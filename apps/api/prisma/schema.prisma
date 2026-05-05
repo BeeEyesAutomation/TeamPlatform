@@ -351,6 +351,22 @@ model AttendanceRecord {
   @@map("attendance_records")
 }
 
+model AttendanceLock {
+  id         String    @id @default(uuid())
+  month      String    @unique @db.VarChar(7)
+  lockedById String?   @map("locked_by_id")
+  lockedAt   DateTime? @map("locked_at")
+  isLocked   Boolean   @default(false) @map("is_locked")
+  note       String?   @db.Text
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@index([month])
+  @@index([isLocked])
+  @@index([createdAt])
+  @@map("attendance_locks")
+}
+
 model TaxSetting {
   id                        String       @id @default(uuid())
   personalDeduction         Decimal      @map("personal_deduction") @db.Decimal(18, 2)
