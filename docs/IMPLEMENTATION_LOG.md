@@ -1,5 +1,47 @@
 # Implementation Log
 
+## 2026-05-05 - Prisma Seed Failure Investigation
+
+### Scope
+
+- Investigate `npx prisma db seed` failure in `apps/api/prisma/seed.ts` inside `seedRolesAndPermissions`.
+- Compare seed upsert keys against `Permission`, `Role`, `RolePermission`, `User`, `UserRole`, `DocumentType`, `EmailTemplate`, `TaxSetting`, and `TaxBracket` schema models.
+- Do not reset the database, delete migrations, or change schema unless required by a real schema mismatch.
+
+### Root Cause
+
+- The Prisma schema and generated Prisma Client agree with the seed for unique keys:
+  - `Permission.code`, `Role.code`, `User.email`, `DocumentType.code`, and `EmailTemplate.code` are unique.
+  - `RolePermission` generates `roleId_permissionId` from `@@unique([roleId, permissionId])`.
+  - `UserRole` generates `userId_roleId` from `@@unique([userId, roleId])`.
+  - `TaxBracket` generates `taxSettingId_level` from `@@unique([taxSettingId, level])`.
+- The initial seed failure was not a compound-key mismatch. `seed.ts` did not load `.env` before constructing `PrismaClient`, so Prisma failed with `Environment variable not found: DATABASE_URL`.
+- After loading environment files explicitly, the retry reached the database but failed because the connected database does not contain `public.permissions`. That indicates migrations have not been applied to the target database.
+
+### Changed Files Summary
+
+- `apps/api/prisma/seed.ts`: Load root `.env` and `apps/api/.env` before creating `PrismaClient`.
+- `docs/logs/2026-05-05_seed-error.log`: Captured initial seed failure output.
+- `docs/logs/2026-05-05_seed-error-retry.log`: Captured retry failure output after the seed env fix.
+- `docs/IMPLEMENTATION_LOG.md`: Documented the seed investigation, root cause, and verification results.
+
+### Verification Commands
+
+- `npx prisma format`
+- `npx prisma validate`
+- `npx prisma generate`
+- `npx prisma db seed`
+
+### Verification Results
+
+- `npx prisma format` passed.
+- `npx prisma validate` passed when `DATABASE_URL` was supplied for the shell.
+- `npx prisma generate` passed.
+- `npx prisma db seed` failed on retry.
+  - Log file: `docs/logs/2026-05-05_seed-error-retry.log`
+  - Root cause: The target database is missing the migrated `public.permissions` table.
+  - Required next action: Apply existing migrations to the target database, then rerun `npx prisma db seed`.
+
 ## 2026-05-05 - Phase 4: Manual Attendance
 
 ### Current Phase
