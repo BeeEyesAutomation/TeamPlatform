@@ -1,0 +1,56 @@
+STDOUT:
+
+> @team-platform/web@0.1.0 dev
+> next dev -p 3000
+
+
+
+STDERR:
+'"node"' is not recognized as an internal or external command,
+operable program or batch file.
+npm error Lifecycle script `dev` failed with error:
+npm error code 1
+npm error path C:\TeamPlatform\apps\web
+npm error workspace @team-platform/web@0.1.0
+npm error location C:\TeamPlatform\apps\web
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c next dev -p 3000
+Invoke-WebRequest : body{display:none}body{display:block}{"props":{"pageProps":{"statusCode":500}},"page":"/_error","qu
+ery":{},"buildId":"development","isFallback":false,"err":{"name":"ModuleBuildError","source":"server","message":"Module
+ build failed (from ../../node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js):\nReferenceError: 
+module is not defined in ES module scope\nThis file is being treated as an ES module because it has a '.js' file 
+extension and 'C:\\TeamPlatform\\apps\\web\\package.json' contains \"type\": \"module\". To treat it as a CommonJS 
+script, rename it to use the '.cjs' file extension.\n    at file:///C:/TeamPlatform/apps/web/postcss.config.js:1:1\n   
+ at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n    at async 
+node:internal/modules/esm/loader:639:26\n    at async findConfig 
+(C:\\TeamPlatform\\node_modules\\next\\dist\\lib\\find-config.js:85:25)\n    at async getPostCssPlugins 
+(C:\\TeamPlatform\\node_modules\\next\\dist\\build\\webpack\\config\\blocks\\css\\plugins.js:89:18)\n    at async 
+C:\\TeamPlatform\\node_modules\\next\\dist\\build\\webpack\\config\\blocks\\css\\index.js:124:36\n    at async 
+C:\\TeamPlatform\\node_modules\\next\\dist\\build\\webpack\\loaders\\postcss-loader\\src\\index.js:51:40\n    at async 
+Span.traceAsyncFn (C:\\TeamPlatform\\node_modules\\next\\dist\\trace\\trace.js:154:20)","stack":"ModuleBuildError: 
+Module build failed (from 
+../../node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js):\nReferenceError: module is not 
+defined in ES module scope\nThis file is being treated as an ES module because it has a '.js' file extension and 
+'C:\\TeamPlatform\\apps\\web\\package.json' contains \"type\": \"module\". To treat it as a CommonJS script, rename it 
+to use the '.cjs' file extension.\n    at file:///C:/TeamPlatform/apps/web/postcss.config.js:1:1\n    at ModuleJob.run 
+(node:internal/modules/esm/module_job:437:25)\n    at async node:internal/modules/esm/loader:639:26\n    at async 
+findConfig (C:\\TeamPlatform\\node_modules\\next\\dist\\lib\\find-config.js:85:25)\n    at async getPostCssPlugins 
+(C:\\TeamPlatform\\node_modules\\next\\dist\\build\\webpack\\config\\blocks\\css\\plugins.js:89:18)\n    at async 
+C:\\TeamPlatform\\node_modules\\next\\dist\\build\\webpack\\config\\blocks\\css\\index.js:124:36\n    at async 
+C:\\TeamPlatform\\node_modules\\next\\dist\\build\\webpack\\loaders\\postcss-loader\\src\\index.js:51:40\n    at async 
+Span.traceAsyncFn (C:\\TeamPlatform\\node_modules\\next\\dist\\trace\\trace.js:154:20)\n    at processResult 
+(C:\\TeamPlatform\\node_modules\\next\\dist\\compiled\\webpack\\bundle5.js:28:400590)\n    at 
+C:\\TeamPlatform\\node_modules\\next\\dist\\compiled\\webpack\\bundle5.js:28:402302\n    at 
+C:\\TeamPlatform\\node_modules\\next\\dist\\compiled\\loader-runner\\LoaderRunner.js:1:8645\n    at 
+C:\\TeamPlatform\\node_modules\\next\\dist\\compiled\\loader-runner\\LoaderRunner.js:1:5828\n    at r.callback 
+(C:\\TeamPlatform\\node_modules\\next\\dist\\compiled\\loader-runner\\LoaderRunner.js:1:4039)\n    at C:\\TeamPlatform\
+\node_modules\\next\\dist\\build\\webpack\\loaders\\postcss-loader\\src\\index.js:113:37"},"gip":true,"scriptLoader":[]
+}
+At line:9 char:7
++ try { Invoke-WebRequest -Uri 'http://localhost:3000' -UseBasicParsing ...
++       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-WebRequest], WebExc 
+   eption
+    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeWebRequestCommand
+
+
