@@ -1,8 +1,10 @@
 import { Router } from "express";
+import { requireAuth } from "../../middleware/authenticate";
+import { requirePermission } from "../../middleware/require-permission";
 
 export const usersRouter = Router();
 
-usersRouter.get("/", (_req, res) => {
+usersRouter.get("/", requireAuth, requirePermission("users.manage"), (_req, res) => {
   res.json({ status: "ok", data: [] });
 });
 

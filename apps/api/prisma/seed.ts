@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -82,6 +83,11 @@ const titleCase = (value: string) =>
     .map((part) => part[0].toUpperCase() + part.slice(1))
     .join(" ");
 
+const adminEmail = process.env.ADMIN_EMAIL ?? "admin@example.com";
+const adminPassword = process.env.ADMIN_PASSWORD ?? "ChangeMe123!";
+const adminFullName = process.env.ADMIN_FULL_NAME ?? "System Administrator";
+const bcryptSaltRounds = Number(process.env.BCRYPT_SALT_ROUNDS ?? 12);
+
 async function seedRolesAndPermissions() {
   for (const code of permissions) {
     await prisma.permission.upsert({
@@ -105,6 +111,57 @@ async function seedRolesAndPermissions() {
       }
     });
   }
+
+  const adminRole = await prisma.role.findUniqueOrThrow({
+    where: { code: "admin" }
+  });
+  const allPermissions = await prisma.permission.findMany();
+
+  for (const permission of allPermissions) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: adminRole.id,
+          permissionId: permission.id
+        }
+      },
+      update: {},
+      create: {
+        roleId: adminRole.id,
+        permissionId: permission.id
+      }
+    });
+  }
+
+  const passwordHash = await bcrypt.hash(adminPassword, bcryptSaltRounds);
+  const adminUser = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {
+      fullName: adminFullName,
+      passwordHash,
+      isActive: true
+    },
+    create: {
+      email: adminEmail,
+      fullName: adminFullName,
+      passwordHash,
+      isActive: true
+    }
+  });
+
+  await prisma.userRole.upsert({
+    where: {
+      userId_roleId: {
+        userId: adminUser.id,
+        roleId: adminRole.id
+      }
+    },
+    update: {},
+    create: {
+      userId: adminUser.id,
+      roleId: adminRole.id
+    }
+  });
 }
 
 async function seedDocumentTypes() {

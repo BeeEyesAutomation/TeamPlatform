@@ -1,13 +1,6 @@
 import type { RequestHandler } from "express";
-import jwt from "jsonwebtoken";
-import { env } from "../config/env";
-
-export interface AuthenticatedRequestUser {
-  id: string;
-  email: string;
-  roles: string[];
-  permissions: string[];
-}
+import { loadCurrentUser, verifyAccessToken, type AuthenticatedRequestUser } from "../modules/auth/auth.service";
+import { AppError } from "../utils/app-error";
 
 declare global {
   namespace Express {
@@ -17,19 +10,29 @@ declare global {
   }
 }
 
-export const authenticate: RequestHandler = (req, res, next) => {
-  const header = req.header("authorization");
-  const token = header?.startsWith("Bearer ") ? header.slice(7) : undefined;
-
-  if (!token) {
-    res.status(401).json({ status: "error", message: "Authentication required" });
-    return;
+const getBearerToken = (authorizationHeader?: string) => {
+  if (!authorizationHeader?.startsWith("Bearer ")) {
+    return undefined;
   }
 
+  const token = authorizationHeader.slice("Bearer ".length).trim();
+  return token.length > 0 ? token : undefined;
+};
+
+export const requireAuth: RequestHandler = async (req, _res, next) => {
   try {
-    req.user = jwt.verify(token, env.JWT_ACCESS_SECRET) as AuthenticatedRequestUser;
+    const token = getBearerToken(req.header("authorization"));
+
+    if (!token) {
+      throw new AppError(401, "Authentication required");
+    }
+
+    const payload = verifyAccessToken(token);
+    req.user = await loadCurrentUser(payload.sub);
     next();
-  } catch {
-    res.status(401).json({ status: "error", message: "Invalid or expired token" });
+  } catch (error) {
+    next(error instanceof AppError ? error : new AppError(401, "Invalid or expired token"));
   }
 };
+
+export const authenticate = requireAuth;

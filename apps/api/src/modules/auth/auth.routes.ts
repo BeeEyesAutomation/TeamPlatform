@@ -1,39 +1,42 @@
 import { Router } from "express";
-import { authenticate } from "../../middleware/authenticate";
+import { requireAuth } from "../../middleware/authenticate";
+import { asyncHandler } from "../../utils/async-handler";
 import { loginSchema } from "./auth.schemas";
-import { createAccessToken } from "./auth.service";
+import { login } from "./auth.service";
 
 export const authRouter = Router();
 
-authRouter.post("/login", (req, res, next) => {
-  try {
+authRouter.post(
+  "/login",
+  asyncHandler(async (req, res) => {
     const body = loginSchema.parse(req.body);
-    const token = createAccessToken({
-      id: "placeholder-user-id",
+    const result = await login({
       email: body.email,
-      roles: ["admin"],
-      permissions: ["auth.me"]
+      password: body.password,
+      ipAddress: req.ip,
+      userAgent: req.header("user-agent")
     });
 
     res.json({
       status: "ok",
-      data: {
-        accessToken: token
-      }
+      data: result
     });
-  } catch (error) {
-    next(error);
-  }
+  })
+);
+
+authRouter.post("/logout", requireAuth, (_req, res) => {
+  res.json({
+    status: "ok",
+    data: {
+      message: "Logout is stateless. Discard the access token on the client."
+    }
+  });
 });
 
-authRouter.post("/logout", (_req, res) => {
-  res.status(204).send();
-});
-
-authRouter.get("/me", authenticate, (req, res) => {
+authRouter.get("/me", requireAuth, (req, res) => {
   res.json({ status: "ok", data: req.user });
 });
 
-authRouter.post("/change-password", authenticate, (_req, res) => {
+authRouter.post("/change-password", requireAuth, (_req, res) => {
   res.status(501).json({ status: "error", message: "Not implemented yet" });
 });

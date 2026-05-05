@@ -10,6 +10,9 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(16),
   JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
   JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
+  JWT_SECRET: z.string().min(16).optional(),
+  JWT_EXPIRES_IN: z.string().default("15m"),
+  BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(14).default(12),
   WEB_APP_URL: z.string().url().default("http://localhost:3000")
 });
 

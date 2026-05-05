@@ -1,5 +1,85 @@
 # Implementation Log
 
+## 2026-05-05 - Phase 2: Authentication and RBAC Backend
+
+### Current Phase
+
+Phase 2: Authentication and RBAC backend.
+
+### Scope
+
+- Implement JWT login and current-user loading from the database.
+- Add bcrypt password hashing/verification helpers.
+- Add RBAC middleware for authentication, roles, and permissions.
+- Add admin seed user and audit log helper foundation.
+- Protect one sample backend route to verify middleware wiring.
+- Do not implement employee, payroll, project, or frontend pages.
+
+### Assumptions
+
+- JWT logout remains stateless for this phase because no token blacklist/session table exists yet.
+- Existing access-token environment variables remain canonical for backend code; generic JWT variables stay in `.env.example` for compatibility until auth configuration is revisited.
+- `bcryptjs` is already installed in the API package and satisfies the bcrypt hashing requirement without adding a new dependency.
+- Database migrations are not changed in this phase unless auth schema changes become necessary.
+
+### Changed Files Summary
+
+- `.env.example`: Added admin seed user environment variables.
+- `apps/api/prisma/seed.ts`: Added bcrypt-hashed admin seed user, admin role assignment, and admin permission assignment.
+- `apps/api/src/config/env.ts`: Added bcrypt and compatibility JWT environment validation.
+- `apps/api/src/modules/auth/*`: Replaced placeholder auth with Prisma-backed login, JWT access token creation/verification, request validation, current-user loading, and stateless logout response.
+- `apps/api/src/middleware/*`: Added `requireAuth`, `requireRole`, `requirePermission`, and RBAC exports.
+- `apps/api/src/modules/audit/audit.service.ts`: Added audit log helper foundation.
+- `apps/api/src/utils/app-error.ts`: Added centralized application error class.
+- `apps/api/src/modules/users/users.routes.ts`: Protected `GET /api/users` as a sample RBAC route.
+- `docs/IMPLEMENTATION_LOG.md`: Finalized the Phase 2 work log.
+
+### Commands Run
+
+- `Get-Content -Raw AGENTS.md`
+- `Get-Content -Raw API.md`
+- `Get-Content -Raw REQUIREMENTS.md`
+- `git status --short --branch`
+- `Get-Content -Raw apps\api\src\modules\auth\auth.routes.ts`
+- `Get-Content -Raw apps\api\src\modules\auth\auth.schemas.ts`
+- `Get-Content -Raw apps\api\src\modules\auth\auth.service.ts`
+- `Get-Content -Raw apps\api\src\modules\auth\auth.repository.ts`
+- `Get-Content -Raw apps\api\src\middleware\authenticate.ts`
+- `Get-Content -Raw apps\api\src\middleware\require-permission.ts`
+- `Get-Content -Raw apps\api\src\middleware\error-handler.ts`
+- `Get-Content -Raw apps\api\src\app.ts`
+- `Get-Content -Raw apps\api\src\config\env.ts`
+- `Get-Content -Raw apps\api\src\prisma\client.ts`
+- `Get-Content -Raw apps\api\src\routes.ts`
+- `Get-Content -Raw apps\api\src\utils\async-handler.ts`
+- `Get-Content -Raw apps\api\prisma\seed.ts`
+- `Get-Content -Raw apps\api\package.json`
+- `Get-Content -Raw apps\api\src\modules\users\users.routes.ts`
+- `Get-Content -Raw apps\api\src\modules\roles\roles.routes.ts`
+- `Get-Content -Raw docs\IMPLEMENTATION_LOG.md`
+- `Get-Content -Raw .env.example`
+- `npm run typecheck -w apps/api`
+- `npm run test -w apps/api -- --runInBand auth`
+- `Get-Content -Raw apps\api\package.json | ConvertFrom-Json | Out-Null`
+- `git diff --check`
+- `git diff --stat`
+- `git diff -- apps/api/src/modules/auth apps/api/src/middleware apps/api/src/modules/audit/audit.service.ts apps/api/prisma/seed.ts apps/api/src/config/env.ts apps/api/src/modules/users/users.routes.ts .env.example docs/IMPLEMENTATION_LOG.md`
+
+### Tests Run
+
+- `apps/api/package.json` parsed successfully.
+- `git diff --check` passed.
+- `npm run typecheck -w apps/api` was attempted but could not run because `npm` is not installed or not on PATH.
+- Targeted auth tests were attempted with `npm run test -w apps/api -- --runInBand auth` but could not run because `npm` is not installed or not on PATH.
+- Manual route smoke check was not run because the API dev server requires npm tooling in this environment.
+- Full test suite was not run per phase instructions.
+
+### Known TODOs
+
+- Run API typecheck and targeted auth tests in an environment with Node/npm available.
+- Run Prisma seed after migrations to create the admin user and RBAC assignments.
+- Consider token invalidation/session storage in a later security phase if server-side logout is required.
+
 ## 2026-05-05 - Phase 1: Database Foundation
 
 ### Current Phase
