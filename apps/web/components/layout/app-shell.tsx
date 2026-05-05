@@ -11,20 +11,21 @@ import {
   ShieldCheck,
   Users
 } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 const navigation = [
-  { label: "Dashboard", icon: LayoutDashboard },
-  { label: "Nhan su", icon: Users },
-  { label: "Cham cong", icon: CalendarDays },
-  { label: "Bang luong", icon: BadgeDollarSign },
-  { label: "Du an", icon: FolderKanban },
-  { label: "Tai lieu", icon: FileText },
-  { label: "Nhap xuat", icon: Import },
-  { label: "Bao cao", icon: ClipboardList },
-  { label: "Email", icon: Mail },
-  { label: "Cau hinh", icon: Settings },
-  { label: "Audit", icon: ShieldCheck }
+  { label: "Dashboard", href: "/", icon: LayoutDashboard },
+  { label: "Nhan su", href: "/employees", icon: Users },
+  { label: "Phong ban", href: "/departments", icon: Settings },
+  { label: "Chuc vu", href: "/positions", icon: ShieldCheck },
+  { label: "Cham cong", href: "/", icon: CalendarDays },
+  { label: "Bang luong", href: "/", icon: BadgeDollarSign },
+  { label: "Du an", href: "/", icon: FolderKanban },
+  { label: "Tai lieu", href: "/", icon: FileText },
+  { label: "Nhap xuat", href: "/", icon: Import },
+  { label: "Bao cao", href: "/", icon: ClipboardList },
+  { label: "Email", href: "/", icon: Mail }
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -37,14 +38,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         <nav className="space-y-1">
           {navigation.map((item) => (
-            <button
+            <Link
               key={item.label}
+              href={item.href}
               className="flex h-10 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium text-muted hover:bg-surface hover:text-ink"
-              type="button"
             >
               <item.icon size={18} />
               <span>{item.label}</span>
-            </button>
+            </Link>
           ))}
         </nav>
       </aside>

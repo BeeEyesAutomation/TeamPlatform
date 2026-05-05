@@ -1,5 +1,113 @@
 # Implementation Log
 
+## 2026-05-05 - Phase 3: Employee, Department, and Position Management
+
+### Current Phase
+
+Phase 3: Employee, Department, and Position Management.
+
+### Scope
+
+- Implement backend CRUD APIs for departments, positions, and employees.
+- Add employee salary preview using position salary and salary level.
+- Add pagination, search, filtering, validation, RBAC, sensitive employee field masking, and audit logs for Phase 3 entities.
+- Add basic frontend pages for listing, creating, editing, and viewing departments, positions, and employees.
+- Do not implement attendance, payroll, projects, email, import/export, reports, or unrelated modules.
+
+### Assumptions
+
+- Existing Phase 2 JWT/RBAC middleware remains the authorization foundation.
+- Sensitive employee fields are Citizen ID, Citizen ID image URLs, bank fields, salary level, position salary preview data, and dependent count.
+- Deletes for Phase 3 are implemented as soft deactivation/status updates, not destructive hard deletes.
+- Frontend pages will be simple functional client-side forms and tables, using bearer tokens stored by the existing placeholder client-side session approach for now.
+
+### Changed Files Summary
+
+- `apps/api/src/modules/hr/hr.schemas.ts`: Added shared Zod validation for pagination, department, position, and employee inputs.
+- `apps/api/src/modules/hr/hr.utils.ts`: Added pagination helpers, Prisma uniqueness error handling, and sensitive-field permission helpers.
+- `apps/api/src/modules/departments/*`: Implemented department list/detail/create/update/deactivate with filtering, validation, RBAC, and audit logs.
+- `apps/api/src/modules/positions/*`: Implemented position list/detail/create/update/deactivate with filtering, non-negative salary validation, RBAC, and audit logs.
+- `apps/api/src/modules/employees/*`: Implemented employee list/detail/create/update/deactivate, salary preview, sensitive field masking, filtering, validation, RBAC, and audit logs.
+- `apps/web/app/departments/*`, `apps/web/app/positions/*`, `apps/web/app/employees/*`: Added basic Phase 3 pages for list/create/edit/detail flows.
+- `apps/web/features/hr/*`: Added client-side HR API helpers, forms, list views, detail view, and formatting helpers.
+- `apps/web/lib/api-client.ts` and `apps/web/lib/auth.ts`: Added bearer-token API helper and local stored-user permission helpers.
+- `apps/web/components/layout/app-shell.tsx`: Added HR navigation links.
+- `docs/logs/*.log`: Captured failed command output for unavailable npm commands.
+- `docs/SETUP_TROUBLESHOOTING.md`: Documented manual Node/npm setup steps and Docker Compose checks.
+- `docs/IMPLEMENTATION_LOG.md`: Finalized the Phase 3 work log.
+
+### Planned Commands
+
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+- Targeted employee/department/position service tests only if test files/framework execution are available.
+- `git diff --check`
+
+### Commands Run
+
+- `Get-Content -Raw AGENTS.md`
+- `Get-Content -Raw docs\IMPLEMENTATION_LOG.md`
+- `Get-Content -Raw docs\DECISIONS.md`
+- `Select-String -Path REQUIREMENTS.md -Pattern '^## 1\.|^## 2\.|^## 12\.|^## 3\.' -Context 0,35`
+- `Select-String -Path DATABASE.md -Pattern '^## departments$|^## positions$|^## employees$|^## audit_logs$|^## users$|^## roles$|^## permissions$|^## user_roles$|^## role_permissions$' -Context 0,35`
+- `Select-String -Path API.md -Pattern '^## Employees$|^## Departments$|^## Positions$' -Context 0,25`
+- `Select-String -Path WORKFLOWS.md -Pattern '^## 1\.|^## 3\.' -Context 0,35`
+- `git status --short --branch`
+- `Get-Content -Raw apps\api\src\modules\departments\departments.routes.ts`
+- `Get-Content -Raw apps\api\src\modules\positions\positions.routes.ts`
+- `Get-Content -Raw apps\api\src\modules\employees\employees.routes.ts`
+- `Get-Content -Raw apps\api\src\modules\audit\audit.service.ts`
+- `Get-Content -Raw apps\api\src\middleware\rbac.ts`
+- `Get-Content -Raw apps\web\lib\api-client.ts`
+- `Get-Content -Raw apps\web\components\layout\app-shell.tsx`
+- `Get-Content -Raw apps\web\app\page.tsx`
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+- `npm run test --workspace apps/api -- employees departments positions`
+- `git diff --check`
+- `Get-Content -Raw apps\api\package.json | ConvertFrom-Json | Out-Null`
+- `Get-Content -Raw apps\web\package.json | ConvertFrom-Json | Out-Null`
+- `git diff --stat`
+
+### Tests Run
+
+- `git diff --check` passed.
+- `apps/api/package.json` and `apps/web/package.json` parsed successfully.
+- `npm run typecheck --workspace apps/api` failed.
+  - Log file: `docs/logs/2026-05-05_phase-3_api-typecheck.log`
+  - Detected error category: `missing_system_tool`
+  - Root cause: `npm` is not installed or not available on `PATH`.
+  - Attempted fix: Documented manual Node/npm installation steps in `docs/SETUP_TROUBLESHOOTING.md`.
+  - Rerun result: Not rerun, because the error requires system software setup.
+  - Remaining manual action: Install Node.js/npm, then rerun the API typecheck.
+- `npm run typecheck --workspace apps/web` failed.
+  - Log file: `docs/logs/2026-05-05_phase-3_web-typecheck.log`
+  - Detected error category: `missing_system_tool`
+  - Root cause: `npm` is not installed or not available on `PATH`.
+  - Attempted fix: Documented manual Node/npm installation steps in `docs/SETUP_TROUBLESHOOTING.md`.
+  - Rerun result: Not rerun, because the error requires system software setup.
+  - Remaining manual action: Install Node.js/npm, then rerun the web typecheck.
+- `npm run test --workspace apps/api -- employees departments positions` failed.
+  - Log file: `docs/logs/2026-05-05_phase-3_targeted-tests.log`
+  - Detected error category: `missing_system_tool`
+  - Root cause: `npm` is not installed or not available on `PATH`.
+  - Attempted fix: Documented manual Node/npm installation steps in `docs/SETUP_TROUBLESHOOTING.md`.
+  - Rerun result: Not rerun, because the error requires system software setup.
+  - Remaining manual action: Install Node.js/npm, then rerun targeted API tests.
+- Full test suite, production build, and e2e tests were not run per phase instructions.
+
+### Fixes Applied
+
+- Added `docs/SETUP_TROUBLESHOOTING.md` after npm-based checks failed due missing system tooling.
+- Tightened the employee form so sensitive fields are hidden and not submitted when the stored user lacks `employees.view_sensitive`.
+
+### Known TODOs
+
+- Install Node.js/npm in the local environment and rerun targeted API/web typechecks.
+- Run migrations and Prisma seed before manually testing the HR APIs against PostgreSQL.
+- Replace the temporary localStorage auth/session approach with the eventual application session flow when the frontend auth phase is implemented.
+- Review and stage or discard existing unrelated local `apps/api/tsconfig.json`, `apps/web/tsconfig.json`, and `.vscode/` changes separately; they were left out of the Phase 3 commit.
+
 ## 2026-05-05 - Phase 2: Authentication and RBAC Backend
 
 ### Current Phase
