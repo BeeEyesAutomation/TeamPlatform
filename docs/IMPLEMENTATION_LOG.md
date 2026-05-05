@@ -1,5 +1,67 @@
 # Implementation Log
 
+## 2026-05-05 - Phase 1: Database Foundation
+
+### Current Phase
+
+Phase 1: Database foundation.
+
+### Scope
+
+- Refine the PostgreSQL Prisma schema foundation for auth/RBAC, audit, HR, attendance, payroll, projects, project documents, email, import, and export tables listed for this phase.
+- Add seed foundation for roles, permissions, document types, default tax settings, and default email templates.
+- Add an initial Prisma migration if local PostgreSQL is available.
+- Do not implement frontend pages, business APIs, or module business logic.
+
+### Assumptions
+
+- Month values remain normalized as `YYYY-MM` strings for monthly payroll, lock, import/export, and snapshot-style data.
+- File contents remain outside PostgreSQL; the schema stores file URL/path and metadata only.
+- Sensitive values such as email SMTP passwords are represented as encrypted text fields, with encryption implementation deferred to a later service phase.
+- Existing route placeholders are out of scope except where seed configuration requires package metadata.
+
+### Changed Files Summary
+
+- `apps/api/prisma/schema.prisma`: Refined the PostgreSQL Prisma foundation for Phase 1 table coverage, relations, Decimal fields, Json metadata fields, and common filter indexes.
+- `apps/api/prisma/seed.ts`: Added seed foundation for roles, permissions, document types, default tax setting/tax brackets, and default email templates.
+- `apps/api/prisma/migrations/20260505173000_init/migration.sql`: Added an initial checked-in migration matching the Phase 1 schema foundation.
+- `apps/api/package.json`: Added Prisma seed command configuration.
+- `docs/IMPLEMENTATION_LOG.md`: Finalized the Phase 1 work log.
+
+### Commands Run
+
+- `Get-Content -Raw AGENTS.md`
+- `Get-Content -Raw DATABASE.md`
+- `Get-Content -Raw MAP.md`
+- `git status --short --branch`
+- `npx prisma format`
+- `Test-Path 'C:\Program Files\nodejs\npx.cmd'`
+- `docker ps --format "{{.Names}}"`
+- `npx prisma validate`
+- `npx prisma generate`
+- `npx prisma migrate dev --name init`
+- `npx prisma db seed`
+- `git diff --check -- apps/api/package.json apps/api/prisma/schema.prisma apps/api/prisma/seed.ts apps/api/prisma/migrations/20260505173000_init/migration.sql docs/IMPLEMENTATION_LOG.md`
+- `git diff --name-only`
+- `Get-Content -Raw apps\api\package.json | ConvertFrom-Json | Out-Null`
+
+### Tests Run
+
+- `git diff --check` passed for changed Phase 1 files.
+- `apps/api/package.json` parsed successfully.
+- `npx prisma format` was attempted but could not run because `npx` is not installed or not on PATH.
+- `npx prisma validate` was attempted but could not run because `npx` is not installed or not on PATH.
+- `npx prisma generate` was attempted but could not run because `npx` is not installed or not on PATH.
+- `npx prisma migrate dev --name init` was attempted but could not run because `npx` is not installed or not on PATH; Docker is also not installed or not on PATH, so local PostgreSQL availability could not be confirmed.
+- `npx prisma db seed` was attempted but could not run because `npx` is not installed or not on PATH.
+- Full test suite was not run per phase instructions.
+
+### Known TODOs
+
+- Run Prisma format, validate, generate, migrate, and seed in an environment with Node/npm/npx and local PostgreSQL available.
+- Verify the manually checked-in initial migration against Prisma-generated output once Prisma CLI is available.
+- Update the pull request summary with migration notes if a writable PR is available.
+
 ## 2026-05-05 - Phase 0: Project Audit and Setup Check
 
 ### Current Phase

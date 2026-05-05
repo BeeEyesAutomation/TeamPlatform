@@ -63,6 +63,13 @@ enum ProjectStatus {
   cancelled
 }
 
+enum ProjectPlanStatus {
+  planned
+  in_progress
+  completed
+  cancelled
+}
+
 enum ProjectTaskStatus {
   todo
   confirmed
@@ -90,6 +97,14 @@ enum MaterialStatus {
   cancelled
 }
 
+enum PurchaseRequestStatus {
+  pending
+  approved
+  rejected
+  received
+  cancelled
+}
+
 enum SecurityLevel {
   project_public
   internal_company
@@ -107,11 +122,40 @@ enum DocumentStatus {
   archived
 }
 
+enum DocumentAction {
+  view
+  upload
+  edit
+  delete
+  download
+  approve
+  reject
+}
+
+enum EmailEncryption {
+  none
+  ssl
+  starttls
+}
+
 enum EmailLogStatus {
   pending
   sent
   failed
   retrying
+}
+
+enum ImportExportStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+enum ExportFormat {
+  excel
+  csv
+  pdf
 }
 
 model User {
@@ -120,14 +164,15 @@ model User {
   passwordHash String     @map("password_hash") @db.VarChar(255)
   fullName     String     @map("full_name") @db.VarChar(255)
   employeeId   String?    @unique @map("employee_id")
-  employee     Employee?  @relation(fields: [employeeId], references: [id])
   isActive     Boolean    @default(true) @map("is_active")
   lastLoginAt  DateTime?  @map("last_login_at")
+  employee     Employee?  @relation(fields: [employeeId], references: [id])
   userRoles    UserRole[]
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
 
   @@index([isActive])
+  @@index([createdAt])
   @@map("users")
 }
 
@@ -144,6 +189,7 @@ model Role {
   updatedAt           DateTime             @updatedAt @map("updated_at")
 
   @@index([status])
+  @@index([createdAt])
   @@map("roles")
 }
 
@@ -157,12 +203,25 @@ model Permission {
   @@map("permissions")
 }
 
+model UserRole {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  roleId String @map("role_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
 model RolePermission {
   id           String     @id @default(uuid())
   roleId       String     @map("role_id")
   permissionId String     @map("permission_id")
-  role         Role       @relation(fields: [roleId], references: [id])
-  permission   Permission @relation(fields: [permissionId], references: [id])
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@unique([roleId, permissionId])
   @@index([roleId])
@@ -170,17 +229,25 @@ model RolePermission {
   @@map("role_permissions")
 }
 
-model UserRole {
-  id     String @id @default(uuid())
-  userId String @map("user_id")
-  roleId String @map("role_id")
-  user   User   @relation(fields: [userId], references: [id])
-  role   Role   @relation(fields: [roleId], references: [id])
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?  @map("actor_id")
+  action     String   @db.VarChar(100)
+  module     String   @db.VarChar(100)
+  targetType String?  @map("target_type") @db.VarChar(100)
+  targetId   String?  @map("target_id") @db.VarChar(100)
+  oldValue   Json?    @map("old_value")
+  newValue   Json?    @map("new_value")
+  metadata   Json?
+  ipAddress  String?  @map("ip_address") @db.VarChar(100)
+  userAgent  String?  @map("user_agent") @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  @@unique([userId, roleId])
-  @@index([userId])
-  @@index([roleId])
-  @@map("user_roles")
+  @@index([actorId])
+  @@index([module])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
 
 model Department {
@@ -192,8 +259,10 @@ model Department {
   employees   Employee[]
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
+  deletedAt   DateTime?    @map("deleted_at")
 
   @@index([status])
+  @@index([createdAt])
   @@map("departments")
 }
 
@@ -208,52 +277,58 @@ model Position {
   employees        Employee[]
   createdAt        DateTime     @default(now()) @map("created_at")
   updatedAt        DateTime     @updatedAt @map("updated_at")
+  deletedAt        DateTime?    @map("deleted_at")
 
   @@index([status])
+  @@index([createdAt])
   @@map("positions")
 }
 
 model Employee {
-  id                       String              @id @default(uuid())
-  employeeCode             String              @unique @map("employee_code") @db.VarChar(100)
-  fullName                 String              @map("full_name") @db.VarChar(255)
-  phone                    String?             @db.VarChar(50)
-  email                    String?             @db.VarChar(255)
-  dateOfBirth              DateTime?           @map("date_of_birth")
-  gender                   String?             @db.VarChar(50)
-  address                  String?             @db.Text
-  avatarUrl                String?             @map("avatar_url") @db.Text
-  citizenIdNumber          String?             @map("citizen_id_number") @db.VarChar(100)
-  citizenIdIssueDate       DateTime?           @map("citizen_id_issue_date")
-  citizenIdIssuePlace      String?             @map("citizen_id_issue_place") @db.VarChar(255)
-  citizenIdFrontImageUrl   String?             @map("citizen_id_front_image_url") @db.Text
-  citizenIdBackImageUrl    String?             @map("citizen_id_back_image_url") @db.Text
-  bankName                 String?             @map("bank_name") @db.VarChar(255)
-  bankAccountNumber        String?             @map("bank_account_number") @db.VarChar(100)
-  bankAccountHolder        String?             @map("bank_account_holder") @db.VarChar(255)
-  bankBranch               String?             @map("bank_branch") @db.VarChar(255)
-  departmentId             String?             @map("department_id")
-  positionId               String?             @map("position_id")
-  salaryLevel              Int                 @default(0) @map("salary_level")
-  startDate                DateTime?           @map("start_date")
-  employmentType           EmploymentType      @default(official) @map("employment_type")
-  status                   EmployeeStatus      @default(active)
-  emergencyContactName     String?             @map("emergency_contact_name") @db.VarChar(255)
-  emergencyContactPhone    String?             @map("emergency_contact_phone") @db.VarChar(50)
-  emergencyContactRelation String?             @map("emergency_contact_relation") @db.VarChar(100)
-  dependentCount           Int                 @default(0) @map("dependent_count")
-  department               Department?         @relation(fields: [departmentId], references: [id])
-  position                 Position?           @relation(fields: [positionId], references: [id])
+  id                       String             @id @default(uuid())
+  employeeCode             String             @unique @map("employee_code") @db.VarChar(100)
+  fullName                 String             @map("full_name") @db.VarChar(255)
+  phone                    String?            @db.VarChar(50)
+  email                    String?            @db.VarChar(255)
+  dateOfBirth              DateTime?          @map("date_of_birth")
+  gender                   String?            @db.VarChar(50)
+  address                  String?            @db.Text
+  avatarUrl                String?            @map("avatar_url") @db.Text
+  citizenIdNumber          String?            @map("citizen_id_number") @db.VarChar(100)
+  citizenIdIssueDate       DateTime?          @map("citizen_id_issue_date")
+  citizenIdIssuePlace      String?            @map("citizen_id_issue_place") @db.VarChar(255)
+  citizenIdFrontImageUrl   String?            @map("citizen_id_front_image_url") @db.Text
+  citizenIdBackImageUrl    String?            @map("citizen_id_back_image_url") @db.Text
+  bankName                 String?            @map("bank_name") @db.VarChar(255)
+  bankAccountNumber        String?            @map("bank_account_number") @db.VarChar(100)
+  bankAccountHolder        String?            @map("bank_account_holder") @db.VarChar(255)
+  bankBranch               String?            @map("bank_branch") @db.VarChar(255)
+  departmentId             String?            @map("department_id")
+  positionId               String?            @map("position_id")
+  salaryLevel              Int                @default(0) @map("salary_level")
+  startDate                DateTime?          @map("start_date")
+  employmentType           EmploymentType     @default(official) @map("employment_type")
+  status                   EmployeeStatus     @default(active)
+  emergencyContactName     String?            @map("emergency_contact_name") @db.VarChar(255)
+  emergencyContactPhone    String?            @map("emergency_contact_phone") @db.VarChar(50)
+  emergencyContactRelation String?            @map("emergency_contact_relation") @db.VarChar(100)
+  dependentCount           Int                @default(0) @map("dependent_count")
+  metadata                 Json?
+  department               Department?        @relation(fields: [departmentId], references: [id])
+  position                 Position?          @relation(fields: [positionId], references: [id])
   user                     User?
   attendanceRecords        AttendanceRecord[]
   payrolls                 Payroll[]
-  createdAt                DateTime            @default(now()) @map("created_at")
-  updatedAt                DateTime            @updatedAt @map("updated_at")
-  deletedAt                DateTime?           @map("deleted_at")
+  projectMemberships       ProjectMember[]
+  createdAt                DateTime           @default(now()) @map("created_at")
+  updatedAt                DateTime           @updatedAt @map("updated_at")
+  deletedAt                DateTime?          @map("deleted_at")
 
+  @@index([employeeCode])
   @@index([departmentId])
   @@index([positionId])
   @@index([status])
+  @@index([createdAt])
   @@map("employees")
 }
 
@@ -272,19 +347,45 @@ model AttendanceRecord {
   @@unique([employeeId, date])
   @@index([date])
   @@index([status])
+  @@index([createdAt])
   @@map("attendance_records")
 }
 
-model AttendanceLock {
-  id         String    @id @default(uuid())
-  month      String    @unique @db.VarChar(7)
-  lockedById String?   @map("locked_by_id")
-  lockedAt   DateTime? @map("locked_at")
-  isLocked   Boolean   @default(false) @map("is_locked")
-  note       String?   @db.Text
+model TaxSetting {
+  id                        String       @id @default(uuid())
+  personalDeduction         Decimal      @map("personal_deduction") @db.Decimal(18, 2)
+  dependentDeduction        Decimal      @map("dependent_deduction") @db.Decimal(18, 2)
+  socialInsuranceRate       Decimal      @map("social_insurance_rate") @db.Decimal(5, 2)
+  healthInsuranceRate       Decimal      @map("health_insurance_rate") @db.Decimal(5, 2)
+  unemploymentInsuranceRate Decimal      @map("unemployment_insurance_rate") @db.Decimal(5, 2)
+  effectiveFrom             DateTime     @map("effective_from")
+  status                    RecordStatus @default(active)
+  metadata                  Json?
+  taxBrackets               TaxBracket[]
+  createdAt                 DateTime     @default(now()) @map("created_at")
+  updatedAt                 DateTime     @updatedAt @map("updated_at")
 
-  @@index([month])
-  @@map("attendance_locks")
+  @@index([effectiveFrom])
+  @@index([status])
+  @@index([createdAt])
+  @@map("tax_settings")
+}
+
+model TaxBracket {
+  id           String     @id @default(uuid())
+  taxSettingId String     @map("tax_setting_id")
+  level        Int
+  incomeFrom   Decimal    @map("income_from") @db.Decimal(18, 2)
+  incomeTo     Decimal?   @map("income_to") @db.Decimal(18, 2)
+  taxRate      Decimal    @map("tax_rate") @db.Decimal(5, 2)
+  taxSetting   TaxSetting @relation(fields: [taxSettingId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  @@unique([taxSettingId, level])
+  @@index([taxSettingId])
+  @@index([createdAt])
+  @@map("tax_brackets")
 }
 
 model AllowanceType {
@@ -298,117 +399,53 @@ model AllowanceType {
   isInsuranceBased  Boolean                  @default(false) @map("is_insurance_based")
   applyScope        ApplyScope               @default(company) @map("apply_scope")
   status            RecordStatus             @default(active)
-  allowanceRules    AllowanceRule[]
+  metadata          Json?
   payrollItems      PayrollItem[]
   createdAt         DateTime                 @default(now()) @map("created_at")
   updatedAt         DateTime                 @updatedAt @map("updated_at")
+  deletedAt         DateTime?                @map("deleted_at")
 
-  @@index([status])
+  @@index([code])
   @@index([calculationType])
+  @@index([status])
+  @@index([createdAt])
   @@map("allowance_types")
 }
 
-model AllowanceRule {
-  id                   String        @id @default(uuid())
-  allowanceTypeId      String        @map("allowance_type_id")
-  minAttendancePercent Decimal?      @map("min_attendance_percent") @db.Decimal(5, 2)
-  amount               Decimal       @db.Decimal(18, 2)
-  applyScope           ApplyScope    @map("apply_scope")
-  departmentId         String?       @map("department_id")
-  positionId           String?       @map("position_id")
-  employeeId           String?       @map("employee_id")
-  effectiveFrom        DateTime      @map("effective_from")
-  effectiveTo          DateTime?     @map("effective_to")
-  status               RecordStatus  @default(active)
-  allowanceType        AllowanceType @relation(fields: [allowanceTypeId], references: [id])
-  createdAt            DateTime      @default(now()) @map("created_at")
-  updatedAt            DateTime      @updatedAt @map("updated_at")
-
-  @@index([allowanceTypeId])
-  @@index([status])
-  @@map("allowance_rules")
-}
-
-model SalaryAdvance {
-  id          String   @id @default(uuid())
-  employeeId  String   @map("employee_id")
-  month       String   @db.VarChar(7)
-  amount      Decimal  @db.Decimal(18, 2)
-  advanceDate DateTime @map("advance_date")
-  note        String?  @db.Text
-  createdById String?  @map("created_by_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@index([employeeId])
-  @@index([month])
-  @@map("salary_advances")
-}
-
-model TaxSetting {
-  id                       String       @id @default(uuid())
-  personalDeduction        Decimal      @map("personal_deduction") @db.Decimal(18, 2)
-  dependentDeduction       Decimal      @map("dependent_deduction") @db.Decimal(18, 2)
-  socialInsuranceRate      Decimal      @map("social_insurance_rate") @db.Decimal(5, 2)
-  healthInsuranceRate      Decimal      @map("health_insurance_rate") @db.Decimal(5, 2)
-  unemploymentInsuranceRate Decimal     @map("unemployment_insurance_rate") @db.Decimal(5, 2)
-  effectiveFrom            DateTime     @map("effective_from")
-  status                   RecordStatus @default(active)
-  taxBrackets              TaxBracket[]
-  createdAt                DateTime     @default(now()) @map("created_at")
-  updatedAt                DateTime     @updatedAt @map("updated_at")
-
-  @@index([effectiveFrom])
-  @@index([status])
-  @@map("tax_settings")
-}
-
-model TaxBracket {
-  id           String     @id @default(uuid())
-  taxSettingId String     @map("tax_setting_id")
-  level        Int
-  incomeFrom   Decimal    @map("income_from") @db.Decimal(18, 2)
-  incomeTo     Decimal?   @map("income_to") @db.Decimal(18, 2)
-  taxRate      Decimal    @map("tax_rate") @db.Decimal(5, 2)
-  taxSetting   TaxSetting @relation(fields: [taxSettingId], references: [id])
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
-
-  @@index([taxSettingId])
-  @@map("tax_brackets")
-}
-
 model Payroll {
-  id                            String        @id @default(uuid())
-  employeeId                    String        @map("employee_id")
-  month                         String        @db.VarChar(7)
-  positionSalary                Decimal       @map("position_salary") @db.Decimal(18, 2)
-  totalAllowances               Decimal       @map("total_allowances") @db.Decimal(18, 2)
-  totalBonuses                  Decimal       @map("total_bonuses") @db.Decimal(18, 2)
-  totalDeductions               Decimal       @map("total_deductions") @db.Decimal(18, 2)
-  insuranceBase                 Decimal       @map("insurance_base") @db.Decimal(18, 2)
-  socialInsurance               Decimal       @map("social_insurance") @db.Decimal(18, 2)
-  healthInsurance               Decimal       @map("health_insurance") @db.Decimal(18, 2)
-  unemploymentInsurance         Decimal       @map("unemployment_insurance") @db.Decimal(18, 2)
-  taxableIncome                 Decimal       @map("taxable_income") @db.Decimal(18, 2)
-  personalDeduction             Decimal       @map("personal_deduction") @db.Decimal(18, 2)
-  dependentDeduction            Decimal       @map("dependent_deduction") @db.Decimal(18, 2)
-  taxableIncomeAfterDeduction   Decimal       @map("taxable_income_after_deduction") @db.Decimal(18, 2)
-  personalIncomeTax             Decimal       @map("personal_income_tax") @db.Decimal(18, 2)
-  salaryAdvance                 Decimal       @map("salary_advance") @db.Decimal(18, 2)
-  netSalary                     Decimal       @map("net_salary") @db.Decimal(18, 2)
-  status                        PayrollStatus @default(draft)
-  calculatedById                String?       @map("calculated_by_id")
-  finalizedById                 String?       @map("finalized_by_id")
-  finalizedAt                   DateTime?     @map("finalized_at")
-  employee                      Employee      @relation(fields: [employeeId], references: [id])
-  payrollItems                  PayrollItem[]
-  createdAt                     DateTime      @default(now()) @map("created_at")
-  updatedAt                     DateTime      @updatedAt @map("updated_at")
+  id                          String        @id @default(uuid())
+  employeeId                  String        @map("employee_id")
+  month                       String        @db.VarChar(7)
+  positionSalary              Decimal       @map("position_salary") @db.Decimal(18, 2)
+  totalAllowances             Decimal       @default(0) @map("total_allowances") @db.Decimal(18, 2)
+  totalBonuses                Decimal       @default(0) @map("total_bonuses") @db.Decimal(18, 2)
+  totalDeductions             Decimal       @default(0) @map("total_deductions") @db.Decimal(18, 2)
+  insuranceBase               Decimal       @default(0) @map("insurance_base") @db.Decimal(18, 2)
+  socialInsurance             Decimal       @default(0) @map("social_insurance") @db.Decimal(18, 2)
+  healthInsurance             Decimal       @default(0) @map("health_insurance") @db.Decimal(18, 2)
+  unemploymentInsurance       Decimal       @default(0) @map("unemployment_insurance") @db.Decimal(18, 2)
+  taxableIncome               Decimal       @default(0) @map("taxable_income") @db.Decimal(18, 2)
+  personalDeduction           Decimal       @default(0) @map("personal_deduction") @db.Decimal(18, 2)
+  dependentDeduction          Decimal       @default(0) @map("dependent_deduction") @db.Decimal(18, 2)
+  taxableIncomeAfterDeduction Decimal       @default(0) @map("taxable_income_after_deduction") @db.Decimal(18, 2)
+  personalIncomeTax           Decimal       @default(0) @map("personal_income_tax") @db.Decimal(18, 2)
+  salaryAdvance               Decimal       @default(0) @map("salary_advance") @db.Decimal(18, 2)
+  netSalary                   Decimal       @default(0) @map("net_salary") @db.Decimal(18, 2)
+  status                      PayrollStatus @default(draft)
+  calculatedById              String?       @map("calculated_by_id")
+  finalizedById               String?       @map("finalized_by_id")
+  finalizedAt                 DateTime?     @map("finalized_at")
+  metadata                    Json?
+  employee                    Employee      @relation(fields: [employeeId], references: [id])
+  payrollItems                PayrollItem[]
+  createdAt                   DateTime      @default(now()) @map("created_at")
+  updatedAt                   DateTime      @updatedAt @map("updated_at")
 
   @@unique([employeeId, month])
+  @@index([employeeId])
   @@index([month])
   @@index([status])
+  @@index([createdAt])
   @@map("payrolls")
 }
 
@@ -423,104 +460,107 @@ model PayrollItem {
   isTaxable        Boolean        @default(false) @map("is_taxable")
   isInsuranceBased Boolean        @default(false) @map("is_insurance_based")
   note             String?        @db.Text
-  payroll          Payroll        @relation(fields: [payrollId], references: [id])
+  metadata         Json?
+  payroll          Payroll        @relation(fields: [payrollId], references: [id], onDelete: Cascade)
   allowanceType    AllowanceType? @relation(fields: [allowanceTypeId], references: [id])
   createdAt        DateTime       @default(now()) @map("created_at")
 
   @@index([payrollId])
+  @@index([code])
+  @@index([type])
+  @@index([createdAt])
   @@map("payroll_items")
 }
 
-model PayrollLock {
-  id         String    @id @default(uuid())
-  month      String    @unique @db.VarChar(7)
-  lockedById String?   @map("locked_by_id")
-  lockedAt   DateTime? @map("locked_at")
-  isLocked   Boolean   @default(false) @map("is_locked")
-  note       String?   @db.Text
+model Project {
+  id                  String            @id @default(uuid())
+  projectCode         String            @unique @map("project_code") @db.VarChar(100)
+  name                String            @db.VarChar(255)
+  customerName        String?           @map("customer_name") @db.VarChar(255)
+  customerContactName String?           @map("customer_contact_name") @db.VarChar(255)
+  customerPhone       String?           @map("customer_phone") @db.VarChar(50)
+  customerEmail       String?           @map("customer_email") @db.VarChar(255)
+  customerAddress     String?           @map("customer_address") @db.Text
+  customerTaxCode     String?           @map("customer_tax_code") @db.VarChar(100)
+  description         String?           @db.Text
+  managerId           String?           @map("manager_id")
+  startDate           DateTime?         @map("start_date")
+  endDate             DateTime?         @map("end_date")
+  actualCompletedDate DateTime?         @map("actual_completed_date")
+  location            String?           @db.VarChar(255)
+  status              ProjectStatus     @default(planning)
+  progressPercent     Decimal           @default(0) @map("progress_percent") @db.Decimal(5, 2)
+  budgetEstimated     Decimal?          @map("budget_estimated") @db.Decimal(18, 2)
+  budgetActual        Decimal?          @map("budget_actual") @db.Decimal(18, 2)
+  note                String?           @db.Text
+  metadata            Json?
+  members             ProjectMember[]
+  plans               ProjectPlan[]
+  tasks               ProjectTask[]
+  issues              ProjectIssue[]
+  materials           ProjectMaterial[]
+  costs               ProjectCost[]
+  documents           ProjectDocument[]
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  deletedAt           DateTime?         @map("deleted_at")
 
-  @@index([month])
-  @@map("payroll_locks")
-}
-
-model SmtpSetting {
-  id                String   @id @default(uuid())
-  host              String   @db.VarChar(255)
-  port              Int
-  username          String   @db.VarChar(255)
-  passwordEncrypted String   @map("password_encrypted") @db.Text
-  fromEmail         String   @map("from_email") @db.VarChar(255)
-  fromName          String   @map("from_name") @db.VarChar(255)
-  encryption        String   @db.VarChar(50)
-  isActive          Boolean  @default(false) @map("is_active")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-
-  @@index([isActive])
-  @@map("smtp_settings")
-}
-
-model EmailTemplate {
-  id        String   @id @default(uuid())
-  code      String   @unique @db.VarChar(100)
-  name      String   @db.VarChar(255)
-  subject   String   @db.VarChar(255)
-  body      String   @db.Text
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@index([isActive])
-  @@map("email_templates")
-}
-
-model EmailLog {
-  id           String         @id @default(uuid())
-  toEmail      String         @map("to_email") @db.VarChar(255)
-  subject      String         @db.VarChar(255)
-  templateCode String?        @map("template_code") @db.VarChar(100)
-  status       EmailLogStatus @default(pending)
-  errorMessage String?        @map("error_message") @db.Text
-  sentAt       DateTime?      @map("sent_at")
-  createdAt    DateTime       @default(now()) @map("created_at")
-
+  @@index([projectCode])
+  @@index([managerId])
   @@index([status])
   @@index([createdAt])
-  @@map("email_logs")
+  @@map("projects")
 }
 
-model Project {
-  id                String            @id @default(uuid())
-  projectCode       String            @unique @map("project_code") @db.VarChar(100)
-  name              String            @db.VarChar(255)
-  customerName      String?           @map("customer_name") @db.VarChar(255)
-  customerEmail     String?           @map("customer_email") @db.VarChar(255)
-  description       String?           @db.Text
-  managerId         String?           @map("manager_id")
-  startDate         DateTime?         @map("start_date")
-  endDate           DateTime?         @map("end_date")
-  actualCompletedDate DateTime?       @map("actual_completed_date")
-  location          String?           @db.VarChar(255)
-  status            ProjectStatus     @default(planning)
-  progressPercent   Decimal           @default(0) @map("progress_percent") @db.Decimal(5, 2)
-  budgetEstimated   Decimal?          @map("budget_estimated") @db.Decimal(18, 2)
-  budgetActual      Decimal?          @map("budget_actual") @db.Decimal(18, 2)
-  note              String?           @db.Text
-  tasks             ProjectTask[]
-  issues            ProjectIssue[]
-  documents         ProjectDocument[]
-  createdAt         DateTime          @default(now()) @map("created_at")
-  updatedAt         DateTime          @updatedAt @map("updated_at")
-  deletedAt         DateTime?         @map("deleted_at")
+model ProjectMember {
+  id          String       @id @default(uuid())
+  projectId   String       @map("project_id")
+  employeeId  String       @map("employee_id")
+  projectRole String       @map("project_role") @db.VarChar(100)
+  joinedDate  DateTime     @map("joined_date")
+  leftDate    DateTime?    @map("left_date")
+  status      RecordStatus @default(active)
+  metadata    Json?
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  employee    Employee     @relation(fields: [employeeId], references: [id])
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
 
+  @@unique([projectId, employeeId])
+  @@index([projectId])
+  @@index([employeeId])
   @@index([status])
-  @@index([managerId])
-  @@map("projects")
+  @@index([createdAt])
+  @@map("project_members")
+}
+
+model ProjectPlan {
+  id              String            @id @default(uuid())
+  projectId       String            @map("project_id")
+  name            String            @db.VarChar(255)
+  description     String?           @db.Text
+  startDate       DateTime?         @map("start_date")
+  endDate         DateTime?         @map("end_date")
+  ownerId         String?           @map("owner_id")
+  progressPercent Decimal           @default(0) @map("progress_percent") @db.Decimal(5, 2)
+  status          ProjectPlanStatus @default(planned)
+  sortOrder       Int               @default(0) @map("sort_order")
+  metadata        Json?
+  project         Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks           ProjectTask[]
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  @@index([projectId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("project_plans")
 }
 
 model ProjectTask {
   id              String            @id @default(uuid())
   projectId       String            @map("project_id")
+  planId          String?           @map("plan_id")
   title           String            @db.VarChar(255)
   description     String?           @db.Text
   assigneeId      String?           @map("assignee_id")
@@ -530,12 +570,22 @@ model ProjectTask {
   progressPercent Decimal           @default(0) @map("progress_percent") @db.Decimal(5, 2)
   startDate       DateTime?         @map("start_date")
   deadline        DateTime?
-  project         Project           @relation(fields: [projectId], references: [id])
+  confirmedAt     DateTime?         @map("confirmed_at")
+  submittedAt     DateTime?         @map("submitted_at")
+  completedAt     DateTime?         @map("completed_at")
+  metadata        Json?
+  project         Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  plan            ProjectPlan?      @relation(fields: [planId], references: [id])
+  issues          ProjectIssue[]
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @updatedAt @map("updated_at")
 
   @@index([projectId])
+  @@index([planId])
+  @@index([assigneeId])
+  @@index([deadline])
   @@index([status])
+  @@index([createdAt])
   @@map("project_tasks")
 }
 
@@ -553,37 +603,93 @@ model ProjectIssue {
   solution     String?            @db.Text
   deadline     DateTime?
   closedAt     DateTime?          @map("closed_at")
-  project      Project            @relation(fields: [projectId], references: [id])
+  metadata     Json?
+  project      Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  task         ProjectTask?       @relation(fields: [taskId], references: [id])
   createdAt    DateTime           @default(now()) @map("created_at")
   updatedAt    DateTime           @updatedAt @map("updated_at")
 
   @@index([projectId])
+  @@index([taskId])
+  @@index([assignedToId])
+  @@index([deadline])
   @@index([status])
+  @@index([createdAt])
   @@map("project_issues")
 }
 
 model ProjectMaterial {
-  id                 String         @id @default(uuid())
-  projectId          String         @map("project_id")
-  materialCode       String         @map("material_code") @db.VarChar(100)
-  materialName       String         @map("material_name") @db.VarChar(255)
-  unit               String         @db.VarChar(50)
-  plannedQuantity    Decimal        @map("planned_quantity") @db.Decimal(18, 3)
-  usedQuantity       Decimal        @default(0) @map("used_quantity") @db.Decimal(18, 3)
-  remainingQuantity  Decimal        @default(0) @map("remaining_quantity") @db.Decimal(18, 3)
-  estimatedUnitPrice Decimal?       @map("estimated_unit_price") @db.Decimal(18, 2)
-  actualUnitPrice    Decimal?       @map("actual_unit_price") @db.Decimal(18, 2)
-  supplierName       String?        @map("supplier_name") @db.VarChar(255)
-  neededDate         DateTime?      @map("needed_date")
-  status             MaterialStatus @default(not_ordered)
-  note               String?        @db.Text
-  createdAt          DateTime       @default(now()) @map("created_at")
-  updatedAt          DateTime       @updatedAt @map("updated_at")
+  id                 String            @id @default(uuid())
+  projectId          String            @map("project_id")
+  materialCode       String            @map("material_code") @db.VarChar(100)
+  materialName       String            @map("material_name") @db.VarChar(255)
+  unit               String            @db.VarChar(50)
+  plannedQuantity    Decimal           @map("planned_quantity") @db.Decimal(18, 3)
+  usedQuantity       Decimal           @default(0) @map("used_quantity") @db.Decimal(18, 3)
+  remainingQuantity  Decimal           @default(0) @map("remaining_quantity") @db.Decimal(18, 3)
+  estimatedUnitPrice Decimal?          @map("estimated_unit_price") @db.Decimal(18, 2)
+  actualUnitPrice    Decimal?          @map("actual_unit_price") @db.Decimal(18, 2)
+  supplierName       String?           @map("supplier_name") @db.VarChar(255)
+  neededDate         DateTime?         @map("needed_date")
+  status             MaterialStatus    @default(not_ordered)
+  note               String?           @db.Text
+  metadata           Json?
+  project            Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  purchaseRequests   PurchaseRequest[]
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
 
+  @@unique([projectId, materialCode])
   @@index([projectId])
   @@index([materialCode])
   @@index([status])
+  @@index([createdAt])
   @@map("project_materials")
+}
+
+model ProjectCost {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  costType    String   @map("cost_type") @db.VarChar(100)
+  name        String   @db.VarChar(255)
+  amount      Decimal  @db.Decimal(18, 2)
+  costDate    DateTime @map("cost_date")
+  createdById String?  @map("created_by_id")
+  note        String?  @db.Text
+  metadata    Json?
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([projectId])
+  @@index([costType])
+  @@index([costDate])
+  @@index([createdAt])
+  @@map("project_costs")
+}
+
+model PurchaseRequest {
+  id               String                @id @default(uuid())
+  projectId        String                @map("project_id")
+  materialId       String?               @map("material_id")
+  requestedById    String?               @map("requested_by_id")
+  approvedById     String?               @map("approved_by_id")
+  quantity         Decimal               @db.Decimal(18, 3)
+  reason           String?               @db.Text
+  neededDate       DateTime?             @map("needed_date")
+  status           PurchaseRequestStatus @default(pending)
+  quotationFileUrl String?               @map("quotation_file_url") @db.Text
+  note             String?               @db.Text
+  metadata         Json?
+  material         ProjectMaterial?      @relation(fields: [materialId], references: [id])
+  createdAt        DateTime              @default(now()) @map("created_at")
+  updatedAt        DateTime              @updatedAt @map("updated_at")
+
+  @@index([projectId])
+  @@index([materialId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("purchase_requests")
 }
 
 model DocumentType {
@@ -596,108 +702,172 @@ model DocumentType {
   documentPermissions DocumentPermission[]
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt           DateTime             @updatedAt @map("updated_at")
+  deletedAt           DateTime?            @map("deleted_at")
 
+  @@index([code])
   @@index([status])
+  @@index([createdAt])
   @@map("document_types")
 }
 
 model ProjectDocument {
-  id             String        @id @default(uuid())
-  projectId      String        @map("project_id")
-  documentTypeId String        @map("document_type_id")
-  title          String        @db.VarChar(255)
-  fileName       String        @map("file_name") @db.VarChar(255)
-  fileUrl        String        @map("file_url") @db.Text
-  fileSize       Int?          @map("file_size")
-  mimeType       String?       @map("mime_type") @db.VarChar(100)
-  version        String        @default("1") @db.VarChar(50)
-  securityLevel  SecurityLevel @map("security_level")
-  status         DocumentStatus @default(draft)
-  uploadedById   String?       @map("uploaded_by_id")
-  approvedById   String?       @map("approved_by_id")
-  approvedAt     DateTime?     @map("approved_at")
-  note           String?       @db.Text
-  project        Project       @relation(fields: [projectId], references: [id])
-  documentType   DocumentType  @relation(fields: [documentTypeId], references: [id])
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
+  id              String              @id @default(uuid())
+  projectId       String              @map("project_id")
+  documentTypeId  String              @map("document_type_id")
+  title           String              @db.VarChar(255)
+  fileName        String              @map("file_name") @db.VarChar(255)
+  fileUrl         String              @map("file_url") @db.Text
+  fileSize        Int?                @map("file_size")
+  mimeType        String?             @map("mime_type") @db.VarChar(100)
+  version         String              @default("1") @db.VarChar(50)
+  securityLevel   SecurityLevel       @map("security_level")
+  status          DocumentStatus      @default(draft)
+  uploadedById    String?             @map("uploaded_by_id")
+  approvedById    String?             @map("approved_by_id")
+  approvedAt      DateTime?           @map("approved_at")
+  note            String?             @db.Text
+  metadata        Json?
+  project         Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  documentType    DocumentType        @relation(fields: [documentTypeId], references: [id])
+  accessLogs      DocumentAccessLog[]
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+  deletedAt       DateTime?           @map("deleted_at")
 
   @@index([projectId])
   @@index([documentTypeId])
   @@index([securityLevel])
   @@index([status])
+  @@index([createdAt])
   @@map("project_documents")
 }
 
 model DocumentPermission {
-  id             String        @id @default(uuid())
-  documentTypeId String        @map("document_type_id")
-  roleId         String        @map("role_id")
+  id             String         @id @default(uuid())
+  documentTypeId String         @map("document_type_id")
+  roleId         String         @map("role_id")
   securityLevel  SecurityLevel? @map("security_level")
-  canView        Boolean       @default(false) @map("can_view")
-  canUpload      Boolean       @default(false) @map("can_upload")
-  canEdit        Boolean       @default(false) @map("can_edit")
-  canDelete      Boolean       @default(false) @map("can_delete")
-  canDownload    Boolean       @default(false) @map("can_download")
-  canApprove     Boolean       @default(false) @map("can_approve")
-  documentType   DocumentType  @relation(fields: [documentTypeId], references: [id])
-  role           Role          @relation(fields: [roleId], references: [id])
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
+  canView        Boolean        @default(false) @map("can_view")
+  canUpload      Boolean        @default(false) @map("can_upload")
+  canEdit        Boolean        @default(false) @map("can_edit")
+  canDelete      Boolean        @default(false) @map("can_delete")
+  canDownload    Boolean        @default(false) @map("can_download")
+  canApprove     Boolean        @default(false) @map("can_approve")
+  metadata       Json?
+  documentType   DocumentType   @relation(fields: [documentTypeId], references: [id], onDelete: Cascade)
+  role           Role           @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
 
   @@unique([documentTypeId, roleId, securityLevel])
   @@index([roleId])
+  @@index([securityLevel])
+  @@index([createdAt])
   @@map("document_permissions")
 }
 
-model ImportLog {
-  id           String   @id @default(uuid())
-  importType   String   @map("import_type") @db.VarChar(100)
-  fileName     String   @map("file_name") @db.VarChar(255)
-  status       String   @db.VarChar(50)
-  totalRows    Int      @default(0) @map("total_rows")
-  successRows  Int      @default(0) @map("success_rows")
-  failedRows   Int      @default(0) @map("failed_rows")
-  errorFileUrl String?  @map("error_file_url") @db.Text
-  importedById String?  @map("imported_by_id")
+model DocumentAccessLog {
+  id         String          @id @default(uuid())
+  documentId String          @map("document_id")
+  userId     String?         @map("user_id")
+  action     DocumentAction
+  ipAddress  String?         @map("ip_address") @db.VarChar(100)
+  userAgent  String?         @map("user_agent") @db.Text
+  metadata   Json?
+  document   ProjectDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime        @default(now()) @map("created_at")
+
+  @@index([documentId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("document_access_logs")
+}
+
+model EmailSetting {
+  id                String          @id @default(uuid())
+  host              String          @db.VarChar(255)
+  port              Int
+  username          String          @db.VarChar(255)
+  passwordEncrypted String          @map("password_encrypted") @db.Text
+  fromEmail         String          @map("from_email") @db.VarChar(255)
+  fromName          String          @map("from_name") @db.VarChar(255)
+  encryption        EmailEncryption @default(starttls)
+  isActive          Boolean         @default(false) @map("is_active")
+  metadata          Json?
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@index([createdAt])
+  @@map("email_settings")
+}
+
+model EmailTemplate {
+  id        String   @id @default(uuid())
+  code      String   @unique @db.VarChar(100)
+  name      String   @db.VarChar(255)
+  subject   String   @db.VarChar(255)
+  body      String   @db.Text
+  isActive  Boolean  @default(true) @map("is_active")
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([code])
+  @@index([isActive])
+  @@index([createdAt])
+  @@map("email_templates")
+}
+
+model EmailLog {
+  id           String         @id @default(uuid())
+  toEmail      String         @map("to_email") @db.VarChar(255)
+  subject      String         @db.VarChar(255)
+  templateCode String?        @map("template_code") @db.VarChar(100)
+  status       EmailLogStatus @default(pending)
+  errorMessage String?        @map("error_message") @db.Text
+  sentAt       DateTime?      @map("sent_at")
   metadata     Json?
-  createdAt    DateTime @default(now()) @map("created_at")
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  @@index([templateCode])
+  @@index([status])
+  @@index([createdAt])
+  @@map("email_logs")
+}
+
+model ImportLog {
+  id           String             @id @default(uuid())
+  importType   String             @map("import_type") @db.VarChar(100)
+  fileName     String             @map("file_name") @db.VarChar(255)
+  status       ImportExportStatus @default(pending)
+  totalRows    Int                @default(0) @map("total_rows")
+  successRows  Int                @default(0) @map("success_rows")
+  failedRows   Int                @default(0) @map("failed_rows")
+  errorFileUrl String?            @map("error_file_url") @db.Text
+  importedById String?            @map("imported_by_id")
+  metadata     Json?
+  createdAt    DateTime           @default(now()) @map("created_at")
 
   @@index([importType])
   @@index([status])
-  @@map("project_import_logs")
+  @@index([createdAt])
+  @@map("import_logs")
 }
 
 model ExportLog {
-  id           String   @id @default(uuid())
-  exportType   String   @map("export_type") @db.VarChar(100)
-  fileName     String   @map("file_name") @db.VarChar(255)
-  format       String   @db.VarChar(50)
-  filtersJson  Json?    @map("filters_json")
-  exportedById String?  @map("exported_by_id")
-  createdAt    DateTime @default(now()) @map("created_at")
+  id           String       @id @default(uuid())
+  exportType   String       @map("export_type") @db.VarChar(100)
+  fileName     String       @map("file_name") @db.VarChar(255)
+  format       ExportFormat
+  filtersJson  Json?        @map("filters_json")
+  exportedById String?      @map("exported_by_id")
+  metadata     Json?
+  createdAt    DateTime     @default(now()) @map("created_at")
 
   @@index([exportType])
   @@index([format])
-  @@map("project_export_logs")
-}
-
-model AuditLog {
-  id         String   @id @default(uuid())
-  actorId    String?  @map("actor_id")
-  action     String   @db.VarChar(100)
-  module     String   @db.VarChar(100)
-  targetType String?  @map("target_type") @db.VarChar(100)
-  targetId   String?  @map("target_id") @db.VarChar(100)
-  oldValue   Json?    @map("old_value")
-  newValue   Json?    @map("new_value")
-  ipAddress  String?  @map("ip_address") @db.VarChar(100)
-  userAgent  String?  @map("user_agent") @db.Text
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  @@index([actorId])
-  @@index([module])
-  @@index([action])
   @@index([createdAt])
-  @@map("audit_logs")
+  @@map("export_logs")
 }

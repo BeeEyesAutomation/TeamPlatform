@@ -14,6 +14,9 @@
     "prisma:seed": "tsx prisma/seed.ts",
     "test": "vitest run"
   },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "dependencies": {
     "@prisma/client": "^5.13.0",
     "@team-platform/shared": "0.1.0",

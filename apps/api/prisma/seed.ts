@@ -1,7 +1,43 @@
 import { PrismaClient } from "@prisma/client";
-import { coreRoles, permissions } from "@team-platform/shared";
 
 const prisma = new PrismaClient();
+
+const roles = [
+  "admin",
+  "director",
+  "hr",
+  "accountant",
+  "project_manager",
+  "team_leader",
+  "project_employee",
+  "employee",
+  "customer_partner"
+];
+
+const permissions = [
+  "auth.me",
+  "users.manage",
+  "roles.manage",
+  "employees.view",
+  "employees.manage",
+  "employees.view_sensitive",
+  "attendance.manage",
+  "attendance.lock",
+  "payroll.view",
+  "payroll.manage",
+  "payroll.publish",
+  "projects.view",
+  "projects.manage",
+  "project_documents.view",
+  "project_documents.upload",
+  "project_documents.download",
+  "project_documents.approve",
+  "project_documents.manage",
+  "imports.manage",
+  "exports.manage",
+  "email.manage",
+  "audit_logs.view"
+];
 
 const documentTypes = [
   "contract",
@@ -30,25 +66,35 @@ const emailTemplates = [
   "project_document_pending_approval"
 ];
 
+const taxBrackets = [
+  { level: 1, incomeFrom: "0", incomeTo: "5000000", taxRate: "5" },
+  { level: 2, incomeFrom: "5000000", incomeTo: "10000000", taxRate: "10" },
+  { level: 3, incomeFrom: "10000000", incomeTo: "18000000", taxRate: "15" },
+  { level: 4, incomeFrom: "18000000", incomeTo: "32000000", taxRate: "20" },
+  { level: 5, incomeFrom: "32000000", incomeTo: "52000000", taxRate: "25" },
+  { level: 6, incomeFrom: "52000000", incomeTo: "80000000", taxRate: "30" },
+  { level: 7, incomeFrom: "80000000", incomeTo: null, taxRate: "35" }
+];
+
 const titleCase = (value: string) =>
   value
-    .split("_")
+    .split(/[._]/)
     .map((part) => part[0].toUpperCase() + part.slice(1))
     .join(" ");
 
-async function main() {
+async function seedRolesAndPermissions() {
   for (const code of permissions) {
     await prisma.permission.upsert({
       where: { code },
       update: {},
       create: {
         code,
-        name: titleCase(code.replace(".", "_"))
+        name: titleCase(code)
       }
     });
   }
 
-  for (const code of coreRoles) {
+  for (const code of roles) {
     await prisma.role.upsert({
       where: { code },
       update: {},
@@ -59,7 +105,9 @@ async function main() {
       }
     });
   }
+}
 
+async function seedDocumentTypes() {
   for (const code of documentTypes) {
     await prisma.documentType.upsert({
       where: { code },
@@ -71,7 +119,9 @@ async function main() {
       }
     });
   }
+}
 
+async function seedEmailTemplates() {
   for (const code of emailTemplates) {
     await prisma.emailTemplate.upsert({
       where: { code },
@@ -87,12 +137,66 @@ async function main() {
   }
 }
 
+async function seedTaxSetting() {
+  const existing = await prisma.taxSetting.findFirst({
+    where: { status: "active" },
+    include: { taxBrackets: true }
+  });
+
+  const taxSetting =
+    existing ??
+    (await prisma.taxSetting.create({
+      data: {
+        personalDeduction: "11000000",
+        dependentDeduction: "4400000",
+        socialInsuranceRate: "8",
+        healthInsuranceRate: "1.5",
+        unemploymentInsuranceRate: "1",
+        effectiveFrom: new Date("2026-01-01T00:00:00.000Z"),
+        status: "active",
+        metadata: {
+          currency: "VND",
+          note: "Default personal income tax and employee insurance contribution settings."
+        }
+      }
+    }));
+
+  if (existing?.taxBrackets.length) {
+    return;
+  }
+
+  for (const bracket of taxBrackets) {
+    await prisma.taxBracket.upsert({
+      where: {
+        taxSettingId_level: {
+          taxSettingId: taxSetting.id,
+          level: bracket.level
+        }
+      },
+      update: {},
+      create: {
+        taxSettingId: taxSetting.id,
+        level: bracket.level,
+        incomeFrom: bracket.incomeFrom,
+        incomeTo: bracket.incomeTo,
+        taxRate: bracket.taxRate
+      }
+    });
+  }
+}
+
+async function main() {
+  await seedRolesAndPermissions();
+  await seedDocumentTypes();
+  await seedEmailTemplates();
+  await seedTaxSetting();
+}
+
 main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
   .finally(async () => {
     await prisma.$disconnect();
-  })
-  .catch(async (error) => {
-    console.error(error);
-    await prisma.$disconnect();
-    process.exit(1);
   });
