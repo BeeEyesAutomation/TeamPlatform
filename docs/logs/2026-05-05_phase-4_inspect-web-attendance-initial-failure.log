@@ -1,0 +1,6 @@
+Get-ChildItem : Could not find a part of the path 'C:\TeamPlatform\apps\web\app\apps\web\features'.
+At line:2 char:1
++ Get-ChildItem -Recurse -File apps\web\features\attendance apps\web\ap ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : ReadError: (C:\TeamPlatform\apps\web\app:String) [Get-ChildItem], DirectoryNotFoundException
+    + FullyQualifiedErrorId : DirIOError,Microsoft.PowerShell.Commands.GetChildItemCommand

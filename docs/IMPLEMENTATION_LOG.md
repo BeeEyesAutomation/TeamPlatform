@@ -1,5 +1,140 @@
 # Implementation Log
 
+## 2026-05-05 - Phase 4: Manual Attendance
+
+### Current Phase
+
+Phase 4: Manual Attendance.
+
+### Scope
+
+- Implement manual attendance by date with active employee list defaulting to `present`.
+- Save attendance records with only allowed statuses: `present`, `leave_paid`, and `leave_unpaid`.
+- Add monthly attendance summaries and attendance month lock/unlock.
+- Add RBAC and audit logs for save, lock, and unlock actions.
+- Add a basic frontend attendance page for daily roll call, monthly summary, and lock/unlock controls.
+- Do not implement payroll, allowances, projects, email automation, import/export, reports, GPS, QR code, or check-in/check-out.
+
+### Assumptions
+
+- Business dates are normalized to UTC midnight from `YYYY-MM-DD` input.
+- Month values are stored as `YYYY-MM` strings for attendance locks.
+- Saving attendance upserts one record per visible active employee for the selected date, with missing statuses defaulting to `present`.
+- Lock/unlock is controlled by `attendance.lock`; save and attendance views require `attendance.manage`.
+- Existing local unrelated `apps/api/tsconfig.json`, `apps/web/tsconfig.json`, and `.vscode/` changes remain out of scope.
+
+### Changed Files Summary
+
+- `apps/api/prisma/schema.prisma`: Added `AttendanceLock` model for month locking.
+- `apps/api/prisma/migrations/20260505190000_add_attendance_locks/migration.sql`: Added migration SQL for `attendance_locks`.
+- `apps/api/src/modules/attendance/*`: Implemented attendance schemas, date helpers, repository, service, and routes for daily attendance, save, monthly summary, lock, and unlock.
+- `apps/web/app/attendance/page.tsx`: Added basic attendance page route.
+- `apps/web/features/attendance/*`: Added attendance API client and daily/monthly attendance UI.
+- `apps/web/types/attendance.ts`: Added attendance response and status types.
+- `apps/web/components/layout/app-shell.tsx`: Pointed the Attendance navigation item to `/attendance`.
+- `docs/logs/2026-05-05_phase-4_*.log`: Added logs for command failures and inspection output.
+- `docs/IMPLEMENTATION_LOG.md`: Finalized the Phase 4 work log.
+
+### Planned Commands
+
+- `npx prisma format`
+- `npx prisma validate`
+- `npx prisma generate`
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+- Targeted attendance tests only if executable in this environment.
+- `git diff --check`
+
+### Commands Run
+
+- `Get-Content -Raw AGENTS.md`
+- `Get-Content -Raw docs\IMPLEMENTATION_LOG.md`
+- `Get-Content -Raw docs\DECISIONS.md`
+- `git status --short --branch`
+- `Select-String -Path PLAN.md -Pattern '^## Phase 4' -Context 0,35`
+- `Select-String -Path REQUIREMENTS.md -Pattern '^## 3\.' -Context 0,20`
+- `Select-String -Path DATABASE.md -Pattern '^## attendance_records$|^## attendance_locks$|^## employees$|^## departments$' -Context 0,30`
+- `Select-String -Path API.md -Pattern '^## Attendance$' -Context 0,15`
+- `Select-String -Path WORKFLOWS.md -Pattern '^## 2\.' -Context 0,35`
+- `Get-Content -Raw apps\api\src\modules\attendance\attendance.routes.ts`
+- `Get-ChildItem -Recurse -File apps\web\features\attendance apps\web\app`
+- `Get-ChildItem -Recurse -File apps\web\features\attendance,apps\web\app`
+- `Select-String -Path apps\api\prisma\schema.prisma -Pattern 'model AttendanceRecord|model AttendanceLock|enum AttendanceStatus|model Employee|model Department' -Context 0,30`
+- `Get-Content -Raw apps\api\src\modules\hr\hr.schemas.ts`
+- `Get-Content -Raw apps\web\features\hr\hr-api.ts`
+- `Get-Content -Raw apps\web\lib\api-client.ts`
+- `Get-Content -Raw apps\api\src\modules\employees\employees.repository.ts`
+- `npx prisma format`
+- `npx prisma validate`
+- `npx prisma generate`
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+- `npm run test --workspace apps/api -- attendance`
+- `git diff --check`
+- `git status --short --branch`
+- `git diff --stat`
+- `Get-ChildItem -File docs\logs\2026-05-05_phase-4_*`
+- `Get-ChildItem -Recurse -File apps\api\docs -ErrorAction SilentlyContinue`
+
+### Tests Run
+
+- `git diff --check` passed.
+- `npx prisma format` failed.
+  - Log file: `docs/logs/2026-05-05_phase-4_prisma-format.log`
+  - Detected error category: `missing_system_tool`
+  - Root cause: `npx` is not installed or not available on `PATH`.
+  - Attempted fix: Existing `docs/SETUP_TROUBLESHOOTING.md` already documents Node/npm/npx installation steps.
+  - Rerun result: Not rerun, because this requires system software setup.
+  - Remaining manual action: Install Node.js/npm/npx and rerun Prisma format.
+- `npx prisma validate` failed.
+  - Log file: `docs/logs/2026-05-05_phase-4_prisma-validate.log`
+  - Detected error category: `missing_system_tool`
+  - Root cause: `npx` is not installed or not available on `PATH`.
+  - Attempted fix: Existing `docs/SETUP_TROUBLESHOOTING.md` already documents Node/npm/npx installation steps.
+  - Rerun result: Not rerun, because this requires system software setup.
+  - Remaining manual action: Install Node.js/npm/npx and rerun Prisma validate.
+- `npx prisma generate` failed.
+  - Log file: `docs/logs/2026-05-05_phase-4_prisma-generate.log`
+  - Detected error category: `missing_system_tool`
+  - Root cause: `npx` is not installed or not available on `PATH`.
+  - Attempted fix: Existing `docs/SETUP_TROUBLESHOOTING.md` already documents Node/npm/npx installation steps.
+  - Rerun result: Not rerun, because this requires system software setup.
+  - Remaining manual action: Install Node.js/npm/npx and rerun Prisma generate.
+- `npm run typecheck --workspace apps/api` failed.
+  - Log file: `docs/logs/2026-05-05_phase-4_api-typecheck.log`
+  - Detected error category: `missing_system_tool`
+  - Root cause: `npm` is not installed or not available on `PATH`.
+  - Attempted fix: Existing `docs/SETUP_TROUBLESHOOTING.md` already documents Node/npm/npx installation steps.
+  - Rerun result: Not rerun, because this requires system software setup.
+  - Remaining manual action: Install Node.js/npm and rerun API typecheck.
+- `npm run typecheck --workspace apps/web` failed.
+  - Log file: `docs/logs/2026-05-05_phase-4_web-typecheck.log`
+  - Detected error category: `missing_system_tool`
+  - Root cause: `npm` is not installed or not available on `PATH`.
+  - Attempted fix: Existing `docs/SETUP_TROUBLESHOOTING.md` already documents Node/npm/npx installation steps.
+  - Rerun result: Not rerun, because this requires system software setup.
+  - Remaining manual action: Install Node.js/npm and rerun web typecheck.
+- `npm run test --workspace apps/api -- attendance` failed.
+  - Log file: `docs/logs/2026-05-05_phase-4_targeted-tests.log`
+  - Detected error category: `missing_system_tool`
+  - Root cause: `npm` is not installed or not available on `PATH`.
+  - Attempted fix: Existing `docs/SETUP_TROUBLESHOOTING.md` already documents Node/npm/npx installation steps.
+  - Rerun result: Not rerun, because this requires system software setup.
+  - Remaining manual action: Install Node.js/npm and rerun targeted attendance tests.
+- Initial attendance frontend inspection command failed due an incorrect path expression.
+  - Log file: `docs/logs/2026-05-05_phase-4_inspect-web-attendance-initial-failure.log`
+  - Detected error category: `unknown`
+  - Root cause: Incorrect command path caused PowerShell to resolve a nested non-existent path.
+  - Attempted fix: Reran the inspection command with comma-separated literal paths.
+  - Rerun result: Succeeded; output saved to `docs/logs/2026-05-05_phase-4_inspect-web-attendance.log`.
+- Full test suite, production build, and e2e tests were not run.
+
+### Known TODOs
+
+- Install Node.js/npm/npx and rerun Prisma format/validate/generate, API typecheck, web typecheck, and targeted attendance tests.
+- Run the new attendance lock migration before using lock/unlock locally.
+- Existing unrelated local `apps/api/tsconfig.json`, `apps/web/tsconfig.json`, and `.vscode/` changes remain unstaged and out of scope.
+
 ## 2026-05-05 - Phase 3: Employee, Department, and Position Management
 
 ### Current Phase
