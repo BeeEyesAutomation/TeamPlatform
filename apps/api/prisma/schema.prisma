@@ -1,0 +1,703 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RecordStatus {
+  active
+  inactive
+}
+
+enum EmployeeStatus {
+  probation
+  active
+  temporarily_inactive
+  resigned
+}
+
+enum EmploymentType {
+  official
+  probation
+  seasonal
+  part_time
+}
+
+enum AttendanceStatus {
+  present
+  leave_paid
+  leave_unpaid
+}
+
+enum AllowanceCalculationType {
+  fixed_monthly
+  per_working_day
+  attendance_rate
+  manual_bonus
+  project_bonus
+  deduction
+}
+
+enum ApplyScope {
+  company
+  department
+  position
+  employee
+}
+
+enum PayrollStatus {
+  draft
+  finalized
+  published
+  locked
+}
+
+enum ProjectStatus {
+  planning
+  in_progress
+  paused
+  completed
+  cancelled
+}
+
+enum ProjectTaskStatus {
+  todo
+  confirmed
+  in_progress
+  pending_review
+  completed
+  cancelled
+}
+
+enum ProjectIssueStatus {
+  new
+  in_progress
+  waiting_confirmation
+  resolved
+  closed
+}
+
+enum MaterialStatus {
+  not_ordered
+  purchase_requested
+  purchasing
+  received
+  issued
+  shortage
+  cancelled
+}
+
+enum SecurityLevel {
+  project_public
+  internal_company
+  pm_admin_only
+  accounting
+  confidential
+  client_shared
+}
+
+enum DocumentStatus {
+  draft
+  pending_approval
+  approved
+  rejected
+  archived
+}
+
+enum EmailLogStatus {
+  pending
+  sent
+  failed
+  retrying
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique @db.VarChar(255)
+  passwordHash String     @map("password_hash") @db.VarChar(255)
+  fullName     String     @map("full_name") @db.VarChar(255)
+  employeeId   String?    @unique @map("employee_id")
+  employee     Employee?  @relation(fields: [employeeId], references: [id])
+  isActive     Boolean    @default(true) @map("is_active")
+  lastLoginAt  DateTime?  @map("last_login_at")
+  userRoles    UserRole[]
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("users")
+}
+
+model Role {
+  id                  String               @id @default(uuid())
+  code                String               @unique @db.VarChar(100)
+  name                String               @db.VarChar(255)
+  description         String?              @db.Text
+  status              RecordStatus         @default(active)
+  rolePermissions     RolePermission[]
+  userRoles           UserRole[]
+  documentPermissions DocumentPermission[]
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("roles")
+}
+
+model Permission {
+  id              String           @id @default(uuid())
+  code            String           @unique @db.VarChar(150)
+  name            String           @db.VarChar(255)
+  description     String?          @db.Text
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String     @id @default(uuid())
+  roleId       String     @map("role_id")
+  permissionId String     @map("permission_id")
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  roleId String @map("role_id")
+  user   User   @relation(fields: [userId], references: [id])
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model Department {
+  id          String       @id @default(uuid())
+  name        String       @db.VarChar(255)
+  code        String       @unique @db.VarChar(100)
+  description String?      @db.Text
+  status      RecordStatus @default(active)
+  employees   Employee[]
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("departments")
+}
+
+model Position {
+  id               String       @id @default(uuid())
+  name             String       @db.VarChar(255)
+  code             String       @unique @db.VarChar(100)
+  description      String?      @db.Text
+  baseSalary       Decimal      @map("base_salary") @db.Decimal(18, 2)
+  salaryStepAmount Decimal      @map("salary_step_amount") @db.Decimal(18, 2)
+  status           RecordStatus @default(active)
+  employees        Employee[]
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("positions")
+}
+
+model Employee {
+  id                       String              @id @default(uuid())
+  employeeCode             String              @unique @map("employee_code") @db.VarChar(100)
+  fullName                 String              @map("full_name") @db.VarChar(255)
+  phone                    String?             @db.VarChar(50)
+  email                    String?             @db.VarChar(255)
+  dateOfBirth              DateTime?           @map("date_of_birth")
+  gender                   String?             @db.VarChar(50)
+  address                  String?             @db.Text
+  avatarUrl                String?             @map("avatar_url") @db.Text
+  citizenIdNumber          String?             @map("citizen_id_number") @db.VarChar(100)
+  citizenIdIssueDate       DateTime?           @map("citizen_id_issue_date")
+  citizenIdIssuePlace      String?             @map("citizen_id_issue_place") @db.VarChar(255)
+  citizenIdFrontImageUrl   String?             @map("citizen_id_front_image_url") @db.Text
+  citizenIdBackImageUrl    String?             @map("citizen_id_back_image_url") @db.Text
+  bankName                 String?             @map("bank_name") @db.VarChar(255)
+  bankAccountNumber        String?             @map("bank_account_number") @db.VarChar(100)
+  bankAccountHolder        String?             @map("bank_account_holder") @db.VarChar(255)
+  bankBranch               String?             @map("bank_branch") @db.VarChar(255)
+  departmentId             String?             @map("department_id")
+  positionId               String?             @map("position_id")
+  salaryLevel              Int                 @default(0) @map("salary_level")
+  startDate                DateTime?           @map("start_date")
+  employmentType           EmploymentType      @default(official) @map("employment_type")
+  status                   EmployeeStatus      @default(active)
+  emergencyContactName     String?             @map("emergency_contact_name") @db.VarChar(255)
+  emergencyContactPhone    String?             @map("emergency_contact_phone") @db.VarChar(50)
+  emergencyContactRelation String?             @map("emergency_contact_relation") @db.VarChar(100)
+  dependentCount           Int                 @default(0) @map("dependent_count")
+  department               Department?         @relation(fields: [departmentId], references: [id])
+  position                 Position?           @relation(fields: [positionId], references: [id])
+  user                     User?
+  attendanceRecords        AttendanceRecord[]
+  payrolls                 Payroll[]
+  createdAt                DateTime            @default(now()) @map("created_at")
+  updatedAt                DateTime            @updatedAt @map("updated_at")
+  deletedAt                DateTime?           @map("deleted_at")
+
+  @@index([departmentId])
+  @@index([positionId])
+  @@index([status])
+  @@map("employees")
+}
+
+model AttendanceRecord {
+  id          String           @id @default(uuid())
+  employeeId  String           @map("employee_id")
+  date        DateTime
+  status      AttendanceStatus @default(present)
+  note        String?          @db.Text
+  createdById String?          @map("created_by_id")
+  updatedById String?          @map("updated_by_id")
+  employee    Employee         @relation(fields: [employeeId], references: [id])
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  @@unique([employeeId, date])
+  @@index([date])
+  @@index([status])
+  @@map("attendance_records")
+}
+
+model AttendanceLock {
+  id         String    @id @default(uuid())
+  month      String    @unique @db.VarChar(7)
+  lockedById String?   @map("locked_by_id")
+  lockedAt   DateTime? @map("locked_at")
+  isLocked   Boolean   @default(false) @map("is_locked")
+  note       String?   @db.Text
+
+  @@index([month])
+  @@map("attendance_locks")
+}
+
+model AllowanceType {
+  id                String                   @id @default(uuid())
+  name              String                   @db.VarChar(255)
+  code              String                   @unique @db.VarChar(100)
+  calculationType   AllowanceCalculationType @map("calculation_type")
+  amount            Decimal                  @db.Decimal(18, 2)
+  unit              String?                  @db.VarChar(50)
+  isTaxable         Boolean                  @default(false) @map("is_taxable")
+  isInsuranceBased  Boolean                  @default(false) @map("is_insurance_based")
+  applyScope        ApplyScope               @default(company) @map("apply_scope")
+  status            RecordStatus             @default(active)
+  allowanceRules    AllowanceRule[]
+  payrollItems      PayrollItem[]
+  createdAt         DateTime                 @default(now()) @map("created_at")
+  updatedAt         DateTime                 @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([calculationType])
+  @@map("allowance_types")
+}
+
+model AllowanceRule {
+  id                   String        @id @default(uuid())
+  allowanceTypeId      String        @map("allowance_type_id")
+  minAttendancePercent Decimal?      @map("min_attendance_percent") @db.Decimal(5, 2)
+  amount               Decimal       @db.Decimal(18, 2)
+  applyScope           ApplyScope    @map("apply_scope")
+  departmentId         String?       @map("department_id")
+  positionId           String?       @map("position_id")
+  employeeId           String?       @map("employee_id")
+  effectiveFrom        DateTime      @map("effective_from")
+  effectiveTo          DateTime?     @map("effective_to")
+  status               RecordStatus  @default(active)
+  allowanceType        AllowanceType @relation(fields: [allowanceTypeId], references: [id])
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+
+  @@index([allowanceTypeId])
+  @@index([status])
+  @@map("allowance_rules")
+}
+
+model SalaryAdvance {
+  id          String   @id @default(uuid())
+  employeeId  String   @map("employee_id")
+  month       String   @db.VarChar(7)
+  amount      Decimal  @db.Decimal(18, 2)
+  advanceDate DateTime @map("advance_date")
+  note        String?  @db.Text
+  createdById String?  @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([employeeId])
+  @@index([month])
+  @@map("salary_advances")
+}
+
+model TaxSetting {
+  id                       String       @id @default(uuid())
+  personalDeduction        Decimal      @map("personal_deduction") @db.Decimal(18, 2)
+  dependentDeduction       Decimal      @map("dependent_deduction") @db.Decimal(18, 2)
+  socialInsuranceRate      Decimal      @map("social_insurance_rate") @db.Decimal(5, 2)
+  healthInsuranceRate      Decimal      @map("health_insurance_rate") @db.Decimal(5, 2)
+  unemploymentInsuranceRate Decimal     @map("unemployment_insurance_rate") @db.Decimal(5, 2)
+  effectiveFrom            DateTime     @map("effective_from")
+  status                   RecordStatus @default(active)
+  taxBrackets              TaxBracket[]
+  createdAt                DateTime     @default(now()) @map("created_at")
+  updatedAt                DateTime     @updatedAt @map("updated_at")
+
+  @@index([effectiveFrom])
+  @@index([status])
+  @@map("tax_settings")
+}
+
+model TaxBracket {
+  id           String     @id @default(uuid())
+  taxSettingId String     @map("tax_setting_id")
+  level        Int
+  incomeFrom   Decimal    @map("income_from") @db.Decimal(18, 2)
+  incomeTo     Decimal?   @map("income_to") @db.Decimal(18, 2)
+  taxRate      Decimal    @map("tax_rate") @db.Decimal(5, 2)
+  taxSetting   TaxSetting @relation(fields: [taxSettingId], references: [id])
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  @@index([taxSettingId])
+  @@map("tax_brackets")
+}
+
+model Payroll {
+  id                            String        @id @default(uuid())
+  employeeId                    String        @map("employee_id")
+  month                         String        @db.VarChar(7)
+  positionSalary                Decimal       @map("position_salary") @db.Decimal(18, 2)
+  totalAllowances               Decimal       @map("total_allowances") @db.Decimal(18, 2)
+  totalBonuses                  Decimal       @map("total_bonuses") @db.Decimal(18, 2)
+  totalDeductions               Decimal       @map("total_deductions") @db.Decimal(18, 2)
+  insuranceBase                 Decimal       @map("insurance_base") @db.Decimal(18, 2)
+  socialInsurance               Decimal       @map("social_insurance") @db.Decimal(18, 2)
+  healthInsurance               Decimal       @map("health_insurance") @db.Decimal(18, 2)
+  unemploymentInsurance         Decimal       @map("unemployment_insurance") @db.Decimal(18, 2)
+  taxableIncome                 Decimal       @map("taxable_income") @db.Decimal(18, 2)
+  personalDeduction             Decimal       @map("personal_deduction") @db.Decimal(18, 2)
+  dependentDeduction            Decimal       @map("dependent_deduction") @db.Decimal(18, 2)
+  taxableIncomeAfterDeduction   Decimal       @map("taxable_income_after_deduction") @db.Decimal(18, 2)
+  personalIncomeTax             Decimal       @map("personal_income_tax") @db.Decimal(18, 2)
+  salaryAdvance                 Decimal       @map("salary_advance") @db.Decimal(18, 2)
+  netSalary                     Decimal       @map("net_salary") @db.Decimal(18, 2)
+  status                        PayrollStatus @default(draft)
+  calculatedById                String?       @map("calculated_by_id")
+  finalizedById                 String?       @map("finalized_by_id")
+  finalizedAt                   DateTime?     @map("finalized_at")
+  employee                      Employee      @relation(fields: [employeeId], references: [id])
+  payrollItems                  PayrollItem[]
+  createdAt                     DateTime      @default(now()) @map("created_at")
+  updatedAt                     DateTime      @updatedAt @map("updated_at")
+
+  @@unique([employeeId, month])
+  @@index([month])
+  @@index([status])
+  @@map("payrolls")
+}
+
+model PayrollItem {
+  id               String         @id @default(uuid())
+  payrollId        String         @map("payroll_id")
+  allowanceTypeId  String?        @map("allowance_type_id")
+  name             String         @db.VarChar(255)
+  code             String         @db.VarChar(100)
+  type             String         @db.VarChar(100)
+  amount           Decimal        @db.Decimal(18, 2)
+  isTaxable        Boolean        @default(false) @map("is_taxable")
+  isInsuranceBased Boolean        @default(false) @map("is_insurance_based")
+  note             String?        @db.Text
+  payroll          Payroll        @relation(fields: [payrollId], references: [id])
+  allowanceType    AllowanceType? @relation(fields: [allowanceTypeId], references: [id])
+  createdAt        DateTime       @default(now()) @map("created_at")
+
+  @@index([payrollId])
+  @@map("payroll_items")
+}
+
+model PayrollLock {
+  id         String    @id @default(uuid())
+  month      String    @unique @db.VarChar(7)
+  lockedById String?   @map("locked_by_id")
+  lockedAt   DateTime? @map("locked_at")
+  isLocked   Boolean   @default(false) @map("is_locked")
+  note       String?   @db.Text
+
+  @@index([month])
+  @@map("payroll_locks")
+}
+
+model SmtpSetting {
+  id                String   @id @default(uuid())
+  host              String   @db.VarChar(255)
+  port              Int
+  username          String   @db.VarChar(255)
+  passwordEncrypted String   @map("password_encrypted") @db.Text
+  fromEmail         String   @map("from_email") @db.VarChar(255)
+  fromName          String   @map("from_name") @db.VarChar(255)
+  encryption        String   @db.VarChar(50)
+  isActive          Boolean  @default(false) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("smtp_settings")
+}
+
+model EmailTemplate {
+  id        String   @id @default(uuid())
+  code      String   @unique @db.VarChar(100)
+  name      String   @db.VarChar(255)
+  subject   String   @db.VarChar(255)
+  body      String   @db.Text
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("email_templates")
+}
+
+model EmailLog {
+  id           String         @id @default(uuid())
+  toEmail      String         @map("to_email") @db.VarChar(255)
+  subject      String         @db.VarChar(255)
+  templateCode String?        @map("template_code") @db.VarChar(100)
+  status       EmailLogStatus @default(pending)
+  errorMessage String?        @map("error_message") @db.Text
+  sentAt       DateTime?      @map("sent_at")
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("email_logs")
+}
+
+model Project {
+  id                String            @id @default(uuid())
+  projectCode       String            @unique @map("project_code") @db.VarChar(100)
+  name              String            @db.VarChar(255)
+  customerName      String?           @map("customer_name") @db.VarChar(255)
+  customerEmail     String?           @map("customer_email") @db.VarChar(255)
+  description       String?           @db.Text
+  managerId         String?           @map("manager_id")
+  startDate         DateTime?         @map("start_date")
+  endDate           DateTime?         @map("end_date")
+  actualCompletedDate DateTime?       @map("actual_completed_date")
+  location          String?           @db.VarChar(255)
+  status            ProjectStatus     @default(planning)
+  progressPercent   Decimal           @default(0) @map("progress_percent") @db.Decimal(5, 2)
+  budgetEstimated   Decimal?          @map("budget_estimated") @db.Decimal(18, 2)
+  budgetActual      Decimal?          @map("budget_actual") @db.Decimal(18, 2)
+  note              String?           @db.Text
+  tasks             ProjectTask[]
+  issues            ProjectIssue[]
+  documents         ProjectDocument[]
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  deletedAt         DateTime?         @map("deleted_at")
+
+  @@index([status])
+  @@index([managerId])
+  @@map("projects")
+}
+
+model ProjectTask {
+  id              String            @id @default(uuid())
+  projectId       String            @map("project_id")
+  title           String            @db.VarChar(255)
+  description     String?           @db.Text
+  assigneeId      String?           @map("assignee_id")
+  assignedById    String?           @map("assigned_by_id")
+  priority        String?           @db.VarChar(50)
+  status          ProjectTaskStatus @default(todo)
+  progressPercent Decimal           @default(0) @map("progress_percent") @db.Decimal(5, 2)
+  startDate       DateTime?         @map("start_date")
+  deadline        DateTime?
+  project         Project           @relation(fields: [projectId], references: [id])
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  @@index([projectId])
+  @@index([status])
+  @@map("project_tasks")
+}
+
+model ProjectIssue {
+  id           String             @id @default(uuid())
+  projectId    String             @map("project_id")
+  taskId       String?            @map("task_id")
+  title        String             @db.VarChar(255)
+  description  String?            @db.Text
+  severity     String?            @db.VarChar(50)
+  reportedById String?            @map("reported_by_id")
+  assignedToId String?            @map("assigned_to_id")
+  status       ProjectIssueStatus @default(new)
+  rootCause    String?            @map("root_cause") @db.Text
+  solution     String?            @db.Text
+  deadline     DateTime?
+  closedAt     DateTime?          @map("closed_at")
+  project      Project            @relation(fields: [projectId], references: [id])
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+
+  @@index([projectId])
+  @@index([status])
+  @@map("project_issues")
+}
+
+model ProjectMaterial {
+  id                 String         @id @default(uuid())
+  projectId          String         @map("project_id")
+  materialCode       String         @map("material_code") @db.VarChar(100)
+  materialName       String         @map("material_name") @db.VarChar(255)
+  unit               String         @db.VarChar(50)
+  plannedQuantity    Decimal        @map("planned_quantity") @db.Decimal(18, 3)
+  usedQuantity       Decimal        @default(0) @map("used_quantity") @db.Decimal(18, 3)
+  remainingQuantity  Decimal        @default(0) @map("remaining_quantity") @db.Decimal(18, 3)
+  estimatedUnitPrice Decimal?       @map("estimated_unit_price") @db.Decimal(18, 2)
+  actualUnitPrice    Decimal?       @map("actual_unit_price") @db.Decimal(18, 2)
+  supplierName       String?        @map("supplier_name") @db.VarChar(255)
+  neededDate         DateTime?      @map("needed_date")
+  status             MaterialStatus @default(not_ordered)
+  note               String?        @db.Text
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+
+  @@index([projectId])
+  @@index([materialCode])
+  @@index([status])
+  @@map("project_materials")
+}
+
+model DocumentType {
+  id                  String               @id @default(uuid())
+  code                String               @unique @db.VarChar(100)
+  name                String               @db.VarChar(255)
+  description         String?              @db.Text
+  status              RecordStatus         @default(active)
+  documents           ProjectDocument[]
+  documentPermissions DocumentPermission[]
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("document_types")
+}
+
+model ProjectDocument {
+  id             String        @id @default(uuid())
+  projectId      String        @map("project_id")
+  documentTypeId String        @map("document_type_id")
+  title          String        @db.VarChar(255)
+  fileName       String        @map("file_name") @db.VarChar(255)
+  fileUrl        String        @map("file_url") @db.Text
+  fileSize       Int?          @map("file_size")
+  mimeType       String?       @map("mime_type") @db.VarChar(100)
+  version        String        @default("1") @db.VarChar(50)
+  securityLevel  SecurityLevel @map("security_level")
+  status         DocumentStatus @default(draft)
+  uploadedById   String?       @map("uploaded_by_id")
+  approvedById   String?       @map("approved_by_id")
+  approvedAt     DateTime?     @map("approved_at")
+  note           String?       @db.Text
+  project        Project       @relation(fields: [projectId], references: [id])
+  documentType   DocumentType  @relation(fields: [documentTypeId], references: [id])
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  @@index([projectId])
+  @@index([documentTypeId])
+  @@index([securityLevel])
+  @@index([status])
+  @@map("project_documents")
+}
+
+model DocumentPermission {
+  id             String        @id @default(uuid())
+  documentTypeId String        @map("document_type_id")
+  roleId         String        @map("role_id")
+  securityLevel  SecurityLevel? @map("security_level")
+  canView        Boolean       @default(false) @map("can_view")
+  canUpload      Boolean       @default(false) @map("can_upload")
+  canEdit        Boolean       @default(false) @map("can_edit")
+  canDelete      Boolean       @default(false) @map("can_delete")
+  canDownload    Boolean       @default(false) @map("can_download")
+  canApprove     Boolean       @default(false) @map("can_approve")
+  documentType   DocumentType  @relation(fields: [documentTypeId], references: [id])
+  role           Role          @relation(fields: [roleId], references: [id])
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  @@unique([documentTypeId, roleId, securityLevel])
+  @@index([roleId])
+  @@map("document_permissions")
+}
+
+model ImportLog {
+  id           String   @id @default(uuid())
+  importType   String   @map("import_type") @db.VarChar(100)
+  fileName     String   @map("file_name") @db.VarChar(255)
+  status       String   @db.VarChar(50)
+  totalRows    Int      @default(0) @map("total_rows")
+  successRows  Int      @default(0) @map("success_rows")
+  failedRows   Int      @default(0) @map("failed_rows")
+  errorFileUrl String?  @map("error_file_url") @db.Text
+  importedById String?  @map("imported_by_id")
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([importType])
+  @@index([status])
+  @@map("project_import_logs")
+}
+
+model ExportLog {
+  id           String   @id @default(uuid())
+  exportType   String   @map("export_type") @db.VarChar(100)
+  fileName     String   @map("file_name") @db.VarChar(255)
+  format       String   @db.VarChar(50)
+  filtersJson  Json?    @map("filters_json")
+  exportedById String?  @map("exported_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([exportType])
+  @@index([format])
+  @@map("project_export_logs")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?  @map("actor_id")
+  action     String   @db.VarChar(100)
+  module     String   @db.VarChar(100)
+  targetType String?  @map("target_type") @db.VarChar(100)
+  targetId   String?  @map("target_id") @db.VarChar(100)
+  oldValue   Json?    @map("old_value")
+  newValue   Json?    @map("new_value")
+  ipAddress  String?  @map("ip_address") @db.VarChar(100)
+  userAgent  String?  @map("user_agent") @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([actorId])
+  @@index([module])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
