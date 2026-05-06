@@ -1,5 +1,79 @@
 # Implementation Log
 
+## 2026-05-06 - Phase 6 Payroll Calculation and Payslips
+
+### Current Phase
+
+Phase 6: Payroll Calculation and Payslips.
+
+### Scope
+
+- Implement Decimal-safe payroll calculation using position salary, attendance, configured allowances, salary advances, insurance, tax brackets, deductions, and net salary.
+- Store itemized payroll items for each calculated payroll record.
+- Implement payroll calculation, list/detail, approve, publish, lock, and employee self-service payslip APIs.
+- Add RBAC and audit logs for payroll calculation and state changes.
+- Add basic frontend pages for payroll calculation, payroll list/detail, and employee payslip view.
+- Add targeted payroll unit tests for required formulas and calculation branches.
+- Do not implement project, email, import/export, reports, production exports, or full payroll email notification.
+
+### Assumptions
+
+- Month values remain `YYYY-MM` strings.
+- `position_salary` is calculated from the employee position and salary level; employees without a position are skipped for calculation.
+- Existing manual attendance records define working days for the month; missing employee records on saved attendance dates are treated as `present`.
+- Configured allowance types with `company` scope apply to all active employees; employee monthly allowances cover manual bonuses, project bonuses, deductions, and employee-specific adjustments when present.
+- Attendance-rate allowance threshold is read from `allowanceType.metadata.minAttendancePercent` when present; otherwise the allowance is not granted unless the threshold is absent.
+- Insurance uses the configured percentage rates against the insurance base.
+- Existing unrelated working tree changes are not reverted.
+
+### Planned Commands
+
+- `npx prisma format` if Prisma schema changes are required.
+- `npx prisma validate` if Prisma schema changes are required.
+- `npx prisma generate` if Prisma schema changes are required.
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+- Targeted payroll unit tests only.
+- `git diff --check`
+
+### Result
+
+- Implemented Decimal-safe payroll calculator with position salary, configured allowances, insurance, tax brackets, deductions, salary advance field support, and net salary.
+- Stored itemized payroll items during calculation and replaced draft item rows on recalculation.
+- Added payroll APIs for calculate, list, detail, approve/finalize, publish, lock, and self-service payslip.
+- Added RBAC checks for payroll view/manage/publish and audit logs for calculation and status changes.
+- Added payroll calculation/list, detail, and employee payslip pages.
+- Added targeted payroll calculator tests for salary formula, per-working-day allowance, attendance-rate allowance, taxable and insurance-based item separation, progressive tax brackets, and net salary.
+- Prisma schema was not changed, so Prisma format/validate/generate were not run.
+
+### Changed Files Summary
+
+- Backend payroll: `apps/api/src/modules/payroll/payroll.calculator.ts`, `apps/api/src/modules/payroll/payroll.service.ts`, `apps/api/src/modules/payroll/payroll.routes.ts`, `apps/api/src/modules/payroll/payroll.schemas.ts`, `apps/api/src/routes.ts`
+- Backend tests: `apps/api/src/modules/payroll/payroll.calculator.test.ts`
+- Backend RBAC seed: `apps/api/prisma/seed.ts`
+- Typecheck unblockers: `apps/api/src/modules/employees/employees.service.ts`, `apps/api/src/modules/positions/positions.service.ts`
+- Frontend payroll: `apps/web/app/payroll/page.tsx`, `apps/web/app/payroll/[id]/page.tsx`, `apps/web/app/payroll/payslip/page.tsx`, `apps/web/features/payroll/payroll-client.tsx`, `apps/web/features/payroll/payroll-detail-client.tsx`, `apps/web/features/payroll/payslip-client.tsx`, `apps/web/features/payroll/payroll-api.ts`, `apps/web/types/payroll.ts`, `apps/web/components/layout/app-shell.tsx`
+- Logs: `docs/logs/2026-05-06_phase-6_*.log`
+
+### Commands Run
+
+- `npm run test --workspace apps/api -- payroll.calculator` - failed once due an incorrect expected value in the new test, then passed after correcting the assertion.
+- `npm run typecheck --workspace apps/api` - failed once due pre-existing employee/position Prisma typing issues, then passed after narrow service typing fixes.
+- `npm run typecheck --workspace apps/web` - passed.
+- `git diff --check` - passed with line-ending warnings only.
+
+### Failures and Logs
+
+- `docs/logs/2026-05-06_phase-6_targeted-payroll-tests.log` - `test_assertion_error`; fixed expected progressive tax and net salary values.
+- `docs/logs/2026-05-06_phase-6_api-typecheck.log` - `type_error`; fixed narrow employee/position service Prisma input typing and generic masking typing.
+- `docs/logs/2026-05-06_phase-6_inspect-api-files.log`, `docs/logs/2026-05-06_phase-6_inspect-tests.log`, `docs/logs/2026-05-06_phase-6_inspect-web-files.log`, `docs/logs/2026-05-06_phase-6_inspect-schema-slice.log` - `unknown`; command syntax/path issues during inspection, corrected with narrower PowerShell commands.
+
+### Remaining TODOs
+
+- Salary advances, employee-specific manual bonuses, project bonuses, and employee monthly adjustments remain limited by the current schema/API surface; payroll currently uses configured company-scope allowance types and a zero salary advance default.
+- Payroll month locking is represented by per-payroll `locked` status; a separate month lock table/process is not yet implemented.
+- Existing unrelated working tree files were left untouched.
+
 ## 2026-05-06 - Phase 5 Payroll Configuration
 
 ### Current Phase

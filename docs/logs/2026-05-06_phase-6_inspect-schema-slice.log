@@ -1,0 +1,4 @@
+classification: unknown
+command: Get-Content apps/api/prisma/schema.prisma | Select-Object -Index 400..490
+
+PowerShell failed because Select-Object -Index requires an int array expression, not the literal string 400..490.

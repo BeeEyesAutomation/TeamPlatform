@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import type { z } from "zod";
 import { prisma } from "../../prisma/client";
 import { AppError } from "../../utils/app-error";
@@ -30,19 +31,33 @@ const sensitiveEmployeeFields = [
   "dependentCount"
 ] as const;
 
-const toEmployeeData = (data: EmployeeCreate | EmployeeUpdate) => ({
+type MaskableEmployee = Record<string, unknown> & {
+  position?: (Record<string, unknown> & {
+    baseSalary?: unknown;
+    salaryStepAmount?: unknown;
+  }) | null;
+};
+
+const toEmployeeCreateData = (data: EmployeeCreate): Prisma.EmployeeUncheckedCreateInput => ({
   ...data,
   dateOfBirth: data.dateOfBirth,
   citizenIdIssueDate: data.citizenIdIssueDate,
   startDate: data.startDate
 });
 
-const maskSensitiveFields = <T extends Record<string, any>>(employee: T, canViewSensitive: boolean) => {
+const toEmployeeUpdateData = (data: EmployeeUpdate): Prisma.EmployeeUncheckedUpdateInput => ({
+  ...data,
+  dateOfBirth: data.dateOfBirth,
+  citizenIdIssueDate: data.citizenIdIssueDate,
+  startDate: data.startDate
+});
+
+const maskSensitiveFields = <T extends MaskableEmployee>(employee: T, canViewSensitive: boolean) => {
   if (canViewSensitive) {
     return employee;
   }
 
-  const masked = { ...employee };
+  const masked = { ...employee } as MaskableEmployee;
   for (const field of sensitiveEmployeeFields) {
     if (field in masked) {
       masked[field] = null;
@@ -57,7 +72,7 @@ const maskSensitiveFields = <T extends Record<string, any>>(employee: T, canView
     };
   }
 
-  return masked;
+  return masked as T;
 };
 
 const getSensitiveChanges = (oldValue: Record<string, any>, newValue: Record<string, any>) => {
@@ -97,7 +112,7 @@ export async function getEmployee(id: string, context: RequestContext) {
 export async function createEmployee(data: EmployeeCreate, context: RequestContext) {
   try {
     const employee = await prisma.employee.create({
-      data: toEmployeeData(data),
+      data: toEmployeeCreateData(data),
       include: {
         department: true,
         position: true
@@ -145,7 +160,7 @@ export async function updateEmployee(id: string, data: EmployeeUpdate, context: 
   try {
     const employee = await prisma.employee.update({
       where: { id },
-      data: toEmployeeData(data),
+      data: toEmployeeUpdateData(data),
       include: {
         department: true,
         position: true

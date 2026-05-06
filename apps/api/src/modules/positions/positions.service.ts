@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import type { z } from "zod";
 import { prisma } from "../../prisma/client";
 import { AppError } from "../../utils/app-error";
@@ -16,7 +17,13 @@ interface RequestContext {
   userAgent?: string;
 }
 
-const toPositionData = (data: PositionCreate | PositionUpdate) => ({
+const toPositionCreateData = (data: PositionCreate): Prisma.PositionUncheckedCreateInput => ({
+  ...data,
+  baseSalary: data.baseSalary.toString(),
+  salaryStepAmount: data.salaryStepAmount.toString()
+});
+
+const toPositionUpdateData = (data: PositionUpdate): Prisma.PositionUncheckedUpdateInput => ({
   ...data,
   ...(data.baseSalary !== undefined ? { baseSalary: data.baseSalary.toString() } : {}),
   ...(data.salaryStepAmount !== undefined ? { salaryStepAmount: data.salaryStepAmount.toString() } : {})
@@ -44,7 +51,7 @@ export async function getPosition(id: string) {
 
 export async function createPosition(data: PositionCreate, context: RequestContext) {
   try {
-    const position = await prisma.position.create({ data: toPositionData(data) });
+    const position = await prisma.position.create({ data: toPositionCreateData(data) });
     await createAuditLog({
       actorId: context.actorId,
       action: "create",
@@ -68,7 +75,7 @@ export async function updatePosition(id: string, data: PositionUpdate, context: 
   try {
     const position = await prisma.position.update({
       where: { id },
-      data: toPositionData(data)
+      data: toPositionUpdateData(data)
     });
 
     await createAuditLog({

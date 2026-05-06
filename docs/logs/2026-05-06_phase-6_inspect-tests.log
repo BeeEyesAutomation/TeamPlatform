@@ -1,0 +1,4 @@
+classification: unknown
+command: Get-ChildItem -Recurse -File apps/api/src apps/api/test apps/api/tests -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '\.(test|spec)\.ts$|payroll' } | Select-Object -ExpandProperty FullName
+
+PowerShell parameter binding failed because multiple paths were passed positionally without -Path.

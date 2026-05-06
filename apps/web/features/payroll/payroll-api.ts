@@ -2,6 +2,8 @@ import { apiGet, apiJson } from "../../lib/api-client";
 import type {
   AllowanceType,
   AllowanceTypeListResponse,
+  Payroll,
+  PayrollListResponse,
   TaxBracket,
   TaxBracketListResponse,
   TaxSetting,
@@ -55,5 +57,33 @@ export function saveAllowanceType(body: Record<string, unknown>, id?: string) {
 
 export function deleteAllowanceType(id: string) {
   return apiJson<AllowanceType>(`/api/allowance-types/${id}`, "DELETE");
+}
+
+export function fetchPayrolls(params: Record<string, string | number | undefined> = {}) {
+  return apiGet<PayrollListResponse>(`/api/payrolls${buildQuery(params)}`);
+}
+
+export function calculatePayroll(month: string) {
+  return apiJson<PayrollListResponse>("/api/payrolls/calculate", "POST", { month });
+}
+
+export function fetchPayroll(id: string) {
+  return apiGet<Payroll>(`/api/payrolls/${id}`);
+}
+
+export function approvePayroll(id: string) {
+  return apiJson<Payroll>(`/api/payrolls/${id}/approve`, "POST");
+}
+
+export function publishPayroll(id: string) {
+  return apiJson<Payroll>(`/api/payrolls/${id}/publish`, "POST");
+}
+
+export function lockPayroll(id: string) {
+  return apiJson<Payroll>(`/api/payrolls/${id}/lock`, "POST");
+}
+
+export function fetchMyPayslip(month: string) {
+  return apiGet<Payroll>(`/api/payslips/me${buildQuery({ month })}`);
 }
 

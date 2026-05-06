@@ -203,23 +203,26 @@ async function seedRolesAndPermissions() {
     const role = await prisma.role.findUniqueOrThrow({
       where: { code: roleCode }
     });
-    const payrollConfigurationPermission = await prisma.permission.findUniqueOrThrow({
-      where: { code: "payroll.configure" }
-    });
 
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permissionId: {
+    for (const permissionCode of ["payroll.configure", "payroll.view", "payroll.manage", "payroll.publish"]) {
+      const payrollPermission = await prisma.permission.findUniqueOrThrow({
+        where: { code: permissionCode }
+      });
+
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId: role.id,
+            permissionId: payrollPermission.id
+          }
+        },
+        update: {},
+        create: {
           roleId: role.id,
-          permissionId: payrollConfigurationPermission.id
+          permissionId: payrollPermission.id
         }
-      },
-      update: {},
-      create: {
-        roleId: role.id,
-        permissionId: payrollConfigurationPermission.id
-      }
-    });
+      });
+    }
   }
 
   const passwordHash = await bcrypt.hash(adminPassword, bcryptSaltRounds);

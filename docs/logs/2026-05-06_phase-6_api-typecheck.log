@@ -1,0 +1,16 @@
+classification: type_error
+command: npm run typecheck --workspace apps/api
+
+> @team-platform/api@0.1.0 typecheck
+> tsc -p tsconfig.json --noEmit
+
+src/modules/employees/employees.service.ts(48,7): error TS2862: Type 'T' is generic and can only be indexed for reading.
+src/modules/employees/employees.service.ts(53,12): error TS2339: Property 'position' does not exist on type 'T'.
+src/modules/employees/employees.service.ts(100,7): error TS2322: Type '{ dateOfBirth: Date | undefined; citizenIdIssueDate: Date | undefined; startDate: Date | undefined; status: "probation" | "active" | "temporarily_inactive" | "resigned"; ... } | { ...; }' is not assignable to type '(Without<EmployeeCreateInput, EmployeeUncheckedCreateInput> & EmployeeUncheckedCreateInput) | (Without<...> & EmployeeCreateInput)'.
+src/modules/positions/positions.service.ts(47,53): error TS2322: Type '{ salaryStepAmount: string | number; baseSalary: string | number; code: string; status: "active" | "inactive"; name: string; description?: string | undefined; } | { ...; }' is not assignable to type '(Without<PositionCreateInput, PositionUncheckedCreateInput> & PositionUncheckedCreateInput) | (Without<...> & PositionCreateInput)'.
+
+Initial result:
+  API typecheck failed due existing employee and position service Prisma typing issues.
+
+Planned fix:
+  Apply the smallest service typing corrections and rerun this command once.
