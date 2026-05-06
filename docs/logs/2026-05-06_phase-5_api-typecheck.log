@@ -1,0 +1,55 @@
+classification: type_error
+command: npm run typecheck --workspace apps/api
+attempt: 2 after targeted config/schema fix
+
+
+> @team-platform/api@0.1.0 typecheck
+> tsc -p tsconfig.json --noEmit
+
+src/modules/allowances/allowances.service.ts(66,63): error TS2322: Type '{ code: string; status: "active" | "inactive"; name: string; calculationType: "fixed_monthly" | "per_working_day" | "attendance_rate" | "manual_bonus" | "project_bonus" | "deduction"; ... 5 more ...; unit?: string | undefined; }' is not assignable to type '(Without<AllowanceTypeCreateInput, AllowanceTypeUncheckedCreateInput> & AllowanceTypeUncheckedCreateInput) | (Without<...> & AllowanceTypeCreateInput)'.
+  Type '{ code: string; status: "active" | "inactive"; name: string; calculationType: "fixed_monthly" | "per_working_day" | "attendance_rate" | "manual_bonus" | "project_bonus" | "deduction"; ... 5 more ...; unit?: string | undefined; }' is not assignable to type 'Without<AllowanceTypeUncheckedCreateInput, AllowanceTypeCreateInput> & AllowanceTypeCreateInput'.
+    Type '{ code: string; status: "active" | "inactive"; name: string; calculationType: "fixed_monthly" | "per_working_day" | "attendance_rate" | "manual_bonus" | "project_bonus" | "deduction"; ... 5 more ...; unit?: string | undefined; }' is not assignable to type 'AllowanceTypeCreateInput'.
+      Types of property 'metadata' are incompatible.
+        Type 'Record<string, unknown> | undefined' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+          Type 'Record<string, unknown>' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+            Type 'Record<string, unknown>' is missing the following properties from type 'readonly (InputJsonValue | null)[]': length, concat, join, slice, and 20 more.
+src/modules/allowances/allowances.service.ts(91,7): error TS2322: Type '{ code?: string | undefined; status?: "active" | "inactive" | undefined; metadata?: Record<string, unknown> | undefined; name?: string | undefined; calculationType?: "fixed_monthly" | ... 5 more ... | undefined; ... 4 more ...; isInsuranceBased?: boolean | undefined; }' is not assignable to type '(Without<AllowanceTypeUpdateInput, AllowanceTypeUncheckedUpdateInput> & AllowanceTypeUncheckedUpdateInput) | (Without<...> & AllowanceTypeUpdateInput)'.
+  Type '{ code?: string | undefined; status?: "active" | "inactive" | undefined; metadata?: Record<string, unknown> | undefined; name?: string | undefined; calculationType?: "fixed_monthly" | ... 5 more ... | undefined; ... 4 more ...; isInsuranceBased?: boolean | undefined; }' is not assignable to type 'Without<AllowanceTypeUncheckedUpdateInput, AllowanceTypeUpdateInput> & AllowanceTypeUpdateInput'.
+    Type '{ code?: string | undefined; status?: "active" | "inactive" | undefined; metadata?: Record<string, unknown> | undefined; name?: string | undefined; calculationType?: "fixed_monthly" | ... 5 more ... | undefined; ... 4 more ...; isInsuranceBased?: boolean | undefined; }' is not assignable to type 'AllowanceTypeUpdateInput'.
+      Types of property 'metadata' are incompatible.
+        Type 'Record<string, unknown> | undefined' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+          Type 'Record<string, unknown>' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+            Type 'Record<string, unknown>' is missing the following properties from type 'readonly (InputJsonValue | null)[]': length, concat, join, slice, and 20 more.
+src/modules/employees/employees.service.ts(48,7): error TS2862: Type 'T' is generic and can only be indexed for reading.
+src/modules/employees/employees.service.ts(53,12): error TS2339: Property 'position' does not exist on type 'T'.
+src/modules/employees/employees.service.ts(100,7): error TS2322: Type '{ dateOfBirth: Date | undefined; citizenIdIssueDate: Date | undefined; startDate: Date | undefined; status: "probation" | "active" | "temporarily_inactive" | "resigned"; ... 22 more ...; emergencyContactRelation?: string | undefined; } | { ...; }' is not assignable to type '(Without<EmployeeCreateInput, EmployeeUncheckedCreateInput> & EmployeeUncheckedCreateInput) | (Without<...> & EmployeeCreateInput)'.
+  Type '{ dateOfBirth: Date | undefined; citizenIdIssueDate: Date | undefined; startDate: Date | undefined; status?: "probation" | "active" | "temporarily_inactive" | "resigned" | undefined; ... 22 more ...; dependentCount?: number | undefined; }' is not assignable to type '(Without<EmployeeCreateInput, EmployeeUncheckedCreateInput> & EmployeeUncheckedCreateInput) | (Without<...> & EmployeeCreateInput)'.
+    Type '{ dateOfBirth: Date | undefined; citizenIdIssueDate: Date | undefined; startDate: Date | undefined; status?: "probation" | "active" | "temporarily_inactive" | "resigned" | undefined; ... 22 more ...; dependentCount?: number | undefined; }' is not assignable to type 'Without<EmployeeUncheckedCreateInput, EmployeeCreateInput> & EmployeeCreateInput'.
+      Type '{ dateOfBirth: Date | undefined; citizenIdIssueDate: Date | undefined; startDate: Date | undefined; status?: "probation" | "active" | "temporarily_inactive" | "resigned" | undefined; ... 22 more ...; dependentCount?: number | undefined; }' is not assignable to type 'Without<EmployeeUncheckedCreateInput, EmployeeCreateInput>'.
+        Types of property 'departmentId' are incompatible.
+          Type 'string | undefined' is not assignable to type 'undefined'.
+            Type 'string' is not assignable to type 'undefined'.
+src/modules/positions/positions.service.ts(47,53): error TS2322: Type '{ salaryStepAmount: string | number; baseSalary: string | number; code: string; status: "active" | "inactive"; name: string; description?: string | undefined; } | { salaryStepAmount?: string | ... 1 more ... | undefined; ... 4 more ...; description?: string | undefined; }' is not assignable to type '(Without<PositionCreateInput, PositionUncheckedCreateInput> & PositionUncheckedCreateInput) | (Without<...> & PositionCreateInput)'.
+  Type '{ salaryStepAmount?: string | number | undefined; baseSalary?: string | number | undefined; code?: string | undefined; status?: "active" | "inactive" | undefined; name?: string | undefined; description?: string | undefined; }' is not assignable to type '(Without<PositionCreateInput, PositionUncheckedCreateInput> & PositionUncheckedCreateInput) | (Without<...> & PositionCreateInput)'.
+    Type '{ salaryStepAmount?: string | number | undefined; baseSalary?: string | number | undefined; code?: string | undefined; status?: "active" | "inactive" | undefined; name?: string | undefined; description?: string | undefined; }' is not assignable to type 'Without<PositionUncheckedCreateInput, PositionCreateInput> & PositionCreateInput'.
+      Type '{ salaryStepAmount?: string | number | undefined; baseSalary?: string | number | undefined; code?: string | undefined; status?: "active" | "inactive" | undefined; name?: string | undefined; description?: string | undefined; }' is not assignable to type 'PositionCreateInput'.
+        Types of property 'name' are incompatible.
+          Type 'string | undefined' is not assignable to type 'string'.
+            Type 'undefined' is not assignable to type 'string'.
+node.exe : npm error Lifecycle script `typecheck` failed with error:
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm error Lifec...led with error::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm error code 2
+npm error path C:\TeamPlatform\apps\api
+npm error workspace @team-platform/api@0.1.0
+npm error location C:\TeamPlatform\apps\api
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c tsc -p tsconfig.json --noEmit
+
+
+Post-log note:
+The two new allowance metadata typing errors shown above were patched after this failed rerun. The command was not rerun again because the failure-handling rule allows only one retry after a targeted fix. Remaining known blockers are the existing HR/employee/position Prisma typing errors shown in this log.

@@ -1,0 +1,4 @@
+classification: unknown
+command: Get-ChildItem -Recurse -File apps/web/features apps/web/app apps/web/types | Where-Object { $_.FullName -match 'payroll|allowance|tax|settings' } | Select-Object -ExpandProperty FullName
+
+PowerShell parameter binding failed because multiple paths were passed positionally without -Path.

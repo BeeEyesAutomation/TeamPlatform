@@ -33,6 +33,7 @@ const permissions = [
   "attendance.manage",
   "attendance.lock",
   "payroll.view",
+  "payroll.configure",
   "payroll.manage",
   "payroll.publish",
   "projects.view",
@@ -83,6 +84,63 @@ const taxBrackets = [
   { level: 5, incomeFrom: "32000000", incomeTo: "52000000", taxRate: "25" },
   { level: 6, incomeFrom: "52000000", incomeTo: "80000000", taxRate: "30" },
   { level: 7, incomeFrom: "80000000", incomeTo: null, taxRate: "35" }
+];
+
+const allowanceTypes = [
+  {
+    code: "MEAL_ALLOWANCE",
+    name: "Meal Allowance",
+    calculationType: "per_working_day" as const,
+    amount: "50000",
+    unit: "VND/day",
+    isTaxable: false,
+    isInsuranceBased: false,
+    applyScope: "company" as const,
+    status: "active" as const,
+    metadata: {
+      example: "50000 VND per actual present day"
+    }
+  },
+  {
+    code: "ATTENDANCE_BONUS",
+    name: "Attendance Bonus",
+    calculationType: "attendance_rate" as const,
+    amount: "500000",
+    unit: "VND/month",
+    isTaxable: true,
+    isInsuranceBased: false,
+    applyScope: "company" as const,
+    status: "active" as const,
+    metadata: {
+      minAttendancePercent: 80
+    }
+  },
+  {
+    code: "TRAVEL_ALLOWANCE",
+    name: "Travel Allowance",
+    calculationType: "fixed_monthly" as const,
+    amount: "300000",
+    unit: "VND/month",
+    isTaxable: false,
+    isInsuranceBased: false,
+    applyScope: "company" as const,
+    status: "active" as const,
+    metadata: {}
+  },
+  {
+    code: "PROJECT_BONUS",
+    name: "Project Bonus",
+    calculationType: "project_bonus" as const,
+    amount: "0",
+    unit: "VND",
+    isTaxable: true,
+    isInsuranceBased: false,
+    applyScope: "employee" as const,
+    status: "active" as const,
+    metadata: {
+      note: "Configured as a project bonus type; actual bonus amounts are assigned later."
+    }
+  }
 ];
 
 const titleCase = (value: string) =>
@@ -137,6 +195,29 @@ async function seedRolesAndPermissions() {
       create: {
         roleId: adminRole.id,
         permissionId: permission.id
+      }
+    });
+  }
+
+  for (const roleCode of ["hr", "accountant"]) {
+    const role = await prisma.role.findUniqueOrThrow({
+      where: { code: roleCode }
+    });
+    const payrollConfigurationPermission = await prisma.permission.findUniqueOrThrow({
+      where: { code: "payroll.configure" }
+    });
+
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: role.id,
+          permissionId: payrollConfigurationPermission.id
+        }
+      },
+      update: {},
+      create: {
+        roleId: role.id,
+        permissionId: payrollConfigurationPermission.id
       }
     });
   }
@@ -250,11 +331,35 @@ async function seedTaxSetting() {
   }
 }
 
+async function seedAllowanceTypes() {
+  for (const allowanceType of allowanceTypes) {
+    await prisma.allowanceType.upsert({
+      where: {
+        code: allowanceType.code
+      },
+      update: {
+        name: allowanceType.name,
+        calculationType: allowanceType.calculationType,
+        amount: allowanceType.amount,
+        unit: allowanceType.unit,
+        isTaxable: allowanceType.isTaxable,
+        isInsuranceBased: allowanceType.isInsuranceBased,
+        applyScope: allowanceType.applyScope,
+        status: allowanceType.status,
+        metadata: allowanceType.metadata,
+        deletedAt: null
+      },
+      create: allowanceType
+    });
+  }
+}
+
 async function main() {
   await seedRolesAndPermissions();
   await seedDocumentTypes();
   await seedEmailTemplates();
   await seedTaxSetting();
+  await seedAllowanceTypes();
 }
 
 main()

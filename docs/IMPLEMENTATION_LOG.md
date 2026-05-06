@@ -1,5 +1,88 @@
 # Implementation Log
 
+## 2026-05-06 - Phase 5 Payroll Configuration
+
+### Current Phase
+
+Phase 5: Payroll Configuration.
+
+### Scope
+
+- Implement configurable payroll settings only: tax settings, tax brackets, and allowance types.
+- Add backend CRUD-style APIs, validation, RBAC, and audit logs for payroll configuration.
+- Add seed examples where suitable for configured allowances and tax/insurance settings.
+- Add a basic frontend payroll settings page for tax settings, tax brackets, and allowance types.
+- Do not implement final payroll calculation, payroll runs, payslips, projects, email, import/export, or reports.
+
+### Assumptions
+
+- Decimal money/rate values are accepted as strings or numbers by API inputs and stored through Prisma Decimal fields.
+- Existing `RecordStatus`, `AllowanceCalculationType`, and `ApplyScope` schema enums remain the source of allowed values.
+- Tax brackets are managed globally through `/api/tax-brackets` while still requiring a `taxSettingId` relationship.
+- Deactivation is preferred over destructive deletes for allowance types and tax brackets where the current schema supports status.
+- RBAC uses a new or existing payroll configuration permission assigned to admin, HR, and accountant roles in seed data.
+- Pre-existing unrelated working tree changes are not reverted.
+
+### Planned Commands
+
+- `npx prisma format` if Prisma schema changes are required.
+- `npx prisma validate` if Prisma schema changes are required.
+- `npx prisma generate` if Prisma schema changes are required.
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+- Targeted payroll configuration tests only if available.
+- `git diff --check`
+
+### Changed Files Summary
+
+- `apps/api/src/modules/tax/*`: Implemented tax settings and tax bracket schemas, services, RBAC-protected routes, validation, activation, and audit logs.
+- `apps/api/src/modules/allowances/*`: Implemented allowance type schemas, services, RBAC-protected routes, validation, soft deactivation, and audit logs.
+- `apps/api/src/routes.ts`: Added `/api/tax-brackets` routing alongside `/api/tax-settings`.
+- `apps/api/prisma/seed.ts`: Added `payroll.configure`, assigned it to HR and accountant roles, and seeded example allowance types.
+- `apps/api/tsconfig.json`: Added API-specific `module` and `moduleResolution` settings so existing extensionless TypeScript imports are compatible with local typecheck, and kept `prisma/seed.ts` within the configured include set.
+- `apps/web/app/payroll/settings/page.tsx`: Added the payroll settings route.
+- `apps/web/features/payroll/*`: Added payroll configuration API client and settings UI.
+- `apps/web/types/payroll.ts`: Added payroll configuration frontend types.
+- `apps/web/components/layout/app-shell.tsx`: Pointed the payroll navigation item to `/payroll/settings`.
+- `docs/logs/2026-05-06_phase-5_*.log`: Captured failed command/inspection output.
+- `docs/IMPLEMENTATION_LOG.md`: Documented Phase 5 work and validation status.
+
+### Commands Run
+
+- `Get-Content -Raw AGENTS.md`
+- `Get-Content -Raw docs/IMPLEMENTATION_LOG.md`
+- `Get-Content -Raw docs/DECISIONS.md`
+- `Select-String` scoped to payroll configuration sections in `REQUIREMENTS.md`, `DATABASE.md`, `API.md`, and `WORKFLOWS.md`
+- `Get-ChildItem` / `Get-Content` for current tax, allowance, HR utility, route, seed, and frontend files
+- `rg "payroll.configure|taxBracketsRouter|allowanceType|TaxSetting|PayrollSettings" apps/api/src apps/api/prisma apps/web -n`
+- `npm run typecheck --workspace apps/api`
+
+### Tests/Checks Run
+
+- Prisma commands were not run because Phase 5 did not change the Prisma schema.
+- `npm run typecheck --workspace apps/api` failed.
+  - Log file: `docs/logs/2026-05-06_phase-5_api-typecheck.log`
+  - First failure class: `config_error`; the API inherited `NodeNext`/Node16 module resolution while the codebase uses extensionless TypeScript imports.
+  - Targeted fix: added API-specific `module: "ESNext"` and `moduleResolution: "Bundler"`.
+  - Rerun result: failed with `type_error`.
+  - Two new allowance metadata typing errors were patched after the failed rerun.
+  - Remaining blockers shown in the log are existing HR/employee/position Prisma typing issues outside Phase 5.
+- Web typecheck, targeted payroll configuration tests, `git diff --check`, production build, full test suite, payroll calculation tests, project tests, email tests, and e2e tests were not run after the API typecheck rerun failed, per the stop rule.
+
+### Fixes Applied
+
+- Added Zod validation for non-negative money values, rates between 0 and 100, valid tax bracket ranges, enum values, and UUID params.
+- Added audit logs for tax settings, tax brackets, and allowance type create/update/activate/delete/deactivate actions.
+- Added RBAC protection through `payroll.configure` for payroll configuration endpoints and UI access.
+- Added default allowance examples for meal allowance, attendance bonus, travel allowance, and project bonus.
+- Patched the new allowance metadata Prisma JSON typing after the failed typecheck rerun.
+
+### Remaining TODOs
+
+- Resolve existing API type errors in `employees.service.ts` and `positions.service.ts`, then rerun `npm run typecheck --workspace apps/api`.
+- After API typecheck is unblocked, run `npm run typecheck --workspace apps/web`.
+- Add targeted payroll configuration tests when the project has a test file pattern for this module.
+
 ## 2026-05-06 - Phase 4 Manual Attendance Completion
 
 ### Current Phase

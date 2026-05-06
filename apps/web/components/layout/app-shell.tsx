@@ -20,7 +20,7 @@ const navigation = [
   { label: "Phong ban", href: "/departments", icon: Settings },
   { label: "Chuc vu", href: "/positions", icon: ShieldCheck },
   { label: "Cham cong", href: "/attendance", icon: CalendarDays },
-  { label: "Bang luong", href: "/", icon: BadgeDollarSign },
+  { label: "Bang luong", href: "/payroll/settings", icon: BadgeDollarSign },
   { label: "Du an", href: "/", icon: FolderKanban },
   { label: "Tai lieu", href: "/", icon: FileText },
   { label: "Nhap xuat", href: "/", icon: Import },

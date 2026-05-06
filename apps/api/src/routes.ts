@@ -16,7 +16,7 @@ import { reportsRouter } from "./modules/reports/reports.routes";
 import { rolesRouter } from "./modules/roles/roles.routes";
 import { salaryAdvancesRouter } from "./modules/salary-advances/salary-advances.routes";
 import { statisticsRouter } from "./modules/statistics/statistics.routes";
-import { taxRouter } from "./modules/tax/tax.routes";
+import { taxBracketsRouter, taxRouter } from "./modules/tax/tax.routes";
 import { usersRouter } from "./modules/users/users.routes";
 
 export const apiRouter = Router();
@@ -35,6 +35,7 @@ apiRouter.use("/employee-monthly-allowances", allowancesRouter);
 apiRouter.use("/payroll", payrollRouter);
 apiRouter.use("/salary-advances", salaryAdvancesRouter);
 apiRouter.use("/tax-settings", taxRouter);
+apiRouter.use("/tax-brackets", taxBracketsRouter);
 apiRouter.use("/projects", projectsRouter);
 apiRouter.use("/document-types", projectDocumentsRouter);
 apiRouter.use("/document-permissions", projectDocumentsRouter);
