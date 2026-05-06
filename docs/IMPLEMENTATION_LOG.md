@@ -1,5 +1,44 @@
 # Implementation Log
 
+## 2026-05-06 - Web TypeScript Config Repair
+
+### Scope
+
+- Fix the web TypeScript `baseUrl` deprecation without upgrading or downgrading TypeScript.
+- Keep existing aliases working.
+- Do not change business code or add features.
+
+### Failure Classification
+
+- `config_error`
+
+### Root Cause
+
+- `apps/web/tsconfig.json` extends the root `tsconfig.base.json`.
+- The root config still used deprecated `compilerOptions.baseUrl`.
+- Removing `baseUrl` exposed TypeScript 5.4's requirement that `paths` targets be explicitly relative when no `baseUrl` is set.
+- `ignoreDeprecations` in the web config was only suppressing the inherited deprecation and was not needed after the root config fix.
+
+### Changed Files
+
+- `tsconfig.base.json`: Removed deprecated `baseUrl` and changed `@team-platform/shared` path target to `./packages/shared/src/index.ts`.
+- `apps/web/tsconfig.json`: Removed `ignoreDeprecations`.
+- `docs/logs/2026-05-06_web-tsconfig-error.log`: Captured the first failed typecheck after removing `baseUrl`.
+- `docs/IMPLEMENTATION_LOG.md`: Documented this repair.
+
+### Commands Run
+
+- `npm run typecheck --workspace apps/web`
+
+### Result
+
+- First run failed with `TS5090`; log saved to `docs/logs/2026-05-06_web-tsconfig-error.log`.
+- After the minimal path target adjustment, `npm run typecheck --workspace apps/web` passed.
+
+### Remaining TODOs
+
+- None for this tsconfig repair.
+
 ## 2026-05-05 - Phase 4 Web Build Config Repair
 
 ### Scope

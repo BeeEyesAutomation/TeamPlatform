@@ -1,0 +1,16 @@
+classification: config_error
+command: npm run typecheck --workspace apps/web
+
+> @team-platform/web@0.1.0 typecheck
+> tsc -p tsconfig.json --noEmit
+
+tsconfig.json(3,3): error TS5090: Non-relative paths are not allowed when 'baseUrl' is not set. Did you forget a leading './'?
+npm error Lifecycle script `typecheck` failed with error:
+npm error code 2
+npm error path C:\TeamPlatform\apps\web
+npm error workspace @team-platform/web@0.1.0
+npm error location C:\TeamPlatform\apps\web
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c tsc -p tsconfig.json --noEmit
+
+Smallest related fix: changed the inherited @team-platform/shared path target from packages/shared/src/index.ts to ./packages/shared/src/index.ts so TypeScript 5.4 accepts paths without baseUrl.
