@@ -10,7 +10,12 @@ import { exportsRouter } from "./modules/exports/exports.routes";
 import { importsRouter } from "./modules/imports/imports.routes";
 import { payrollRouter, payrollsRouter, payslipsRouter } from "./modules/payroll/payroll.routes";
 import { positionsRouter } from "./modules/positions/positions.routes";
-import { projectDocumentsRouter } from "./modules/project-documents/project-documents.routes";
+import {
+  documentPermissionsRouter,
+  documentTypesRouter,
+  projectDocumentsForProjectRouter,
+  projectDocumentsRouter
+} from "./modules/project-documents/project-documents.routes";
 import {
   projectCostsRouter,
   projectIssuesRouter,
@@ -46,6 +51,7 @@ apiRouter.use("/payslips", payslipsRouter);
 apiRouter.use("/salary-advances", salaryAdvancesRouter);
 apiRouter.use("/tax-settings", taxRouter);
 apiRouter.use("/tax-brackets", taxBracketsRouter);
+apiRouter.use("/projects", projectDocumentsForProjectRouter);
 apiRouter.use("/projects", projectsRouter);
 apiRouter.use("/project-plans", projectPlansRouter);
 apiRouter.use("/project-tasks", projectTasksRouter);
@@ -53,8 +59,8 @@ apiRouter.use("/project-issues", projectIssuesRouter);
 apiRouter.use("/project-materials", projectMaterialsRouter);
 apiRouter.use("/project-costs", projectCostsRouter);
 apiRouter.use("/project-members", projectMembersRouter);
-apiRouter.use("/document-types", projectDocumentsRouter);
-apiRouter.use("/document-permissions", projectDocumentsRouter);
+apiRouter.use("/document-types", documentTypesRouter);
+apiRouter.use("/document-permissions", documentPermissionsRouter);
 apiRouter.use("/project-documents", projectDocumentsRouter);
 apiRouter.use("/email", emailRouter);
 apiRouter.use("/imports", importsRouter);

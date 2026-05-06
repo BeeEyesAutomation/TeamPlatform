@@ -1,0 +1,13 @@
+classification: type_error
+command: npm run typecheck --workspace apps/api
+
+> @team-platform/api@0.1.0 typecheck
+> tsc -p tsconfig.json --noEmit
+
+prisma/seed.ts(426,13): error TS2322: Type '"project_public" | "internal_company" | "client_shared" | null' is not assignable to type 'SecurityLevel'.
+  Type 'null' is not assignable to type 'SecurityLevel'.
+src/modules/project-documents/project-documents.service.ts(266,11): error TS2322: Type '"project_public" | "internal_company" | "pm_admin_only" | "accounting" | "confidential" | "client_shared" | null' is not assignable to type 'SecurityLevel'.
+  Type 'null' is not assignable to type 'SecurityLevel'.
+
+Fix:
+  Build nullable security-level Prisma inputs by omitting the field when the permission applies to all security levels.

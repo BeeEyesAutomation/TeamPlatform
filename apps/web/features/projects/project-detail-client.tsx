@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { getStoredUser, hasPermission } from "../../lib/auth";
+import { ProjectDocumentsPanel } from "../project-documents/project-documents-panel";
 import type { Project, ProjectCost, ProjectDashboard, ProjectIssue, ProjectMaterial, ProjectMember, ProjectPlan, ProjectTask, ProjectTimelineEntry } from "../../types/projects";
 import {
   approveTask,
@@ -27,7 +28,7 @@ import {
   updateTaskProgress
 } from "./projects-api";
 
-const tabs = ["overview", "profile", "plan", "tasks", "issues", "materials", "costs", "members", "timeline"] as const;
+const tabs = ["overview", "profile", "plan", "tasks", "issues", "materials", "costs", "members", "documents", "timeline"] as const;
 const money = new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 });
 
 export function ProjectDetailClient({ id }: { id: string }) {
@@ -190,6 +191,8 @@ export function ProjectDetailClient({ id }: { id: string }) {
           <MiniForm enabled={canManage} fields={["employeeId", "projectRole", "joinedDate"]} submitLabel="Them thanh vien" onSubmit={(body) => createMember(id, body)} reload={load} />
         </Collection>
       ) : null}
+
+      {activeTab === "documents" ? <ProjectDocumentsPanel projectId={id} /> : null}
 
       {activeTab === "timeline" ? (
         <SimpleTable headers={["Thoi gian", "Hanh dong", "Doi tuong"]} rows={timeline.map((entry) => [new Date(entry.createdAt).toLocaleString("vi-VN"), entry.action, entry.targetType ?? "-"])} />

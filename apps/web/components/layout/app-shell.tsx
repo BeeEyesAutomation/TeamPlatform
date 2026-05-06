@@ -22,7 +22,7 @@ const navigation = [
   { label: "Cham cong", href: "/attendance", icon: CalendarDays },
   { label: "Bang luong", href: "/payroll", icon: BadgeDollarSign },
   { label: "Du an", href: "/projects", icon: FolderKanban },
-  { label: "Tai lieu", href: "/", icon: FileText },
+  { label: "Tai lieu", href: "/document-permissions", icon: FileText },
   { label: "Nhap xuat", href: "/", icon: Import },
   { label: "Bao cao", href: "/", icon: ClipboardList },
   { label: "Email", href: "/", icon: Mail }

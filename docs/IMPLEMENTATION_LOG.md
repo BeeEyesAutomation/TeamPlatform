@@ -1,5 +1,76 @@
 # Implementation Log
 
+## 2026-05-06 - Phase 8 Project Documents and Document Permissions
+
+### Current Phase
+
+Phase 8: Project Documents and Document Permissions.
+
+### Scope
+
+- Implement document type CRUD and seed the required project document types.
+- Implement configurable document permissions by role, document type, optional security level, and action booleans.
+- Implement project document metadata upload/list/view/update/archive/approve/reject/download URL APIs.
+- Enforce server-side permissions and log view/download/upload/edit/delete/approve/reject access events.
+- Add project documents tab, document permission settings page, and document access log view.
+- Add targeted document permission tests for deny/allow, confidential restrictions, approve/reject, and access log writing.
+- Do not implement SMTP/email queue, import/export, reports, or real object storage upload streaming in this phase.
+
+### Assumptions
+
+- File upload is metadata-only in Phase 8; `fileUrl` stores an already available URL/path.
+- The existing `DocumentPermission` schema does not have `canReject`, so reject uses `canApprove`.
+- Project membership is required for non-admin document access; admins with matching permissions are allowed through even if not members.
+- `client_shared` security level may be accessed by `customer_partner` when a matching document permission exists and project membership is present.
+- Existing unrelated working tree changes are not reverted.
+
+### Planned Commands
+
+- `npx prisma format` if Prisma schema changes are required.
+- `npx prisma validate` if Prisma schema changes are required.
+- `npx prisma generate` if Prisma schema changes are required.
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+- Targeted document permission tests only.
+- `git diff --check`
+
+### Result
+
+- Implemented document type CRUD and kept the required seed document types.
+- Implemented document permission list/upsert by role, document type, optional security level, and action booleans.
+- Implemented project document metadata list/upload/view/update/archive/approve/reject/download APIs.
+- Added server-side document access checks using user roles, coarse permissions, project membership, document type, security level, and action.
+- Added access logs for upload, view, edit, delete/archive, approve, reject, and download actions.
+- Added seeded default document permission matrix for admin, project manager, team leader, project employee, and customer partner roles.
+- Added a project documents tab, document permission settings page, and access log panel.
+- Added targeted document permission tests for deny/allow, confidential restrictions, approve/reject, and access log payload creation.
+- Prisma schema was not changed for Phase 8, so Prisma format/validate/generate were not run.
+
+### Changed Files Summary
+
+- Backend documents: `apps/api/src/modules/project-documents/project-documents.permissions.ts`, `apps/api/src/modules/project-documents/project-documents.schemas.ts`, `apps/api/src/modules/project-documents/project-documents.service.ts`, `apps/api/src/modules/project-documents/project-documents.routes.ts`, `apps/api/src/routes.ts`
+- Backend tests: `apps/api/src/modules/project-documents/project-documents.permissions.test.ts`
+- Seed/shared permissions: `apps/api/prisma/seed.ts`, `packages/shared/src/permissions.ts`
+- Frontend documents: `apps/web/features/project-documents/*`, `apps/web/types/project-documents.ts`, `apps/web/app/document-permissions/page.tsx`, `apps/web/features/projects/project-detail-client.tsx`, `apps/web/components/layout/app-shell.tsx`
+- Logs: `docs/logs/2026-05-06_phase-8_*.log`
+
+### Commands Run
+
+- `npm run test --workspace apps/api -- project-documents.permissions` - passed.
+- `npm run typecheck --workspace apps/api` - failed once, then passed after the nullable security-level Prisma input fix.
+- `npm run typecheck --workspace apps/web` - passed.
+- `git diff --check` - passed with line-ending warnings only.
+
+### Failures and Logs
+
+- `docs/logs/2026-05-06_phase-8_api-typecheck.log` - `type_error`; fixed by avoiding nullable `securityLevel` compound-unique upserts and using find/update/create instead.
+
+### Remaining TODOs
+
+- Real object storage upload streaming is still deferred; Phase 8 stores file metadata URL/path only.
+- Reject permission reuses `canApprove` because the current `DocumentPermission` schema does not have `canReject`.
+- Document access logs are available per document; broader filtering/reporting remains out of scope.
+
 ## 2026-05-06 - Phase 7 Project Core Management
 
 ### Current Phase

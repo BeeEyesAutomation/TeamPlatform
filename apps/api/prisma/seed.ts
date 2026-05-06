@@ -274,6 +274,40 @@ async function seedRolesAndPermissions() {
     });
   }
 
+  const documentRolePermissions: Record<string, string[]> = {
+    director: ["project_documents.view", "project_documents.download", "project_documents.approve", "project_documents.manage"],
+    project_manager: ["project_documents.view", "project_documents.upload", "project_documents.download", "project_documents.approve", "project_documents.manage"],
+    team_leader: ["project_documents.view", "project_documents.upload", "project_documents.download"],
+    project_employee: ["project_documents.view", "project_documents.download"],
+    customer_partner: ["project_documents.view", "project_documents.download"]
+  };
+
+  for (const [roleCode, permissionCodes] of Object.entries(documentRolePermissions)) {
+    const role = await prisma.role.findUniqueOrThrow({
+      where: { code: roleCode }
+    });
+
+    for (const permissionCode of permissionCodes) {
+      const documentPermission = await prisma.permission.findUniqueOrThrow({
+        where: { code: permissionCode }
+      });
+
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId: role.id,
+            permissionId: documentPermission.id
+          }
+        },
+        update: {},
+        create: {
+          roleId: role.id,
+          permissionId: documentPermission.id
+        }
+      });
+    }
+  }
+
   const passwordHash = await bcrypt.hash(adminPassword, bcryptSaltRounds);
   const adminUser = await prisma.user.upsert({
     where: { email: adminEmail },
@@ -316,6 +350,111 @@ async function seedDocumentTypes() {
         status: "active"
       }
     });
+  }
+}
+
+async function seedDocumentPermissions() {
+  const allDocumentTypes = await prisma.documentType.findMany({
+    where: { deletedAt: null }
+  });
+  const roleByCode = new Map((await prisma.role.findMany()).map((role) => [role.code, role]));
+  const permissionSets = [
+    {
+      roleCode: "admin",
+      securityLevel: null,
+      canView: true,
+      canUpload: true,
+      canEdit: true,
+      canDelete: true,
+      canDownload: true,
+      canApprove: true
+    },
+    {
+      roleCode: "project_manager",
+      securityLevel: null,
+      canView: true,
+      canUpload: true,
+      canEdit: true,
+      canDelete: true,
+      canDownload: true,
+      canApprove: true
+    },
+    {
+      roleCode: "team_leader",
+      securityLevel: "internal_company" as const,
+      canView: true,
+      canUpload: true,
+      canEdit: true,
+      canDelete: false,
+      canDownload: true,
+      canApprove: false
+    },
+    {
+      roleCode: "project_employee",
+      securityLevel: "project_public" as const,
+      canView: true,
+      canUpload: false,
+      canEdit: false,
+      canDelete: false,
+      canDownload: true,
+      canApprove: false
+    },
+    {
+      roleCode: "customer_partner",
+      securityLevel: "client_shared" as const,
+      canView: true,
+      canUpload: false,
+      canEdit: false,
+      canDelete: false,
+      canDownload: true,
+      canApprove: false
+    }
+  ];
+
+  for (const documentType of allDocumentTypes) {
+    for (const permissionSet of permissionSets) {
+      const role = roleByCode.get(permissionSet.roleCode);
+      if (!role) {
+        continue;
+      }
+
+      const existing = await prisma.documentPermission.findFirst({
+        where: {
+          documentTypeId: documentType.id,
+          roleId: role.id,
+          securityLevel: permissionSet.securityLevel
+        }
+      });
+      const data = {
+        documentTypeId: documentType.id,
+        roleId: role.id,
+        securityLevel: permissionSet.securityLevel,
+        canView: permissionSet.canView,
+        canUpload: permissionSet.canUpload,
+        canEdit: permissionSet.canEdit,
+        canDelete: permissionSet.canDelete,
+        canDownload: permissionSet.canDownload,
+        canApprove: permissionSet.canApprove
+      };
+
+      if (existing) {
+        await prisma.documentPermission.update({
+          where: { id: existing.id },
+          data: {
+            canView: permissionSet.canView,
+            canUpload: permissionSet.canUpload,
+            canEdit: permissionSet.canEdit,
+            canDelete: permissionSet.canDelete,
+            canDownload: permissionSet.canDownload,
+            canApprove: permissionSet.canApprove
+          }
+        });
+      } else {
+        await prisma.documentPermission.create({
+          data
+        });
+      }
+    }
   }
 }
 
@@ -409,6 +548,7 @@ async function seedAllowanceTypes() {
 async function main() {
   await seedRolesAndPermissions();
   await seedDocumentTypes();
+  await seedDocumentPermissions();
   await seedEmailTemplates();
   await seedTaxSetting();
   await seedAllowanceTypes();
