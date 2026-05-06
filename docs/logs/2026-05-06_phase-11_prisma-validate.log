@@ -1,0 +1,12 @@
+classification: env_missing
+command: npx prisma validate --schema apps/api/prisma/schema.prisma
+
+Failure:
+  Prisma could not read DATABASE_URL from the current shell environment.
+
+Output:
+  Error code: P1012
+  Environment variable not found: DATABASE_URL.
+
+Fix:
+  Rerun once with the local development DATABASE_URL from `.env.example` scoped to the command.

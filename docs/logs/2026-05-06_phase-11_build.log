@@ -1,0 +1,14 @@
+classification: config_error
+command: npm run build
+
+Result:
+  API build passed.
+  Web production build passed.
+  Shared package build failed.
+
+Failure:
+  packages/shared/src/index.ts(1,15): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './permissions.js'?
+  packages/shared/src/index.ts(2,15): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './types.js'?
+
+Fix:
+  Add `.js` extensions to shared package relative barrel exports.

@@ -45,10 +45,40 @@ export function ImportExportClient() {
     }
   }
 
-  function openExport(type: string, format: string) {
+  async function downloadFile(url: string) {
     const token = getStoredAccessToken();
-    const url = exportUrl(type, { format });
-    window.open(token ? `${url}${url.includes("?") ? "&" : "?"}accessToken=${encodeURIComponent(token)}` : url, "_blank");
+    const response = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined
+    });
+
+    if (!response.ok) {
+      throw new Error(`Download failed with status ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const disposition = response.headers.get("content-disposition") ?? "";
+    const match = /filename="([^"]+)"/.exec(disposition);
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = match?.[1] ?? "download";
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
+  async function openExport(type: string, format: string) {
+    try {
+      await downloadFile(exportUrl(type, { format }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Cannot download export");
+    }
+  }
+
+  async function downloadTemplate(type: string) {
+    try {
+      await downloadFile(importTemplateUrl(type));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Cannot download template");
+    }
   }
 
   return (
@@ -63,7 +93,7 @@ export function ImportExportClient() {
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-md border border-border bg-white p-4">
           <h2 className="mb-3 text-lg font-semibold">Import center</h2>
-          <div className="mb-4 flex flex-wrap gap-2">{importTypes.map((type) => <a key={type} className="rounded-md border border-border px-3 py-2 text-sm" href={importTemplateUrl(type)}>Template {type}</a>)}</div>
+          <div className="mb-4 flex flex-wrap gap-2">{importTypes.map((type) => <button key={type} className="rounded-md border border-border px-3 py-2 text-sm" type="button" onClick={() => void downloadTemplate(type)}>Template {type}</button>)}</div>
           <form className="space-y-3" onSubmit={(event) => void submitImport(event)}>
             <select className="h-10 rounded-md border border-border px-3 text-sm" name="type">{importTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select>
             <input className="h-10 rounded-md border border-border px-3 text-sm" name="fileName" placeholder="file name" />
@@ -80,7 +110,7 @@ export function ImportExportClient() {
               <div key={type} className="flex items-center justify-between border-b border-border pb-2 text-sm">
                 <span>{type}</span>
                 <div className="flex gap-2">
-                  {["excel", "csv", "pdf"].map((format) => <button key={format} className="text-primary" type="button" onClick={() => openExport(type, format)}>{format}</button>)}
+                  {["excel", "csv", "pdf"].map((format) => <button key={format} className="text-primary" type="button" onClick={() => void openExport(type, format)}>{format}</button>)}
                 </div>
               </div>
             ))}

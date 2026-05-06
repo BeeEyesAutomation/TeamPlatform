@@ -1,5 +1,76 @@
 # Implementation Log
 
+## 2026-05-06 - Phase 11 Hardening, Cleanup, Final Review
+
+### Current Phase
+
+Phase 11: Hardening, Cleanup, Final Review.
+
+### Scope
+
+- Review implemented modules for obvious route/security/build issues.
+- Tighten docs, setup instructions, environment examples, and troubleshooting notes.
+- Verify Prisma, API/web typecheck, targeted tests, broader tests where reasonable, and production build once near the end.
+- Keep changes focused on cleanup, consistency, security, and build health.
+
+### Assumptions
+
+- Existing unrelated local generated files remain outside this commit.
+- No new business feature scope is added in this phase.
+- Protected export/template downloads should use authenticated fetches rather than unauthenticated browser navigation.
+
+### Planned Commands
+
+- `npx prisma validate`
+- `npx prisma generate`
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+- Targeted unit tests
+- Full test suite if reasonably fast
+- Production build once near the end if configured
+- `git diff --check`
+
+### Result
+
+- Fixed protected import template/export downloads in the web UI to use authenticated `fetch` with blob download instead of unauthenticated browser navigation.
+- Updated `.env.example` with `NEXT_PUBLIC_API_URL`.
+- Rewrote README setup/run/check commands to match the implemented monorepo.
+- Added final decisions for month values, attendance defaults, audit-backed project timeline, document reject permission, SMTP password references, and import foundation behavior.
+- Added `docs/TODO.md` for production hardening and follow-up work.
+- Expanded troubleshooting notes for PostgreSQL auth, missing `DATABASE_URL`, Redis, ESM/CommonJS, PowerShell execution policy, and GitHub CLI.
+- Fixed shared package ESM barrel exports so production build passes under NodeNext rules.
+
+### Review Notes
+
+- Sensitive API groups use RBAC middleware: payroll, employee sensitive handling, project documents, import/export, email, audit logs, and project modules.
+- Project document access is enforced server-side through document type, security level, role permission, project membership, and action checks.
+- Payroll calculations have targeted tests in `apps/api/src/modules/payroll/payroll.calculator.test.ts`.
+- Prisma migration status reports the local database schema is up to date.
+- Docker Compose config is valid and local PostgreSQL/Redis containers are healthy.
+
+### Commands Run
+
+- `npx prisma validate --schema apps/api/prisma/schema.prisma` - failed once due missing `DATABASE_URL`, then passed with local dev `DATABASE_URL`.
+- `npx prisma generate --schema apps/api/prisma/schema.prisma` - passed.
+- `npm run typecheck --workspace apps/api` - passed.
+- `npm run typecheck --workspace apps/web` - passed.
+- `npm run test --workspace apps/api -- payroll.calculator project-documents.permissions email.renderer imports.utils` - passed.
+- `npm test` - passed.
+- `npm run build` - failed once due shared package ESM extension config, then passed after the targeted fix.
+- `docker compose config` - passed.
+- `docker compose ps` - PostgreSQL and Redis are running healthy locally.
+- `npx prisma migrate status --schema apps/api/prisma/schema.prisma` - database schema is up to date.
+- `git diff --check` - passed with line-ending warnings only.
+
+### Failures and Logs
+
+- `docs/logs/2026-05-06_phase-11_prisma-validate.log` - `env_missing`; reran with local development `DATABASE_URL`.
+- `docs/logs/2026-05-06_phase-11_build.log` - `config_error`; fixed shared package ESM relative export extensions.
+
+### Remaining TODOs
+
+- See `docs/TODO.md`.
+
 ## 2026-05-06 - Phase 10 Import, Export, and Reports
 
 ### Current Phase
