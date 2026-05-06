@@ -1,0 +1,8 @@
+classification: unknown
+command: rg --files apps/api/src | rg "(project|projects).*(test|spec)|vitest"
+
+Result:
+  Command exited with code 1 because no existing targeted project test files were found.
+
+Action:
+  Continue with API/web typecheck and add tests only if a local project test pattern becomes available.

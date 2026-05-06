@@ -1,5 +1,76 @@
 # Implementation Log
 
+## 2026-05-06 - Phase 7 Project Core Management
+
+### Current Phase
+
+Phase 7: Project Core Management.
+
+### Scope
+
+- Implement project profile CRUD, plans, tasks, issues, materials, costs, members, per-project dashboard summary, and timeline activity.
+- Add RBAC enforcement and audit logging for project-core changes.
+- Add frontend projects list and project detail tabs for overview, profile, plan, tasks, issues, materials, costs, members, and timeline.
+- Do not implement document permissions, SMTP/email queue, import/export, reports, or project documents in this phase.
+
+### Assumptions
+
+- Existing Prisma project-core models are sufficient; no Prisma schema change is planned.
+- Project timeline entries are backed by audit logs with `module: "projects"` and the project id in metadata, because the current schema does not include a dedicated project activity log model.
+- `projects.view` allows viewing projects and project detail collections; `projects.manage` allows state-changing project-core operations.
+- Task assignment email side effects are deferred to the later SMTP/email queue phase.
+- Purchase requests and contracts are out of scope for this Phase 7 pass unless needed by existing project-core models.
+- Existing unrelated working tree changes are not reverted.
+
+### Planned Commands
+
+- `npx prisma format` if Prisma schema changes are required.
+- `npx prisma validate` if Prisma schema changes are required.
+- `npx prisma generate` if Prisma schema changes are required.
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+- Targeted project service tests only if present.
+- `git diff --check`
+
+### Result
+
+- Implemented project CRUD/profile APIs and soft cancellation for project deletion.
+- Implemented project plan, task, issue, material, cost, and member APIs, including task confirm/progress/submit/approve/return and issue close/reopen.
+- Implemented per-project dashboard summary for project statuses, project/task progress, task statuses, issue statuses, material statuses, material cost estimates, and estimated vs actual costs.
+- Added audit logging for project-core mutations and exposed a per-project timeline backed by project audit log entries.
+- Added project RBAC seed assignments for director, project manager, team leader, project employee, and employee roles.
+- Added frontend projects list and project detail tabs for overview, profile, plan, tasks, issues, materials, costs, members, and timeline.
+- Prisma schema was not changed for Phase 7, so Prisma format/validate/generate were not run.
+
+### Changed Files Summary
+
+- Backend project core: `apps/api/src/modules/projects/projects.schemas.ts`, `apps/api/src/modules/projects/projects.service.ts`, `apps/api/src/modules/projects/projects.routes.ts`, `apps/api/src/routes.ts`
+- Backend seed: `apps/api/prisma/seed.ts`
+- Frontend project core: `apps/web/app/projects/page.tsx`, `apps/web/app/projects/[id]/page.tsx`, `apps/web/features/projects/projects-api.ts`, `apps/web/features/projects/projects-client.tsx`, `apps/web/features/projects/project-detail-client.tsx`, `apps/web/types/projects.ts`, `apps/web/components/layout/app-shell.tsx`
+- Logs: `docs/logs/2026-05-06_phase-7_*.log`
+
+### Commands Run
+
+- `rg --files apps/api/src | rg "(project|projects).*(test|spec)|vitest"` - no targeted project tests found; logged as inspection no-match.
+- `npm run typecheck --workspace apps/api` - failed once, then passed after a narrow import fix.
+- `npm run typecheck --workspace apps/web` - passed.
+- `git diff --check` - passed with line-ending warnings only.
+
+### Failures and Logs
+
+- `docs/logs/2026-05-06_phase-7_inspect-project-tests.log` - `unknown`; no existing targeted project test files were found.
+- `docs/logs/2026-05-06_phase-7_api-typecheck.log` - `type_error`; fixed by importing `Prisma` as a runtime value in the project service.
+- `docs/logs/2026-05-06_phase-7_github-cli.log` - `missing_system_tool`; `gh` is not installed, so commit/push/PR update is blocked by the publish workflow prerequisite. Manual setup documented in `docs/SETUP_TROUBLESHOOTING.md`.
+
+### Remaining TODOs
+
+- Dedicated project activity log table can be added later if the schema is expanded; timeline currently uses project audit logs.
+- Cost deletion uses hard delete because the current `ProjectCost` model has no status or deleted timestamp.
+- Task assignment and issue notification emails are deferred to the SMTP/email queue phase.
+- Project documents, document permissions, import/export, and reports remain out of scope for Phase 7.
+- Commit, push, and PR update remain pending until GitHub CLI is installed and authenticated.
+- Existing unrelated working tree files were left untouched.
+
 ## 2026-05-06 - Phase 6 Payroll Calculation and Payslips
 
 ### Current Phase

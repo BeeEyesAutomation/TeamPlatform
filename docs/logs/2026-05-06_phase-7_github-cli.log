@@ -1,0 +1,17 @@
+classification: missing_system_tool
+command: gh --version
+
+Failure:
+  PowerShell could not find the `gh` command.
+
+Output:
+  gh : The term 'gh' is not recognized as the name of a cmdlet, function, script file, or operable program.
+
+Impact:
+  The GitHub publish workflow requires GitHub CLI availability before commit/push/PR update.
+
+Manual setup:
+  Install GitHub CLI, then authenticate it:
+  - winget install --id GitHub.cli
+  - gh auth login
+  - gh auth status

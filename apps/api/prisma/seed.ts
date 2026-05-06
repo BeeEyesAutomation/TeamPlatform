@@ -225,6 +225,55 @@ async function seedRolesAndPermissions() {
     }
   }
 
+  for (const roleCode of ["director", "project_manager", "team_leader"]) {
+    const role = await prisma.role.findUniqueOrThrow({
+      where: { code: roleCode }
+    });
+
+    for (const permissionCode of ["projects.view", "projects.manage"]) {
+      const projectPermission = await prisma.permission.findUniqueOrThrow({
+        where: { code: permissionCode }
+      });
+
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId: role.id,
+            permissionId: projectPermission.id
+          }
+        },
+        update: {},
+        create: {
+          roleId: role.id,
+          permissionId: projectPermission.id
+        }
+      });
+    }
+  }
+
+  for (const roleCode of ["project_employee", "employee"]) {
+    const role = await prisma.role.findUniqueOrThrow({
+      where: { code: roleCode }
+    });
+    const projectViewPermission = await prisma.permission.findUniqueOrThrow({
+      where: { code: "projects.view" }
+    });
+
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: role.id,
+          permissionId: projectViewPermission.id
+        }
+      },
+      update: {},
+      create: {
+        roleId: role.id,
+        permissionId: projectViewPermission.id
+      }
+    });
+  }
+
   const passwordHash = await bcrypt.hash(adminPassword, bcryptSaltRounds);
   const adminUser = await prisma.user.upsert({
     where: { email: adminEmail },

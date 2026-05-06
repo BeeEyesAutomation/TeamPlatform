@@ -1,0 +1,19 @@
+classification: type_error
+command: npm run typecheck --workspace apps/api
+
+> @team-platform/api@0.1.0 typecheck
+> tsc -p tsconfig.json --noEmit
+
+src/modules/projects/projects.service.ts(83,48): error TS1361: 'Prisma' cannot be used as a value because it was imported using 'import type'.
+src/modules/projects/projects.service.ts(326,54): error TS1361: 'Prisma' cannot be used as a value because it was imported using 'import type'.
+src/modules/projects/projects.service.ts(328,10): error TS1361: 'Prisma' cannot be used as a value because it was imported using 'import type'.
+src/modules/projects/projects.service.ts(330,51): error TS1361: 'Prisma' cannot be used as a value because it was imported using 'import type'.
+src/modules/projects/projects.service.ts(332,10): error TS1361: 'Prisma' cannot be used as a value because it was imported using 'import type'.
+src/modules/projects/projects.service.ts(345,15): error TS1361: 'Prisma' cannot be used as a value because it was imported using 'import type'.
+src/modules/projects/projects.service.ts(346,92): error TS1361: 'Prisma' cannot be used as a value because it was imported using 'import type'.
+src/modules/projects/projects.service.ts(346,138): error TS1361: 'Prisma' cannot be used as a value because it was imported using 'import type'.
+src/modules/projects/projects.service.ts(450,28): error TS1361: 'Prisma' cannot be used as a value because it was imported using 'import type'.
+src/modules/projects/projects.service.ts(468,115): error TS1361: 'Prisma' cannot be used as a value because it was imported using 'import type'.
+
+Fix:
+  Import `Prisma` as a runtime value in the Phase 7 project service.
