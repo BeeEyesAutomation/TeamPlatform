@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const attendanceStatusSchema = z.enum(["present", "leave_paid", "leave_unpaid"]);
+const attendanceStatusSchema = z.enum(["present", "paid_leave", "unpaid_leave"]);
 const dateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
 const monthStringSchema = z.string().regex(/^\d{4}-\d{2}$/, "Use YYYY-MM");
 const emptyToUndefined = (value: unknown) => (value === "" || value === null ? undefined : value);

@@ -12,8 +12,8 @@ const currentMonth = today.slice(0, 7);
 
 const statusLabels: Record<AttendanceStatus, string> = {
   present: "Co mat",
-  leave_paid: "Nghi co luong",
-  leave_unpaid: "Nghi khong luong"
+  paid_leave: "Nghi co luong",
+  unpaid_leave: "Nghi khong luong"
 };
 
 export function AttendanceClient() {

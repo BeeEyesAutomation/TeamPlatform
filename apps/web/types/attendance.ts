@@ -1,6 +1,6 @@
 import type { Department } from "./hr";
 
-export type AttendanceStatus = "present" | "leave_paid" | "leave_unpaid";
+export type AttendanceStatus = "present" | "paid_leave" | "unpaid_leave";
 
 export interface AttendanceEmployee {
   id: string;

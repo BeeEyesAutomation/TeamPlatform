@@ -1,0 +1,202 @@
+classification: config_error
+command: npm run typecheck --workspace apps/api
+attempt: 1
+
+> @team-platform/api@0.1.0 typecheck
+> tsc -p tsconfig.json --noEmit
+
+tsconfig.json(4,27): error TS5103: Invalid value for '--ignoreDeprecations'.
+npm error Lifecycle script `typecheck` failed with error:
+npm error code 2
+npm error path C:\TeamPlatform\apps\api
+npm error workspace @team-platform/api@0.1.0
+npm error location C:\TeamPlatform\apps\api
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c tsc -p tsconfig.json --noEmit
+
+Targeted config fix applied: removed unsupported ignoreDeprecations value from apps/api/tsconfig.json.
+
+---classification: config_error
+command: npm run typecheck --workspace apps/api
+
+
+> @team-platform/api@0.1.0 typecheck
+> tsc -p tsconfig.json --noEmit
+
+src/app.ts(5,30): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './middleware/error-handler.js'?
+src/app.ts(6,33): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './middleware/not-found-handler.js'?
+src/app.ts(7,27): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './routes.js'?
+src/jobs/email.worker.ts(2,33): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './queues.js'?
+src/jobs/queues.ts(3,21): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../config/env.js'?
+src/jobs/queues.ts(5,36): error TS2351: This expression is not constructable.
+  Type 'typeof import("C:/TeamPlatform/node_modules/ioredis/built/index")' has no construct signatures.
+src/middleware/authenticate.ts(2,83): error TS2307: Cannot find module '../modules/auth/auth.service' or its corresponding type declarations.
+src/middleware/authenticate.ts(3,26): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../utils/app-error.js'?
+src/middleware/error-handler.ts(3,26): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../utils/app-error.js'?
+src/middleware/rbac.ts(1,43): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './authenticate.js'?
+src/middleware/rbac.ts(2,35): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './require-permission.js'?
+src/middleware/rbac.ts(3,29): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './require-role.js'?
+src/middleware/require-permission.ts(2,26): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../utils/app-error.js'?
+src/middleware/require-role.ts(2,26): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../utils/app-error.js'?
+src/modules/attendance/attendance.repository.ts(1,24): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../prisma/client.js'?
+src/modules/attendance/attendance.repository.ts(2,31): error TS2307: Cannot find module './attendance.utils' or its corresponding type declarations.
+src/modules/attendance/attendance.routes.ts(2,48): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../middleware/rbac.js'?
+src/modules/attendance/attendance.routes.ts(3,30): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../utils/async-handler.js'?
+src/modules/attendance/attendance.routes.ts(4,113): error TS2307: Cannot find module './attendance.schemas' or its corresponding type declarations.
+src/modules/attendance/attendance.routes.ts(5,126): error TS2307: Cannot find module './attendance.service' or its corresponding type declarations.
+src/modules/attendance/attendance.routes.ts(14,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/attendance/attendance.routes.ts(14,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/attendance/attendance.routes.ts(24,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/attendance/attendance.routes.ts(24,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/attendance/attendance.routes.ts(38,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/attendance/attendance.routes.ts(38,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/attendance/attendance.routes.ts(48,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/attendance/attendance.routes.ts(48,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/attendance/attendance.routes.ts(62,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/attendance/attendance.routes.ts(62,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/attendance/attendance.service.ts(1,24): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../prisma/client.js'?
+src/modules/attendance/attendance.service.ts(2,26): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../utils/app-error.js'?
+src/modules/attendance/attendance.service.ts(3,32): error TS2307: Cannot find module '../audit/audit.service' or its corresponding type declarations.
+src/modules/attendance/attendance.service.ts(10,8): error TS2307: Cannot find module './attendance.repository' or its corresponding type declarations.
+src/modules/attendance/attendance.service.ts(11,53): error TS2307: Cannot find module './attendance.utils' or its corresponding type declarations.
+src/modules/attendance/attendance.service.ts(12,44): error TS2307: Cannot find module './attendance.schemas' or its corresponding type declarations.
+src/modules/attendance/attendance.service.ts(71,83): error TS7006: Parameter 'employee' implicitly has an 'any' type.
+src/modules/attendance/attendance.service.ts(72,51): error TS7006: Parameter 'record' implicitly has an 'any' type.
+src/modules/attendance/attendance.service.ts(78,31): error TS7006: Parameter 'employee' implicitly has an 'any' type.
+src/modules/attendance/attendance.service.ts(82,27): error TS2339: Property 'id' does not exist on type '{}'.
+src/modules/attendance/attendance.service.ts(83,45): error TS2339: Property 'status' does not exist on type '{}'.
+src/modules/attendance/attendance.service.ts(84,23): error TS2339: Property 'note' does not exist on type '{}'.
+src/modules/attendance/attendance.service.ts(100,58): error TS7006: Parameter 'employee' implicitly has an 'any' type.
+src/modules/attendance/attendance.service.ts(102,46): error TS7006: Parameter 'employee' implicitly has an 'any' type.
+src/modules/attendance/attendance.service.ts(118,24): error TS7006: Parameter 'record' implicitly has an 'any' type.
+src/modules/attendance/attendance.service.ts(163,69): error TS7006: Parameter 'items' implicitly has an 'any' type.
+src/modules/attendance/attendance.service.ts(164,40): error TS7006: Parameter 'employee' implicitly has an 'any' type.
+src/modules/attendance/attendance.service.ts(176,48): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/modules/attendance/attendance.service.ts(177,56): error TS7006: Parameter 'record' implicitly has an 'any' type.
+src/modules/attendance/attendance.service.ts(187,30): error TS2339: Property 'status' does not exist on type '{}'.
+src/modules/attendance/attendance.utils.ts(1,26): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../utils/app-error.js'?
+src/modules/audit/audit.service.ts(1,24): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../prisma/client.js'?
+src/modules/auth/auth.repository.ts(1,24): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../prisma/client.js'?
+src/modules/auth/auth.routes.ts(2,29): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../middleware/authenticate.js'?
+src/modules/auth/auth.routes.ts(3,30): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../utils/async-handler.js'?
+src/modules/auth/auth.routes.ts(4,29): error TS2307: Cannot find module './auth.schemas' or its corresponding type declarations.
+src/modules/auth/auth.routes.ts(5,23): error TS2307: Cannot find module './auth.service' or its corresponding type declarations.
+src/modules/auth/auth.routes.ts(11,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/auth/auth.routes.ts(11,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/auth/auth.service.ts(3,21): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../config/env.js'?
+src/modules/auth/auth.service.ts(4,26): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../utils/app-error.js'?
+src/modules/auth/auth.service.ts(5,32): error TS2307: Cannot find module '../audit/audit.service' or its corresponding type declarations.
+src/modules/auth/auth.service.ts(6,72): error TS2307: Cannot find module './auth.repository' or its corresponding type declarations.
+src/modules/auth/auth.service.ts(58,11): error TS7006: Parameter 'userRole' implicitly has an 'any' type.
+src/modules/auth/auth.service.ts(59,14): error TS7006: Parameter 'role' implicitly has an 'any' type.
+src/modules/auth/auth.service.ts(60,34): error TS7006: Parameter 'role' implicitly has an 'any' type.
+src/modules/auth/auth.service.ts(63,28): error TS7006: Parameter 'role' implicitly has an 'any' type.
+src/modules/auth/auth.service.ts(64,35): error TS7006: Parameter 'rolePermission' implicitly has an 'any' type.
+src/modules/auth/auth.service.ts(75,5): error TS2322: Type 'unknown[]' is not assignable to type 'string[]'.
+  Type 'unknown' is not assignable to type 'string'.
+src/modules/departments/departments.repository.ts(1,24): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../prisma/client.js'?
+src/modules/departments/departments.routes.ts(2,48): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../middleware/rbac.js'?
+src/modules/departments/departments.routes.ts(3,30): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../utils/async-handler.js'?
+src/modules/departments/departments.routes.ts(4,102): error TS2307: Cannot find module '../hr/hr.schemas' or its corresponding type declarations.
+src/modules/departments/departments.routes.ts(5,105): error TS2307: Cannot find module './departments.service' or its corresponding type declarations.
+src/modules/departments/departments.routes.ts(14,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/departments/departments.routes.ts(14,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/departments/departments.routes.ts(24,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/departments/departments.routes.ts(24,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/departments/departments.routes.ts(38,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/departments/departments.routes.ts(38,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/departments/departments.routes.ts(48,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/departments/departments.routes.ts(48,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/departments/departments.routes.ts(63,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/departments/departments.routes.ts(63,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/departments/departments.service.ts(1,32): error TS2307: Cannot find module '../audit/audit.service' or its corresponding type declarations.
+src/modules/departments/departments.service.ts(2,24): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../prisma/client.js'?
+src/modules/departments/departments.service.ts(3,26): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../utils/app-error.js'?
+src/modules/departments/departments.service.ts(4,69): error TS2307: Cannot find module '../hr/hr.utils' or its corresponding type declarations.
+src/modules/departments/departments.service.ts(5,53): error TS2307: Cannot find module './departments.repository' or its corresponding type declarations.
+src/modules/departments/departments.service.ts(7,92): error TS2307: Cannot find module '../hr/hr.schemas' or its corresponding type declarations.
+src/modules/employees/employees.repository.ts(1,24): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../prisma/client.js'?
+src/modules/employees/employees.routes.ts(2,48): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../middleware/rbac.js'?
+src/modules/employees/employees.routes.ts(3,30): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../utils/async-handler.js'?
+src/modules/employees/employees.routes.ts(4,96): error TS2307: Cannot find module '../hr/hr.schemas' or its corresponding type declarations.
+src/modules/employees/employees.routes.ts(5,113): error TS2307: Cannot find module './employees.service' or its corresponding type declarations.
+src/modules/employees/employees.routes.ts(14,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/employees/employees.routes.ts(14,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/employees/employees.routes.ts(26,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/employees/employees.routes.ts(26,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/employees/employees.routes.ts(40,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/employees/employees.routes.ts(40,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/employees/employees.routes.ts(52,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/employees/employees.routes.ts(52,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/employees/employees.routes.ts(67,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/employees/employees.routes.ts(67,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/employees/employees.routes.ts(81,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/employees/employees.routes.ts(81,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/employees/employees.service.ts(2,24): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../prisma/client.js'?
+src/modules/employees/employees.service.ts(3,26): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../utils/app-error.js'?
+src/modules/employees/employees.service.ts(4,32): error TS2307: Cannot find module '../audit/audit.service' or its corresponding type declarations.
+src/modules/employees/employees.service.ts(5,86): error TS2307: Cannot find module '../hr/hr.schemas' or its corresponding type declarations.
+src/modules/employees/employees.service.ts(6,101): error TS2307: Cannot find module '../hr/hr.utils' or its corresponding type declarations.
+src/modules/employees/employees.service.ts(7,49): error TS2307: Cannot find module './employees.repository' or its corresponding type declarations.
+src/modules/employees/employees.service.ts(48,7): error TS2862: Type 'T' is generic and can only be indexed for reading.
+src/modules/employees/employees.service.ts(53,12): error TS2339: Property 'position' does not exist on type 'T'.
+src/modules/employees/employees.service.ts(80,23): error TS7006: Parameter 'employee' implicitly has an 'any' type.
+src/modules/hr/hr.utils.ts(1,26): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../utils/app-error.js'?
+src/modules/positions/positions.repository.ts(1,24): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../prisma/client.js'?
+src/modules/positions/positions.routes.ts(2,48): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../middleware/rbac.js'?
+src/modules/positions/positions.routes.ts(3,30): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../utils/async-handler.js'?
+src/modules/positions/positions.routes.ts(4,96): error TS2307: Cannot find module '../hr/hr.schemas' or its corresponding type declarations.
+src/modules/positions/positions.routes.ts(5,95): error TS2307: Cannot find module './positions.service' or its corresponding type declarations.
+src/modules/positions/positions.routes.ts(14,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/positions/positions.routes.ts(14,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/positions/positions.routes.ts(24,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/positions/positions.routes.ts(24,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/positions/positions.routes.ts(38,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/positions/positions.routes.ts(38,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/positions/positions.routes.ts(48,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/positions/positions.routes.ts(48,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/positions/positions.routes.ts(63,23): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/modules/positions/positions.routes.ts(63,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/modules/positions/positions.service.ts(2,24): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../prisma/client.js'?
+src/modules/positions/positions.service.ts(3,26): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../utils/app-error.js'?
+src/modules/positions/positions.service.ts(4,32): error TS2307: Cannot find module '../audit/audit.service' or its corresponding type declarations.
+src/modules/positions/positions.service.ts(5,86): error TS2307: Cannot find module '../hr/hr.schemas' or its corresponding type declarations.
+src/modules/positions/positions.service.ts(6,69): error TS2307: Cannot find module '../hr/hr.utils' or its corresponding type declarations.
+src/modules/positions/positions.service.ts(7,49): error TS2307: Cannot find module './positions.repository' or its corresponding type declarations.
+src/modules/users/users.routes.ts(2,29): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../middleware/authenticate.js'?
+src/modules/users/users.routes.ts(3,35): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../middleware/require-permission.js'?
+src/routes.ts(2,34): error TS2307: Cannot find module './modules/attendance/attendance.routes' or its corresponding type declarations.
+src/routes.ts(3,29): error TS2307: Cannot find module './modules/audit/audit.routes' or its corresponding type declarations.
+src/routes.ts(4,28): error TS2307: Cannot find module './modules/auth/auth.routes' or its corresponding type declarations.
+src/routes.ts(5,34): error TS2307: Cannot find module './modules/allowances/allowances.routes' or its corresponding type declarations.
+src/routes.ts(6,35): error TS2307: Cannot find module './modules/departments/departments.routes' or its corresponding type declarations.
+src/routes.ts(7,29): error TS2307: Cannot find module './modules/email/email.routes' or its corresponding type declarations.
+src/routes.ts(8,33): error TS2307: Cannot find module './modules/employees/employees.routes' or its corresponding type declarations.
+src/routes.ts(9,31): error TS2307: Cannot find module './modules/exports/exports.routes' or its corresponding type declarations.
+src/routes.ts(10,31): error TS2307: Cannot find module './modules/imports/imports.routes' or its corresponding type declarations.
+src/routes.ts(11,31): error TS2307: Cannot find module './modules/payroll/payroll.routes' or its corresponding type declarations.
+src/routes.ts(12,33): error TS2307: Cannot find module './modules/positions/positions.routes' or its corresponding type declarations.
+src/routes.ts(13,40): error TS2307: Cannot find module './modules/project-documents/project-documents.routes' or its corresponding type declarations.
+src/routes.ts(14,32): error TS2307: Cannot find module './modules/projects/projects.routes' or its corresponding type declarations.
+src/routes.ts(15,31): error TS2307: Cannot find module './modules/reports/reports.routes' or its corresponding type declarations.
+src/routes.ts(16,29): error TS2307: Cannot find module './modules/roles/roles.routes' or its corresponding type declarations.
+src/routes.ts(17,38): error TS2307: Cannot find module './modules/salary-advances/salary-advances.routes' or its corresponding type declarations.
+src/routes.ts(18,34): error TS2307: Cannot find module './modules/statistics/statistics.routes' or its corresponding type declarations.
+src/routes.ts(19,27): error TS2307: Cannot find module './modules/tax/tax.routes' or its corresponding type declarations.
+src/routes.ts(20,29): error TS2307: Cannot find module './modules/users/users.routes' or its corresponding type declarations.
+src/server.ts(1,27): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './app.js'?
+src/server.ts(2,21): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './config/env.js'?
+node.exe : npm error Lifecycle script `typecheck` failed with error:
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm error Lifec...led with error::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm error code 2
+npm error path C:\TeamPlatform\apps\api
+npm error workspace @team-platform/api@0.1.0
+npm error location C:\TeamPlatform\apps\api
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c tsc -p tsconfig.json --noEmit
+

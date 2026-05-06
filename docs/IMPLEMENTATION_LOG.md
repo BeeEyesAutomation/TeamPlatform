@@ -1,5 +1,86 @@
 # Implementation Log
 
+## 2026-05-06 - Phase 4 Manual Attendance Completion
+
+### Current Phase
+
+Phase 4: Simple Manual Attendance.
+
+### Scope
+
+- Complete manual attendance APIs for daily attendance save/view and monthly summaries.
+- Ensure daily attendance defaults missing records to `present`.
+- Use only Phase 4 attendance statuses: `present`, `paid_leave`, and `unpaid_leave` at the API/frontend boundary.
+- Preserve existing attendance lock behavior if already implemented, without expanding into payroll or other modules.
+- Add or verify RBAC and audit logging for attendance changes.
+- Complete a basic web attendance screen with date selection, employee status selection, bulk save, and monthly summary.
+- Do not implement payroll calculation, projects, email, import/export, reports, check-in/check-out, late/early tracking, GPS, or QR code.
+
+### Assumptions
+
+- Existing Phase 2 RBAC permissions are the source of authorization.
+- If manager scoping is not represented in the current schema/services, managers use the same attendance management permission until a scope model exists.
+- Employee self-service attendance views are deferred unless existing auth/user-to-employee linkage already supports them.
+- Business dates are accepted as `YYYY-MM-DD` and normalized consistently in the service layer.
+- Month values stay as `YYYY-MM` strings.
+- Pre-existing unrelated working tree changes are not reverted.
+
+### Planned Commands
+
+- `npx prisma format` if Prisma schema changes are required.
+- `npx prisma validate` if Prisma schema changes are required.
+- `npx prisma generate` if Prisma schema changes are required.
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web` if frontend changes are required.
+- Targeted attendance tests only if available.
+- `git diff --check`
+
+### Changed Files Summary
+
+- `apps/api/src/modules/attendance/attendance.schemas.ts`: Updated the API request status names to `present`, `paid_leave`, and `unpaid_leave`.
+- `apps/api/src/modules/attendance/attendance.service.ts`: Added API-to-database status mapping, returned API status names, and calculated monthly summaries with missing records treated as `present` on saved attendance dates.
+- `apps/api/src/modules/attendance/attendance.repository.ts`: Added distinct saved attendance date lookup for monthly summary working-day calculation.
+- `apps/web/types/attendance.ts`: Updated frontend attendance status types to the API status names.
+- `apps/web/features/attendance/attendance-client.tsx`: Updated the daily status selector values to `paid_leave` and `unpaid_leave`.
+- `apps/api/tsconfig.json`: Removed the unsupported local `ignoreDeprecations: "6.0"` config value during API typecheck failure handling; the pre-existing local `rootDir` change remains otherwise untouched.
+- `docs/logs/2026-05-06_phase-4_api-typecheck.log`: Captured API typecheck failures.
+- `docs/logs/2026-05-06_phase-4_inspect-tests.log`: Captured an inspection command syntax failure.
+- `docs/IMPLEMENTATION_LOG.md`: Documented Phase 4 completion work and remaining validation blocker.
+
+### Commands Run
+
+- `Get-Content -Raw AGENTS.md`
+- `Get-Content -Raw docs/IMPLEMENTATION_LOG.md`
+- `Get-Content -Raw docs/DECISIONS.md`
+- `Select-String` scoped to attendance sections in `REQUIREMENTS.md`, `DATABASE.md`, `API.md`, and `WORKFLOWS.md`
+- `Get-ChildItem` and `Get-Content` for attendance-related backend/frontend files
+- `rg "attendance\\." apps/api/prisma/seed.ts apps/api/src -n`
+- `rg "leave_paid|leave_unpaid|paid_leave|unpaid_leave" apps/api apps/web packages -n`
+- `npm run typecheck --workspace apps/api`
+
+### Tests/Checks Run
+
+- Prisma commands were not run because this completion pass did not change the Prisma schema.
+- `npm run typecheck --workspace apps/api` failed with `config_error`.
+  - Log file: `docs/logs/2026-05-06_phase-4_api-typecheck.log`
+  - First failure: unsupported `ignoreDeprecations: "6.0"` in `apps/api/tsconfig.json`.
+  - Targeted fix: removed the unsupported suppressor.
+  - Rerun result: failed again because the API inherits `NodeNext`/Node16-style module resolution while existing source imports are extensionless across the API.
+- Web typecheck, targeted attendance tests, `git diff --check`, production build, full test suite, payroll tests, project tests, and e2e tests were not run after the API typecheck rerun failed, per the stop rule.
+
+### Fixes Applied
+
+- Kept the database enum values unchanged (`leave_paid`, `leave_unpaid`) and mapped them to the requested API/frontend values (`paid_leave`, `unpaid_leave`) to avoid a migration-only enum rename.
+- Monthly summary now counts missing employee records as `present` for dates where attendance exists in the selected month/filter.
+- Removed unsupported `ignoreDeprecations: "6.0"` from the local API tsconfig during failure handling.
+
+### Remaining TODOs
+
+- Resolve the API-wide TypeScript module resolution mismatch before validation can pass. Options are to set an API-specific module/moduleResolution pair compatible with extensionless TypeScript imports or convert API relative imports to explicit `.js` specifiers consistently.
+- Rerun `npm run typecheck --workspace apps/api` after that config decision.
+- Run `npm run typecheck --workspace apps/web` after API validation is unblocked or in a follow-up pass.
+- Add targeted attendance tests in a later pass if the project adds attendance test files.
+
 ## 2026-05-06 - Web TypeScript Config Repair
 
 ### Scope

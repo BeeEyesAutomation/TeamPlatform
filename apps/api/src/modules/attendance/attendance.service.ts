@@ -1,9 +1,17 @@
 import { prisma } from "../../prisma/client";
 import { AppError } from "../../utils/app-error";
 import { createAuditLog } from "../audit/audit.service";
-import { findAttendanceLock, listActiveEmployees, listAttendanceRecordsForDate, listMonthlyAttendance } from "./attendance.repository";
+import {
+  findAttendanceLock,
+  listActiveEmployees,
+  listAttendanceDatesForMonth,
+  listAttendanceRecordsForDate,
+  listMonthlyAttendance
+} from "./attendance.repository";
 import { getMonthFromDate, parseBusinessDate } from "./attendance.utils";
 import type { AttendanceStatusInput } from "./attendance.schemas";
+
+type StoredAttendanceStatus = "present" | "leave_paid" | "leave_unpaid";
 
 interface RequestContext {
   actorId?: string;
@@ -29,6 +37,30 @@ const summaryDefaults = () => ({
   attendancePercent: 0
 });
 
+function toStoredStatus(status: AttendanceStatusInput): StoredAttendanceStatus {
+  if (status === "paid_leave") {
+    return "leave_paid";
+  }
+  if (status === "unpaid_leave") {
+    return "leave_unpaid";
+  }
+  return "present";
+}
+
+function toApiStatus(status: StoredAttendanceStatus): AttendanceStatusInput {
+  if (status === "leave_paid") {
+    return "paid_leave";
+  }
+  if (status === "leave_unpaid") {
+    return "unpaid_leave";
+  }
+  return "present";
+}
+
+function dateKey(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
 export async function getAttendanceByDate(input: { date: string; departmentId?: string }) {
   const businessDate = parseBusinessDate(input.date);
   const month = getMonthFromDate(input.date);
@@ -48,7 +80,7 @@ export async function getAttendanceByDate(input: { date: string; departmentId?: 
       return {
         employee,
         recordId: record?.id ?? null,
-        status: record?.status ?? "present",
+        status: record ? toApiStatus(record.status) : "present",
         note: record?.note ?? ""
       };
     })
@@ -71,7 +103,7 @@ export async function saveAttendance(input: SaveAttendanceInput, context: Reques
     const submitted = submittedByEmployeeId.get(employee.id);
     return {
       employeeId: employee.id,
-      status: submitted?.status ?? "present",
+      status: toStoredStatus(submitted?.status ?? "present"),
       note: submitted?.note
     };
   });
@@ -127,30 +159,47 @@ export async function saveAttendance(input: SaveAttendanceInput, context: Reques
 }
 
 export async function getMonthlyAttendanceSummary(input: { month: string; employeeId?: string; departmentId?: string }) {
-  const records = await listMonthlyAttendance(input.month, {
-    employeeId: input.employeeId,
-    departmentId: input.departmentId
-  });
-  const lock = await findAttendanceLock(input.month);
+  const [employees, records, attendanceDates, lock] = await Promise.all([
+    listActiveEmployees({ departmentId: input.departmentId }).then((items) =>
+      input.employeeId ? items.filter((employee) => employee.id === input.employeeId) : items
+    ),
+    listMonthlyAttendance(input.month, {
+      employeeId: input.employeeId,
+      departmentId: input.departmentId
+    }),
+    listAttendanceDatesForMonth(input.month, {
+      departmentId: input.departmentId
+    }),
+    findAttendanceLock(input.month)
+  ]);
   const summaryByEmployeeId = new Map<string, ReturnType<typeof summaryDefaults> & { employee: typeof records[number]["employee"] }>();
+  const workingDateKeys = attendanceDates.map((item) => dateKey(item.date));
+  const recordByEmployeeAndDate = new Map(records.map((record) => [`${record.employeeId}:${dateKey(record.date)}`, record]));
 
-  for (const record of records) {
-    const current = summaryByEmployeeId.get(record.employeeId) ?? {
-      employee: record.employee,
+  for (const employee of employees) {
+    const current = {
+      employee,
       ...summaryDefaults()
     };
-    current.workingDays += 1;
-    if (record.status === "present") {
-      current.presentDays += 1;
+
+    for (const workingDate of workingDateKeys) {
+      const record = recordByEmployeeAndDate.get(`${employee.id}:${workingDate}`);
+      const status = record?.status ?? "present";
+
+      current.workingDays += 1;
+      if (status === "present") {
+        current.presentDays += 1;
+      }
+      if (status === "leave_paid") {
+        current.paidLeaveDays += 1;
+      }
+      if (status === "leave_unpaid") {
+        current.unpaidLeaveDays += 1;
+      }
     }
-    if (record.status === "leave_paid") {
-      current.paidLeaveDays += 1;
-    }
-    if (record.status === "leave_unpaid") {
-      current.unpaidLeaveDays += 1;
-    }
+
     current.attendancePercent = current.workingDays === 0 ? 0 : Math.round((current.presentDays / current.workingDays) * 10000) / 100;
-    summaryByEmployeeId.set(record.employeeId, current);
+    summaryByEmployeeId.set(employee.id, current);
   }
 
   return {

@@ -80,3 +80,27 @@ export function listMonthlyAttendance(month: string, filters: { employeeId?: str
     orderBy: [{ employee: { fullName: "asc" } }, { date: "asc" }]
   });
 }
+
+export function listAttendanceDatesForMonth(month: string, filters: { departmentId?: string }) {
+  const range = getMonthRange(month);
+
+  return prisma.attendanceRecord.findMany({
+    where: {
+      date: {
+        gte: range.start,
+        lt: range.end
+      },
+      employee: {
+        deletedAt: null,
+        ...(filters.departmentId ? { departmentId: filters.departmentId } : {})
+      }
+    },
+    select: {
+      date: true
+    },
+    distinct: ["date"],
+    orderBy: {
+      date: "asc"
+    }
+  });
+}
