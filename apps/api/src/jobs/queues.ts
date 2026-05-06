@@ -2,10 +2,21 @@ import { Queue } from "bullmq";
 import IORedis from "ioredis";
 import { env } from "../config/env";
 
-export const redisConnection = new IORedis(env.REDIS_URL, {
-  maxRetriesPerRequest: null
-});
+let redisConnection: IORedis | undefined;
+let emailQueue: Queue | undefined;
 
-export const emailQueue = new Queue("email", {
-  connection: redisConnection
-});
+export function getRedisConnection() {
+  redisConnection ??= new IORedis(env.REDIS_URL, {
+    maxRetriesPerRequest: null
+  });
+
+  return redisConnection;
+}
+
+export function getEmailQueue() {
+  emailQueue ??= new Queue("email", {
+    connection: getRedisConnection()
+  });
+
+  return emailQueue;
+}

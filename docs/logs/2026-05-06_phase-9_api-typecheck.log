@@ -1,0 +1,11 @@
+classification: type_error
+command: npm run typecheck --workspace apps/api
+
+> @team-platform/api@0.1.0 typecheck
+> tsc -p tsconfig.json --noEmit
+
+src/modules/email/email.service.ts(215,5): error TS2322: Type 'Record<string, unknown>' is not assignable to type 'InputJsonValue | null | undefined'.
+src/modules/email/email.service.ts(223,7): error TS2322: Type '{ variables: Record<string, unknown>; }' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+
+Fix:
+  Cast queued email metadata variables at the Prisma JSON boundary.

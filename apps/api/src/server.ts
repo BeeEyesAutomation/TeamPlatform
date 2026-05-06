@@ -1,5 +1,6 @@
 import { createApp } from "./app";
 import { env } from "./config/env";
+import "./jobs/email.worker";
 
 const app = createApp();
 

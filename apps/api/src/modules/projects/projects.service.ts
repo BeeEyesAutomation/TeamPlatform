@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../../prisma/client";
 import { AppError } from "../../utils/app-error";
 import { createAuditLog } from "../audit/audit.service";
+import { enqueueEmail } from "../email/email.service";
 import { getPagination, getPaginationMeta, handlePrismaError } from "../hr/hr.utils";
 import type { z } from "zod";
 import type {
@@ -418,6 +419,17 @@ export async function createTask(projectId: string, data: TaskCreate, context: R
     data: { projectId, assignedById: context.actorId, ...taskData(data) } as Prisma.ProjectTaskUncheckedCreateInput
   });
   await auditProjectChange({ action: "create_task", projectId, targetType: "project_task", targetId: task.id, newValue: task, context });
+  const assignee = task.assigneeId ? await prisma.employee.findUnique({ where: { id: task.assigneeId } }) : undefined;
+  await enqueueEmail({
+    toEmail: assignee?.email,
+    templateCode: "task_assigned",
+    variables: {
+      employeeName: assignee?.fullName,
+      taskTitle: task.title,
+      projectId
+    },
+    context
+  });
   return task;
 }
 
@@ -439,6 +451,16 @@ export async function confirmTask(id: string, context: RequestContext) {
   const existing = await getTask(id);
   const task = await prisma.projectTask.update({ where: { id }, data: { status: "confirmed", confirmedAt: new Date() } });
   await auditProjectChange({ action: "confirm_task", projectId: existing.projectId, targetType: "project_task", targetId: id, oldValue: existing, newValue: task, context });
+  const assignedBy = existing.assignedById ? await prisma.user.findUnique({ where: { id: existing.assignedById } }) : undefined;
+  await enqueueEmail({
+    toEmail: assignedBy?.email,
+    templateCode: "task_confirmed",
+    variables: {
+      taskTitle: task.title,
+      projectId: task.projectId
+    },
+    context
+  });
   return task;
 }
 
@@ -453,6 +475,17 @@ export async function updateTaskProgress(id: string, data: TaskProgress, context
     }
   });
   await auditProjectChange({ action: "update_task_progress", projectId: existing.projectId, targetType: "project_task", targetId: id, oldValue: existing, newValue: task, context });
+  const assignedBy = existing.assignedById ? await prisma.user.findUnique({ where: { id: existing.assignedById } }) : undefined;
+  await enqueueEmail({
+    toEmail: assignedBy?.email,
+    templateCode: "task_progress_updated",
+    variables: {
+      taskTitle: task.title,
+      progressPercent: task.progressPercent.toString(),
+      projectId: task.projectId
+    },
+    context
+  });
   return task;
 }
 
@@ -496,6 +529,17 @@ export async function createIssue(projectId: string, data: IssueCreate, context:
     data: { projectId, reportedById: context.actorId, ...data } as Prisma.ProjectIssueUncheckedCreateInput
   });
   await auditProjectChange({ action: "create_issue", projectId, targetType: "project_issue", targetId: issue.id, newValue: issue, context });
+  const assignee = issue.assignedToId ? await prisma.employee.findUnique({ where: { id: issue.assignedToId } }) : undefined;
+  await enqueueEmail({
+    toEmail: assignee?.email,
+    templateCode: "issue_created",
+    variables: {
+      issueTitle: issue.title,
+      severity: issue.severity,
+      projectId
+    },
+    context
+  });
   return issue;
 }
 
@@ -517,6 +561,16 @@ export async function closeIssue(id: string, context: RequestContext) {
   const existing = await getIssue(id);
   const issue = await prisma.projectIssue.update({ where: { id }, data: { status: "closed", closedAt: new Date() } });
   await auditProjectChange({ action: "close_issue", projectId: existing.projectId, targetType: "project_issue", targetId: id, oldValue: existing, newValue: issue, context });
+  const reporter = existing.reportedById ? await prisma.user.findUnique({ where: { id: existing.reportedById } }) : undefined;
+  await enqueueEmail({
+    toEmail: reporter?.email,
+    templateCode: "issue_resolved",
+    variables: {
+      issueTitle: issue.title,
+      projectId: issue.projectId
+    },
+    context
+  });
   return issue;
 }
 

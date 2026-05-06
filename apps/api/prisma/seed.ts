@@ -71,6 +71,7 @@ const emailTemplates = [
   "issue_created",
   "issue_resolved",
   "payroll_published",
+  "smtp_test",
   "attendance_locked",
   "payroll_locked",
   "project_document_pending_approval"
@@ -459,15 +460,58 @@ async function seedDocumentPermissions() {
 }
 
 async function seedEmailTemplates() {
+  const templateDefaults: Record<string, { subject: string; body: string }> = {
+    task_assigned: {
+      subject: "[Team Platform] Task assigned: {{taskTitle}}",
+      body: "Hello {{employeeName}},<br/>You have been assigned task <strong>{{taskTitle}}</strong>."
+    },
+    task_confirmed: {
+      subject: "[Team Platform] Task confirmed: {{taskTitle}}",
+      body: "Task <strong>{{taskTitle}}</strong> has been confirmed."
+    },
+    task_progress_updated: {
+      subject: "[Team Platform] Task progress updated: {{taskTitle}}",
+      body: "Task <strong>{{taskTitle}}</strong> progress is now {{progressPercent}}%."
+    },
+    issue_created: {
+      subject: "[Team Platform] Issue created: {{issueTitle}}",
+      body: "Issue <strong>{{issueTitle}}</strong> was created with severity {{severity}}."
+    },
+    issue_resolved: {
+      subject: "[Team Platform] Issue resolved: {{issueTitle}}",
+      body: "Issue <strong>{{issueTitle}}</strong> has been resolved or closed."
+    },
+    payroll_published: {
+      subject: "[Team Platform] Payslip published for {{month}}",
+      body: "Hello {{employeeName}},<br/>Your payslip for {{month}} has been published. Please sign in to view details."
+    },
+    project_document_pending_approval: {
+      subject: "[Team Platform] Document pending approval: {{documentTitle}}",
+      body: "Document <strong>{{documentTitle}}</strong> in project {{projectName}} is pending approval."
+    },
+    smtp_test: {
+      subject: "[Team Platform] SMTP test",
+      body: "{{message}}"
+    }
+  };
+
   for (const code of emailTemplates) {
+    const defaults = templateDefaults[code] ?? {
+      subject: `[Team Platform] ${titleCase(code)}`,
+      body: `Template placeholder for ${code}.`
+    };
+
     await prisma.emailTemplate.upsert({
       where: { code },
-      update: {},
+      update: {
+        subject: defaults.subject,
+        body: defaults.body
+      },
       create: {
         code,
         name: titleCase(code),
-        subject: `[Team Platform] ${titleCase(code)}`,
-        body: `Template placeholder for ${code}.`,
+        subject: defaults.subject,
+        body: defaults.body,
         isActive: true
       }
     });

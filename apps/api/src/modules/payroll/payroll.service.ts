@@ -3,6 +3,7 @@ import { prisma } from "../../prisma/client";
 import { AppError } from "../../utils/app-error";
 import { createAuditLog } from "../audit/audit.service";
 import { getMonthRange } from "../attendance/attendance.utils";
+import { enqueueEmail } from "../email/email.service";
 import { getPagination, getPaginationMeta } from "../hr/hr.utils";
 import { calculatePayroll, decimal, type PayrollAllowanceInput } from "./payroll.calculator";
 import type { z } from "zod";
@@ -420,8 +421,18 @@ export function approvePayroll(id: string, context: RequestContext) {
   return updatePayrollStatus(id, "finalized", context);
 }
 
-export function publishPayroll(id: string, context: RequestContext) {
-  return updatePayrollStatus(id, "published", context);
+export async function publishPayroll(id: string, context: RequestContext) {
+  const payroll = await updatePayrollStatus(id, "published", context);
+  await enqueueEmail({
+    toEmail: payroll.employee?.email,
+    templateCode: "payroll_published",
+    variables: {
+      employeeName: payroll.employee?.fullName,
+      month: payroll.month
+    },
+    context
+  });
+  return payroll;
 }
 
 export function lockPayroll(id: string, context: RequestContext) {

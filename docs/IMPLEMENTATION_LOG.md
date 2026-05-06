@@ -1,5 +1,70 @@
 # Implementation Log
 
+## 2026-05-06 - Phase 9 SMTP Email Automation with Queue
+
+### Current Phase
+
+Phase 9: SMTP Email Automation with Queue.
+
+### Scope
+
+- Implement configurable SMTP settings, test email enqueueing, templates, email logs, retry, BullMQ queue, and Nodemailer worker.
+- Trigger queued email jobs for task assignment, task confirmation, task progress update, issue creation, issue resolution, and payroll publication.
+- Add frontend pages for SMTP settings, email templates, and email logs.
+- Add targeted email service tests with mocked SMTP behavior and no real email sending.
+- Do not implement import/export reports, production build, or real SMTP sends in tests.
+
+### Assumptions
+
+- SMTP password is stored in the existing `passwordEncrypted` field as either an environment reference (`env:NAME`) or a local encrypted/string placeholder; Phase 9 does not introduce a new secrets service.
+- Email jobs are queued through BullMQ; worker startup is imported by the API server but can be disabled in tests.
+- Payroll publication emails use a generic notification and do not include sensitive salary details.
+- Existing unrelated working tree changes are not reverted.
+
+### Planned Commands
+
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+- Targeted email service tests only.
+- `git diff --check`
+
+### Result
+
+- Implemented SMTP settings APIs, including active setting management, environment variable password references, and queued test email creation.
+- Implemented email template list/detail/update APIs and seeded concrete template subjects/bodies for required triggers.
+- Implemented email log listing and retry, including pending, sent, failed, and retrying states.
+- Implemented BullMQ email queue helpers and a Nodemailer-backed worker that processes email log jobs.
+- Added queued email triggers for task assignment, task confirmation, task progress update, issue creation, issue resolution, project document pending approval, and payroll publication.
+- Payroll publication email payloads are sanitized and do not include salary, tax, or bank details.
+- Added frontend SMTP settings, template editing, and email log/retry page.
+- Added targeted email renderer tests with no real SMTP sending.
+
+### Changed Files Summary
+
+- Backend email: `apps/api/src/modules/email/email.schemas.ts`, `apps/api/src/modules/email/email.service.ts`, `apps/api/src/modules/email/email.renderer.ts`, `apps/api/src/modules/email/email.routes.ts`
+- Backend queue/worker: `apps/api/src/jobs/queues.ts`, `apps/api/src/jobs/email.worker.ts`, `apps/api/src/server.ts`
+- Backend triggers: `apps/api/src/modules/projects/projects.service.ts`, `apps/api/src/modules/project-documents/project-documents.service.ts`, `apps/api/src/modules/payroll/payroll.service.ts`
+- Backend tests/seed: `apps/api/src/modules/email/email.renderer.test.ts`, `apps/api/prisma/seed.ts`
+- Frontend email: `apps/web/app/email/page.tsx`, `apps/web/features/email/*`, `apps/web/types/email.ts`, `apps/web/components/layout/app-shell.tsx`
+- Logs: `docs/logs/2026-05-06_phase-9_*.log`
+
+### Commands Run
+
+- `npm run test --workspace apps/api -- email.renderer` - passed.
+- `npm run typecheck --workspace apps/api` - failed once, then passed after the Prisma JSON metadata fix.
+- `npm run typecheck --workspace apps/web` - passed.
+- `git diff --check` - passed with line-ending warnings only.
+
+### Failures and Logs
+
+- `docs/logs/2026-05-06_phase-9_api-typecheck.log` - `type_error`; fixed by casting queued email metadata variables at the Prisma JSON boundary.
+
+### Remaining TODOs
+
+- Real SMTP delivery was not manually exercised, per the no-real-email rule.
+- Redis availability was not tested because no dev server or worker execution command was run.
+- SMTP password handling supports `env:NAME` references and stored placeholder strings; stronger encryption can be added when a secrets/key-management approach is selected.
+
 ## 2026-05-06 - Phase 8 Project Documents and Document Permissions
 
 ### Current Phase

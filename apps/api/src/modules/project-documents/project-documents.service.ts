@@ -2,6 +2,7 @@ import type { DocumentAction, ProjectDocument, SecurityLevel } from "@prisma/cli
 import { prisma } from "../../prisma/client";
 import { AppError } from "../../utils/app-error";
 import { createAuditLog } from "../audit/audit.service";
+import { enqueueEmail } from "../email/email.service";
 import { getPagination, getPaginationMeta, handlePrismaError } from "../hr/hr.utils";
 import { buildDocumentAccessLogData, canPerformDocumentAction, type DocumentPermissionAction } from "./project-documents.permissions";
 import type { z } from "zod";
@@ -365,6 +366,19 @@ export async function uploadProjectDocument(projectId: string, data: DocumentUpl
 
   await logDocumentAccess(document.id, "upload", context);
   await auditDocumentChange({ action: "upload", documentId: document.id, projectId, newValue: document, context });
+  if (document.status === "pending_approval") {
+    const project = await prisma.project.findUnique({ where: { id: projectId } });
+    const manager = project?.managerId ? await prisma.employee.findUnique({ where: { id: project.managerId } }) : undefined;
+    await enqueueEmail({
+      toEmail: manager?.email,
+      templateCode: "project_document_pending_approval",
+      variables: {
+        documentTitle: document.title,
+        projectName: document.project.name
+      },
+      context
+    });
+  }
   return document;
 }
 

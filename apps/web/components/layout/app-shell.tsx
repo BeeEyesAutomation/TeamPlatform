@@ -25,7 +25,7 @@ const navigation = [
   { label: "Tai lieu", href: "/document-permissions", icon: FileText },
   { label: "Nhap xuat", href: "/", icon: Import },
   { label: "Bao cao", href: "/", icon: ClipboardList },
-  { label: "Email", href: "/", icon: Mail }
+  { label: "Email", href: "/email", icon: Mail }
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
