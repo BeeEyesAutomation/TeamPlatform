@@ -1,5 +1,68 @@
 # Implementation Log
 
+## 2026-05-06 - Phase 10 Import, Export, and Reports
+
+### Current Phase
+
+Phase 10: Import, Export, and Reports.
+
+### Scope
+
+- Implement Excel import template generation, metadata-based upload/preview/confirm import workflow, import logs, and error-file download foundation.
+- Implement Excel/CSV/PDF export endpoints for HR, attendance, payroll, projects, project detail, progress, costs, issues, and materials.
+- Implement reporting/statistics dashboard APIs for HR, payroll, project, issue, material, and cost overviews.
+- Add frontend import center, export center, and reports dashboard.
+- Add targeted parser/exporter tests if present or a narrow utility test where useful.
+- Do not implement e2e tests, production build, or full test suite.
+
+### Assumptions
+
+- File upload is represented by JSON rows in this foundation pass; multipart upload/storage can be added later without changing the import log contract.
+- Import preview rows/errors are stored in `ImportLog.metadata`; confirmed imports update log status/counts and insert supported rows where a safe minimal mapping exists.
+- PDF export foundation returns generated PDF buffers for payslip and project summary paths using HTML rendering helpers; no production styling guarantee in this phase.
+- Existing unrelated working tree changes are not reverted.
+
+### Planned Commands
+
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+- Targeted parser/exporter tests only.
+- `git diff --check`
+
+### Result
+
+- Implemented Excel template downloads for employees, projects, project plans, tasks, issues, materials, costs, and allowances.
+- Implemented JSON-row import preview/confirm foundation with row validation, import logs, and downloadable Excel error files.
+- Implemented export endpoints for employee, attendance, payroll, project list, project full report, project progress, costs, issues, materials, and performance.
+- Added Excel, CSV, and PDF response generation foundation and export logs.
+- Added HR, payroll, project, issue, material, cost, and employee project performance statistics APIs.
+- Added frontend import center, export center, and reports dashboard.
+- Added targeted utility tests for import type recognition, row validation, and CSV export.
+
+### Changed Files Summary
+
+- Backend imports: `apps/api/src/modules/imports/imports.schemas.ts`, `apps/api/src/modules/imports/imports.service.ts`, `apps/api/src/modules/imports/imports.utils.ts`, `apps/api/src/modules/imports/imports.routes.ts`
+- Backend exports/statistics: `apps/api/src/modules/exports/exports.schemas.ts`, `apps/api/src/modules/exports/exports.service.ts`, `apps/api/src/modules/exports/exports.routes.ts`, `apps/api/src/modules/statistics/statistics.service.ts`, `apps/api/src/modules/statistics/statistics.routes.ts`
+- Backend tests: `apps/api/src/modules/imports/imports.utils.test.ts`
+- Frontend: `apps/web/app/import-export/page.tsx`, `apps/web/app/reports/page.tsx`, `apps/web/features/import-export/*`, `apps/web/features/reports/*`, `apps/web/types/import-export.ts`, `apps/web/components/layout/app-shell.tsx`
+
+### Commands Run
+
+- `npm run test --workspace apps/api -- imports.utils` - passed.
+- `npm run typecheck --workspace apps/api` - passed.
+- `npm run typecheck --workspace apps/web` - passed.
+- `git diff --check` - passed with line-ending warnings only.
+
+### Failures and Logs
+
+- No Phase 10 command failures.
+
+### Remaining TODOs
+
+- Multipart Excel upload parsing is deferred; current import preview/confirm accepts JSON rows and writes logs.
+- PDF exports use a simple HTML table foundation; production report styling can be added later.
+- Import mappings are complete for safe minimal employees/projects upsert; other import types currently validate and log preview data only.
+
 ## 2026-05-06 - Phase 9 SMTP Email Automation with Queue
 
 ### Current Phase

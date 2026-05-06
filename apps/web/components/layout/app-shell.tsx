@@ -23,8 +23,8 @@ const navigation = [
   { label: "Bang luong", href: "/payroll", icon: BadgeDollarSign },
   { label: "Du an", href: "/projects", icon: FolderKanban },
   { label: "Tai lieu", href: "/document-permissions", icon: FileText },
-  { label: "Nhap xuat", href: "/", icon: Import },
-  { label: "Bao cao", href: "/", icon: ClipboardList },
+  { label: "Nhap xuat", href: "/import-export", icon: Import },
+  { label: "Bao cao", href: "/reports", icon: ClipboardList },
   { label: "Email", href: "/email", icon: Mail }
 ];
 
