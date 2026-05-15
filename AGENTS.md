@@ -270,3 +270,150 @@ Choose report type
 - Seed initial roles, permissions, document types, email templates, and tax/insurance settings.
 - Keep UI and API behavior predictable and permission-safe.
 - Prefer clear implementation over over-engineering.
+
+## Token and Context Optimization Rules
+
+### 1. Read only what is necessary
+
+- Always read AGENTS.md first.
+- Then read docs/IMPLEMENTATION_LOG.md and docs/DECISIONS.md if they exist.
+- For each task, read only the documentation sections directly related to the current phase.
+- Do not load unrelated large files.
+- Do not inspect frontend files when the task is backend-only.
+- Do not inspect backend files when the task is frontend-only, unless API contracts are needed.
+- Do not read generated files, build output, node_modules, .next, dist, coverage, or migration SQL files unless specifically debugging them.
+
+### 2. Use implementation logs as memory
+
+- Before starting, check docs/IMPLEMENTATION_LOG.md to understand completed phases and known issues.
+- Do not rediscover completed work by scanning the entire repo.
+- Update docs/IMPLEMENTATION_LOG.md at the end of each task with:
+  - phase/task name
+  - files changed
+  - commands run
+  - errors found
+  - fixes applied
+  - remaining TODOs
+- Use docs/DECISIONS.md for long-term technical decisions.
+
+### 3. Keep scope narrow
+
+- Only implement the requested phase or task.
+- Do not opportunistically refactor unrelated modules.
+- Do not implement future phase features early.
+- If a dependency or schema change is needed outside the phase, document the reason before changing it.
+- Prefer small, targeted changes over broad rewrites.
+
+### 4. Avoid large responses
+
+- Do not paste full files into responses.
+- Summarize changes instead of printing large code blocks.
+- Show only the exact command outputs that matter.
+- If a file is large, mention the file path and summarize the relevant section.
+- Return concise status updates:
+  - completed
+  - changed files
+  - commands run
+  - issues
+  - next step
+
+### 5. Search efficiently
+
+- Prefer targeted search terms.
+- Search by exact symbol, route, model, or file name.
+- Do not perform broad repo-wide searches unless necessary.
+- Stop searching once the needed file or symbol is found.
+
+### 6. Test efficiently
+
+- Do not run the full test suite except in final hardening phase.
+- Run only targeted checks for changed code.
+- Prefer:
+  - npm run typecheck --workspace apps/api
+  - npm run typecheck --workspace apps/web
+  - npx prisma validate
+  - npx prisma generate
+  - targeted unit tests
+- If a command fails, save logs and retry at most once after a targeted fix.
+
+### 7. Failure handling
+
+- If a command fails, save output under docs/logs/.
+- Classify the error as:
+  - missing_dependency
+  - missing_system_tool
+  - database_not_running
+  - redis_not_running
+  - env_missing
+  - migration_error
+  - type_error
+  - lint_error
+  - test_assertion_error
+  - config_error
+  - unknown
+- Fix only the smallest related issue.
+- If system-level setup is missing, do not install OS tools automatically. Document manual steps in docs/SETUP_TROUBLESHOOTING.md.
+- If an npm dependency is clearly missing, install it only in the correct workspace and commit package.json plus lockfile.
+
+### 8. Database and Prisma efficiency
+
+- Do not reset the database unless explicitly instructed.
+- Do not delete migrations unless explicitly instructed.
+- When Prisma changes are needed, run only:
+  - npx prisma format
+  - npx prisma validate
+  - npx prisma generate
+  - npx prisma migrate dev only when schema changes are intentional
+- Do not inspect all migrations unless debugging migration history.
+
+### 9. Frontend efficiency
+
+- Do not run production build during feature phases unless necessary.
+- Fix config errors locally and minimally.
+- For TypeScript path/config issues, inspect only:
+  - apps/web/tsconfig.json
+  - apps/web/package.json
+  - apps/web/next.config.*
+  - apps/web/postcss.config.*
+  - apps/web/tailwind.config.*
+
+### 10. Backend efficiency
+
+- For API work, inspect only:
+  - relevant route
+  - relevant controller/service
+  - relevant validation schema
+  - relevant Prisma model
+  - relevant middleware
+- Do not scan all modules unless shared infrastructure is affected.
+
+### 11. Commit discipline
+
+- Make small logical commits.
+- Commit documentation/log updates with the related fix.
+- Do not mix unrelated phase changes in one commit.
+- Commit messages should be short and specific.
+
+### 12. Response format
+
+At the end of each task, respond using this format only:
+
+Summary:
+- ...
+
+Changed files:
+- ...
+
+Commands run:
+- ...
+
+Result:
+- ...
+
+Issues / TODO:
+- ...
+
+Next recommended step:
+- ...
+
+Do not include large code dumps unless explicitly requested.

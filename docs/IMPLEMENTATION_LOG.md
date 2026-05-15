@@ -1,5 +1,55 @@
 # Implementation Log
 
+## 2026-05-15 - Documentation Token and Context Optimization Rules
+
+### Current Phase
+
+Documentation update: token and context optimization rules.
+
+### Scope
+
+- Add strict token and context optimization rules to `AGENTS.md`.
+- Record the documentation-only update in this implementation log.
+- Do not change application code.
+
+### Assumptions
+
+- Existing unrelated working tree changes are out of scope and remain untouched.
+- No application validation is required because this task changes documentation only.
+
+### Result
+
+- Added the `Token and Context Optimization Rules` section to `AGENTS.md`.
+- Documented expectations for scoped reading, implementation-log usage, narrow changes, concise responses, targeted searches, efficient tests, failure handling, Prisma/database efficiency, frontend/backend inspection limits, and commit discipline.
+
+### Changed Files Summary
+
+- `AGENTS.md`
+- `docs/IMPLEMENTATION_LOG.md`
+
+### Commands Run
+
+- `Get-Content -Raw AGENTS.md`
+- `Get-Content -Raw docs\IMPLEMENTATION_LOG.md`
+- `Get-Content -Raw docs\DECISIONS.md`
+- `git status --short --branch`
+- `Get-Content docs\IMPLEMENTATION_LOG.md -TotalCount 40`
+- `Get-Content AGENTS.md -Tail 40`
+- `git diff --check -- AGENTS.md docs/IMPLEMENTATION_LOG.md`
+- `git diff --stat -- AGENTS.md docs/IMPLEMENTATION_LOG.md`
+- `git diff -- AGENTS.md docs/IMPLEMENTATION_LOG.md`
+- `git add AGENTS.md docs/IMPLEMENTATION_LOG.md`
+- `git commit -m "Add token optimization rules"`
+- `git push`
+
+### Failures and Logs
+
+- No command failures.
+
+### Remaining TODOs
+
+- None for this documentation update.
+
 ## 2026-05-06 - Phase 11 Hardening, Cleanup, Final Review
 
 ### Current Phase
