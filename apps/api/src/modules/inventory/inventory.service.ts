@@ -54,13 +54,25 @@ const movementInclude = {
   item: { select: { id: true, materialCode: true, materialName: true, unit: true } }
 } satisfies Prisma.InventoryStockMovementInclude;
 
-const decimalData = (data: Partial<ItemCreate>) => ({
+const calculateSellingPrice = (purchasePrice: number, markupPercentage: number) =>
+  Math.round((purchasePrice * (1 + markupPercentage / 100) + Number.EPSILON) * 100) / 100;
+
+const decimalData = (data: Partial<ItemCreate> & { sellingPrice?: number }) => ({
   ...(data.purchasePrice !== undefined ? { purchasePrice: data.purchasePrice.toString() } : {}),
   ...(data.sellingPrice !== undefined ? { sellingPrice: data.sellingPrice.toString() } : {}),
   ...(data.markupPercentage !== undefined ? { markupPercentage: data.markupPercentage.toString() } : {}),
   ...(data.stockQuantity !== undefined ? { stockQuantity: data.stockQuantity.toString() } : {}),
   ...(data.minimumStockQuantity !== undefined ? { minimumStockQuantity: data.minimumStockQuantity.toString() } : {})
 });
+
+const createPricingData = (data: ItemCreate) =>
+  decimalData({
+    purchasePrice: data.purchasePrice,
+    markupPercentage: data.markupPercentage,
+    sellingPrice: calculateSellingPrice(data.purchasePrice, data.markupPercentage),
+    stockQuantity: data.stockQuantity,
+    minimumStockQuantity: data.minimumStockQuantity
+  });
 
 const itemCreateData = (data: ItemCreateWithCode, actorId?: string): Prisma.InventoryItemUncheckedCreateInput => ({
   materialCode: data.materialCode,
@@ -73,20 +85,33 @@ const itemCreateData = (data: ItemCreateWithCode, actorId?: string): Prisma.Inve
   description: data.description,
   createdById: actorId,
   updatedById: actorId,
-  ...decimalData(data)
+  ...createPricingData(data)
 });
 
-const itemUpdateData = (data: ItemUpdate, actorId?: string): Prisma.InventoryItemUncheckedUpdateInput => ({
-  ...(data.materialName !== undefined ? { materialName: data.materialName } : {}),
-  ...(data.categoryId !== undefined ? { categoryId: data.categoryId } : {}),
-  ...(data.supplierId !== undefined ? { supplierId: data.supplierId } : {}),
-  ...(data.unit !== undefined ? { unit: data.unit } : {}),
-  ...(data.status !== undefined ? { status: data.status } : {}),
-  ...(data.imageUrl !== undefined ? { imageUrl: data.imageUrl } : {}),
-  ...(data.description !== undefined ? { description: data.description } : {}),
-  updatedById: actorId,
-  ...decimalData(data)
-});
+const itemUpdateData = (
+  data: ItemUpdate,
+  existing: Awaited<ReturnType<typeof getInventoryItem>>,
+  actorId?: string
+): Prisma.InventoryItemUncheckedUpdateInput => {
+  const pricingChanged = data.purchasePrice !== undefined || data.markupPercentage !== undefined;
+  const purchasePrice = data.purchasePrice ?? Number(existing.purchasePrice);
+  const markupPercentage = data.markupPercentage ?? Number(existing.markupPercentage);
+
+  return {
+    ...(data.materialName !== undefined ? { materialName: data.materialName } : {}),
+    ...(data.categoryId !== undefined ? { categoryId: data.categoryId } : {}),
+    ...(data.supplierId !== undefined ? { supplierId: data.supplierId } : {}),
+    ...(data.unit !== undefined ? { unit: data.unit } : {}),
+    ...(data.status !== undefined ? { status: data.status } : {}),
+    ...(data.imageUrl !== undefined ? { imageUrl: data.imageUrl } : {}),
+    ...(data.description !== undefined ? { description: data.description } : {}),
+    updatedById: actorId,
+    ...decimalData({
+      ...data,
+      ...(pricingChanged ? { sellingPrice: calculateSellingPrice(purchasePrice, markupPercentage) } : {})
+    })
+  };
+};
 
 async function getInventoryCategoryForCode(categoryId: string) {
   const category = await prisma.inventoryCategory.findFirst({
@@ -208,18 +233,31 @@ export async function updateInventoryItem(id: string, data: ItemUpdate, context:
   try {
     const item = await prisma.inventoryItem.update({
       where: { id },
-      data: itemUpdateData(data, context.actorId),
+      data: itemUpdateData(data, existing, context.actorId),
       include: itemInclude
     });
+    const pricingChanged =
+      Number(existing.purchasePrice) !== Number(item.purchasePrice) ||
+      Number(existing.markupPercentage) !== Number(item.markupPercentage) ||
+      Number(existing.sellingPrice) !== Number(item.sellingPrice);
+    const nameChanged = existing.materialName !== item.materialName;
     await createAuditLog({
       actorId: context.actorId,
-      action: existing.materialName !== item.materialName ? "update_material_name" : "update",
+      action: nameChanged ? "update_material_name" : pricingChanged ? "update_pricing" : "update",
       module: "inventory",
       targetType: "inventory_item",
       targetId: id,
       oldValue: existing,
       newValue: item,
-      metadata: existing.materialName !== item.materialName ? { from: existing.materialName, to: item.materialName } : undefined,
+      metadata: nameChanged
+        ? { from: existing.materialName, to: item.materialName }
+        : pricingChanged
+          ? {
+              purchasePrice: { from: existing.purchasePrice, to: item.purchasePrice },
+              markupPercentage: { from: existing.markupPercentage, to: item.markupPercentage },
+              sellingPrice: { from: existing.sellingPrice, to: item.sellingPrice }
+            }
+          : undefined,
       ipAddress: context.ipAddress,
       userAgent: context.userAgent
     });

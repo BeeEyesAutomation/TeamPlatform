@@ -8,6 +8,16 @@ const optionalTextSchema = z.preprocess(emptyToUndefined, z.string().trim().max(
 const optionalShortTextSchema = z.preprocess(emptyToUndefined, z.string().trim().max(255).optional());
 const nonNegativeDecimalSchema = z.coerce.number().min(0);
 const optionalNonNegativeDecimalSchema = z.preprocess(emptyToUndefined, nonNegativeDecimalSchema.optional());
+const requiredNonNegativeDecimalSchema = (label: string) =>
+  z.preprocess(
+    emptyToUndefined,
+    z.coerce
+      .number({
+        required_error: `${label} is required`,
+        invalid_type_error: `${label} is required`
+      })
+      .min(0, `${label} must be non-negative`)
+  );
 const positiveDecimalSchema = z.coerce.number().positive();
 
 export const idParamSchema = z.object({
@@ -27,15 +37,15 @@ export const inventoryItemQuerySchema = paginationQuerySchema.extend({
 });
 
 export const inventoryItemCreateSchema = z.object({
-  materialName: z.string().trim().min(1).max(255),
-  categoryId: z.string().uuid(),
-  supplierId: z.string().uuid(),
-  purchasePrice: optionalNonNegativeDecimalSchema,
+  materialName: z.string().trim().min(1, "Material Name is required").max(255),
+  categoryId: z.string().uuid("Material Group is required"),
+  supplierId: z.string().uuid("Supplier is required"),
+  purchasePrice: requiredNonNegativeDecimalSchema("Purchase Price"),
   sellingPrice: optionalNonNegativeDecimalSchema,
-  markupPercentage: optionalNonNegativeDecimalSchema,
+  markupPercentage: requiredNonNegativeDecimalSchema("Markup %"),
   stockQuantity: optionalNonNegativeDecimalSchema,
   minimumStockQuantity: optionalNonNegativeDecimalSchema,
-  unit: z.string().trim().min(1).max(50),
+  unit: z.string().trim().min(1, "Unit is required").max(50),
   status: inventoryStatusSchema.default("active"),
   imageUrl: z.preprocess(emptyToUndefined, z.string().trim().max(1000).optional()),
   description: optionalTextSchema

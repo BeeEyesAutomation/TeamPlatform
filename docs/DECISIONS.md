@@ -48,8 +48,16 @@ SMTP settings support direct stored placeholders or `env:VARIABLE_NAME` referenc
 
 Phase 10 stores import preview rows and row errors in `ImportLog.metadata`. Excel template generation and error workbook generation are implemented; multipart Excel upload parsing is deferred.
 
+## 2026-05-15 - SMTP Password Encryption
+
+SMTP settings continue to support `env:VARIABLE_NAME` password references. Directly submitted SMTP passwords are stored as AES-256-GCM encrypted values in `password_encrypted` using `SMTP_PASSWORD_ENCRYPTION_KEY`, which must be supplied through the environment when encrypting or decrypting stored SMTP passwords.
+
 ## 2026-05-15 - Inventory Material Codes
 
 Material Code is generated server-side from the selected Material Group code plus a 5-digit increasing sequence scoped to that Material Group, for example `CK00001` or `DT00001`. `inventory_items.material_code` remains unique in the database, and create retries code generation once if a duplicate is detected.
 
 Material Code is not manually editable in the UI or API create flow. If a material's Material Group changes later, the existing Material Code is kept unchanged for audit safety unless a future requirement explicitly asks for regeneration.
+
+## 2026-05-15 - Inventory Material Pricing
+
+Selling Price is calculated from Purchase Price and Markup % using `purchasePrice * (1 + markupPercentage / 100)`. The backend is authoritative and recalculates Selling Price on create and when Purchase Price or Markup % changes on update; the UI shows Selling Price as a read-only calculated value.

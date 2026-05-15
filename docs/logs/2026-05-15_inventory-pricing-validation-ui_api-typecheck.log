@@ -1,0 +1,3 @@
+Command: npm run typecheck --workspace apps/api
+Classification: config_error
+Error: npm.ps1 cannot be loaded because running scripts is disabled on this system.

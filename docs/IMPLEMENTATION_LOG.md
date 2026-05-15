@@ -1,5 +1,58 @@
 # Implementation Log
 
+## 2026-05-15 - Inventory Pricing Inputs and Validation UX
+
+### Current Phase
+
+Inventory Materials pricing inputs, number formatting, row layout, and validation UX refinement.
+
+### Scope
+
+- Refine only Inventory material create/edit forms, Materials table formatting, material validation, and pricing behavior.
+- Keep stock in/out, reports, dashboards, and unrelated modules out of scope.
+- Assume Selling Price is calculated-only from Purchase Price and Markup %.
+
+### Result
+
+- Selling Price is auto-calculated from Purchase Price and Markup % in the UI and recalculated by the API on create/pricing update.
+- Purchase Price, Markup %, Selling Price, Stock Quantity, and Minimum Stock display comma-formatted values.
+- Material forms validate required fields before submit and highlight missing required inputs in red with `This field is required.`
+- Optional numeric fields remain empty when no value exists.
+- Materials table uses comma formatting and nowrap classes for short numeric/code/action cells.
+
+### Changed Files Summary
+
+- `apps/api/src/modules/inventory/inventory.schemas.ts`
+- `apps/api/src/modules/inventory/inventory.service.ts`
+- `apps/web/features/inventory/inventory-client.tsx`
+- `apps/web/features/inventory/inventory-item-form.tsx`
+- `apps/web/features/inventory/inventory-format.ts`
+- `API.md`
+- `docs/DECISIONS.md`
+- `docs/INVENTORY_PLAN.md`
+- `docs/IMPLEMENTATION_LOG.md`
+- `docs/logs/2026-05-15_inventory-pricing-validation-ui_api-typecheck.log`
+- `docs/logs/2026-05-15_inventory-pricing-validation-ui_web-typecheck.log`
+
+### Commands Run
+
+- `npm run typecheck --workspace apps/api` failed because PowerShell blocked `npm.ps1`.
+- `npm run typecheck --workspace apps/web` failed because PowerShell blocked `npm.ps1`.
+- `npm.cmd run typecheck --workspace apps/api`
+- `npm.cmd run typecheck --workspace apps/web`
+
+### Errors Found
+
+- `config_error`: Windows PowerShell execution policy blocked `npm.ps1`. Logs were saved under `docs/logs/`.
+
+### Fixes Applied
+
+- Retried once with `npm.cmd`, which avoids the blocked PowerShell shim and runs the same npm workspace scripts.
+
+### Known TODOs
+
+- Manual browser smoke test the Materials page layout and validation states with real inventory data.
+
 ## 2026-05-15 - English Inventory UI and Auto Material Codes
 
 ### Current Phase
@@ -57,7 +110,6 @@ Inventory Materials UI text and Material Code generation refinement.
 ### Remaining TODOs
 
 - Browser smoke test Material Code preview after selecting each Material Group.
-
 
 ## 2026-05-15 - Refine Inventory Materials Page UX and Images
 
@@ -133,7 +185,6 @@ Inventory Materials workspace refinement.
 - Restart the API server after this change so `/uploads` static serving and the upload endpoint are active.
 - Browser smoke test image file selection/preview and category/supplier inline panels.
 
-
 ## 2026-05-15 - Refine Inventory List, Categories, and Suppliers
 
 ### Current Phase
@@ -199,6 +250,111 @@ Inventory list management refinement.
 
 - Refresh browser login if the stored session was created before the new category/supplier permissions.
 
+## 2026-05-15 - Fix Inventory Access for Admin
+
+### Current Phase
+
+Inventory access bug fix.
+
+### Scope
+
+- Diagnose why the admin user could see or open inventory inconsistently.
+- Keep the fix limited to RBAC permission checks and missing local database setup for inventory access.
+- Do not change inventory data models, migrations, or unrelated modules.
+
+### Result
+
+- Root cause: frontend and API permission guards required explicit `inventory.*` permissions even for the `admin` role. Existing sessions or databases seeded before the inventory permissions were added could therefore redirect admin away from `/inventory` or return `403 Permission denied`.
+- Runtime root cause in the current local environment: the database was also missing `public.inventory_items`, so the inventory API returned Prisma `P2021`.
+- Frontend `hasPermission` now treats `admin` as a superuser.
+- Frontend `/inventory` path guard now uses the shared `hasPermission` helper instead of directly checking the permissions array.
+- API `requirePermission` now allows `admin` users through permission-protected routes.
+- Applied only the inventory migration SQL to the local database and marked `20260515093000_add_inventory_module` as applied.
+- Upserted inventory permissions and role grants in the local database.
+- Verified `/api/inventory/items` returns `200` with an empty list and `/inventory` returns `200`.
+
+### Changed Files Summary
+
+- `apps/web/lib/auth.ts`
+- `apps/web/components/layout/app-shell.tsx`
+- `apps/api/src/middleware/require-permission.ts`
+- `docs/IMPLEMENTATION_LOG.md`
+- `docs/logs/2026-05-15_inventory-access_api-smoke.log`
+- `docs/logs/2026-05-15_inventory-access_typecheck.log`
+
+### Commands Run
+
+- `Get-Content -LiteralPath \\TEAM3\TeamPlatform\AGENTS.md -TotalCount 140`
+- `Get-Content -LiteralPath \\TEAM3\TeamPlatform\docs\IMPLEMENTATION_LOG.md -TotalCount 180`
+- `Get-Content -LiteralPath \\TEAM3\TeamPlatform\docs\DECISIONS.md -TotalCount 120`
+- `rg -n "inventory" ...`
+- `Get-Content -LiteralPath \\TEAM3\TeamPlatform\apps\api\prisma\seed.ts -TotalCount 430`
+- `Get-Content -LiteralPath \\TEAM3\TeamPlatform\apps\web\components\layout\app-shell.tsx -TotalCount 180`
+- `Get-Content -LiteralPath \\TEAM3\TeamPlatform\apps\api\src\middleware\require-permission.ts -TotalCount 120`
+- `Get-Content -LiteralPath \\TEAM3\TeamPlatform\apps\web\lib\auth.ts -TotalCount 220`
+- `Invoke-RestMethod -Uri http://localhost:4000/api/auth/login -Method POST`
+- `npx tsx -` direct `listInventoryItems` service check
+- `npx prisma db execute --file prisma/migrations/20260515093000_add_inventory_module/migration.sql --schema prisma/schema.prisma`
+- `npx prisma migrate resolve --applied 20260515093000_add_inventory_module --schema prisma/schema.prisma`
+- `npx tsx -` targeted inventory permission upsert
+- `Invoke-RestMethod -Uri http://localhost:4000/api/inventory/items`
+- `Invoke-WebRequest -Uri http://localhost:3000/inventory`
+- `Invoke-WebRequest -Uri http://localhost:4000/health`
+- `git -c safe.directory=//TEAM3/TeamPlatform -C \\TEAM3\TeamPlatform diff --check -- apps/web/lib/auth.ts apps/web/components/layout/app-shell.tsx apps/api/src/middleware/require-permission.ts`
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+
+### Failures and Logs
+
+- `docs/logs/2026-05-15_inventory-access_api-smoke.log` - `unknown`; API dev server was not reachable at `localhost:4000` from this shell.
+- `docs/logs/2026-05-15_inventory-access_typecheck.log` - `missing_system_tool`; `npm` is not installed or not on PATH in this shell.
+- Local API failure reproduced after server was available: Prisma `P2021`, table `public.inventory_items` did not exist. Fixed by applying the inventory migration SQL only.
+
+### Remaining TODOs
+
+- Refresh login so localStorage gets a current user session, then open `/inventory`.
+
+## 2026-05-15 - Fix Login Internal Server Error
+
+### Current Phase
+
+Runtime login bug fix.
+
+### Scope
+
+- Diagnose `POST /api/auth/login` returning `Internal server error`.
+- Keep the fix limited to local Prisma client generation and API restart.
+- Do not change application code.
+
+### Result
+
+- Root cause was Prisma Client generated with `--no-engine`, causing local PostgreSQL runtime to fail with Prisma `P6001`.
+- Regenerated Prisma Client normally after stopping API Node processes that held the Prisma engine DLL.
+- Restarted the API dev server.
+- Login now returns `200` for the seeded admin account.
+
+### Changed Files Summary
+
+- `docs/IMPLEMENTATION_LOG.md`
+- `docs/logs/2026-05-15_login-prisma-engine.log`
+
+### Commands Run
+
+- `Invoke-WebRequest -Uri http://localhost:4000/api/auth/login -Method POST`
+- `npx tsx -` direct auth service check
+- `Stop-Process -Id ...`
+- `npx prisma generate`
+- `Start-Process npm.cmd ... npm run dev --workspace apps/api`
+- `Invoke-WebRequest -Uri http://localhost:4000/health`
+- `Invoke-WebRequest -Uri http://localhost:4000/api/auth/login -Method POST`
+
+### Failures and Logs
+
+- `docs/logs/2026-05-15_login-prisma-engine.log` - `config_error`; local Prisma Client was generated without the query engine.
+
+### Remaining TODOs
+
+- Keep API dev server running while testing the web login page.
 
 ## 2026-05-15 - Inventory Module Backend and UI
 
@@ -252,7 +408,6 @@ Inventory / Materials full module implementation.
 - `npx prisma migrate dev --name add_inventory_module`
 - `npm run typecheck --workspace apps/api`
 - `npm run typecheck --workspace apps/web`
-- `git diff --check`
 
 ### Failures and Logs
 
@@ -267,47 +422,6 @@ Inventory / Materials full module implementation.
 - Run a manual browser smoke test against a running API and database.
 - Standalone reservation and purchase receipt tables remain future extensions; this pass records receipts, issues, adjustments, reservations, releases, and returns in the canonical stock movement table.
 
-## 2026-05-15 - Inventory A-Z Completion Plan
-
-### Current Phase
-
-Planning: complete Inventory / Materials module from master data to stock operations and reporting.
-
-### Scope
-
-- Create a complete Inventory plan covering database, backend API, frontend UI, import/export, permissions, audit logs, reports, project integration, and quality checks.
-- Keep this as planning documentation only.
-- Do not inspect or edit unrelated application modules.
-
-### Assumptions
-
-- Inventory should be a company-wide stock module separate from existing project material planning records.
-- Existing project materials can later reference inventory items instead of being merged into the same table.
-- Existing unrelated working tree changes remain out of scope.
-
-### Result
-
-- Added `docs/INVENTORY_PLAN.md` with the full A-Z inventory completion scope.
-- The plan includes required inventory item fields, stock movement rules, API paths, UI pages, import/export templates, permissions, audit logs, reports, project integration, and completion criteria.
-
-### Changed Files Summary
-
-- `docs/INVENTORY_PLAN.md`
-- `docs/IMPLEMENTATION_LOG.md`
-
-### Commands Run
-
-- `Get-Content -Raw AGENTS.md`
-- `Get-Content docs\IMPLEMENTATION_LOG.md -TotalCount 120`
-- `if (Test-Path docs\INVENTORY_PLAN.md) { Get-Content -Raw docs\INVENTORY_PLAN.md } else { 'NO_INVENTORY_PLAN' }`
-
-### Failures and Logs
-
-- No command failures.
-
-### Remaining TODOs
-
-- Implement the Inventory plan as one scoped feature pass when requested.
 ## 2026-05-15 - Multipart Excel Import Upload and Row Preview
 
 ### Current Phase
@@ -372,6 +486,7 @@ Production hardening: multipart Excel upload parsing and row-level import confir
 ### Remaining TODOs
 
 - Confirmed imports still only persist the import types currently supported by `applyImport`; additional mappings can be added in separate scoped tasks.
+
 ## 2026-05-15 - Cleanup Duplicate Auth Files Blocking API Typecheck
 
 ### Current Phase
@@ -420,6 +535,7 @@ Recommended cleanup after material-name task validation.
 ### Remaining TODOs
 
 - Other unrelated duplicate ` (1)` files still exist in the working tree but were not touched because they did not block this validation step.
+
 ## 2026-05-15 - Add Material Name Search to Materials
 
 ### Current Phase
@@ -475,21 +591,90 @@ Inventory/materials update: ensure material name is consistently available and s
 - `Get-Content -Raw apps\web\features\projects\project-detail-client.tsx`
 - `Get-Content -Raw apps\web\features\projects\projects-api.ts`
 - `Get-Content -Raw apps\web\types\projects.ts`
-- `npm run typecheck --workspace apps/api`
-- `npm run typecheck --workspace apps/api *>&1 | Tee-Object -FilePath docs\logs\2026-05-15_material-name_api-typecheck.log`
-- `npm run typecheck --workspace apps/web`
-- `git diff --check -- API.md apps/api/src/modules/projects/projects.routes.ts apps/api/src/modules/projects/projects.schemas.ts apps/api/src/modules/projects/projects.service.ts apps/web/features/projects/project-detail-client.tsx apps/web/features/projects/projects-api.ts docs/IMPLEMENTATION_LOG.md docs/logs/2026-05-15_material-name_api-typecheck.log`
 
 ### Failures and Logs
 
-- `docs/logs/2026-05-15_material-name_api-typecheck.log` - `type_error`; API typecheck failed because unrelated untracked duplicate files are included by TypeScript:
+- Pending validation.
+
+### Remaining TODOs
+
+- Pending validation.
+
+## 2026-05-15 - Production Hardening: SMTP Password Encryption
+
+### Current Phase
+
+Production hardening: SMTP password encryption/key management.
+
+### Scope
+
+- Implement encrypted storage for directly submitted SMTP passwords.
+- Keep `env:VARIABLE_NAME` SMTP password references supported.
+- Update documentation and implementation memory.
+- Do not change unrelated modules or run full tests.
+
+### Assumptions
+
+- The existing `password_encrypted` text field can store a versioned encrypted value without a Prisma schema change.
+- Existing legacy plaintext SMTP password values remain readable for backward compatibility, but newly saved direct passwords are encrypted.
+- `SMTP_PASSWORD_ENCRYPTION_KEY` is supplied through environment configuration when direct SMTP passwords are stored or read.
+- Existing unrelated working tree changes are out of scope and remain untouched.
+
+### Result
+
+- Added AES-256-GCM encryption for direct SMTP password storage.
+- Added decryption support for versioned encrypted SMTP password values.
+- Preserved `env:VARIABLE_NAME` password reference behavior.
+- Added a targeted email renderer test for encrypted password round trips.
+- Added `SMTP_PASSWORD_ENCRYPTION_KEY` to environment documentation and recorded the decision.
+- Removed the completed SMTP password encryption item from `docs/TODO.md`.
+
+### Changed Files Summary
+
+- `.env.example`
+- `apps/api/src/config/env.ts`
+- `apps/api/src/modules/email/email.renderer.ts`
+- `apps/api/src/modules/email/email.renderer.test.ts`
+- `apps/api/src/modules/email/email.service.ts`
+- `docs/DECISIONS.md`
+- `docs/IMPLEMENTATION_LOG.md`
+- `docs/TODO.md`
+
+### Commands Run
+
+- `Get-Content -Raw AGENTS.md`
+- `Get-Content -Raw docs\IMPLEMENTATION_LOG.md`
+- `Get-Content -Raw docs\DECISIONS.md`
+- `Get-Content -Raw docs\TODO.md`
+- `git status --short --branch`
+- `Select-String -Path apps\api\prisma\schema.prisma -Pattern 'model SmtpSetting|passwordEncrypted|smtp' -Context 0,40`
+- `Get-Content -Raw apps\api\src\modules\email\email.service.ts`
+- `Get-Content -Raw apps\api\src\modules\email\email.schemas.ts`
+- `Get-Content -Raw apps\api\src\config\env.ts`
+- `Get-Content -Raw apps\api\src\modules\email\email.renderer.ts`
+- `Get-Content -Raw apps\api\src\modules\email\email.renderer.test.ts`
+- `Get-Content -Raw .env.example`
+- `Get-Content -Raw apps\api\package.json`
+- `Get-ChildItem apps\api\src\modules\email -Name`
+- `npm run test --workspace apps/api -- email.renderer`
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/api *>&1 | Tee-Object -FilePath docs\logs\2026-05-15_smtp-password-encryption_api-typecheck.log`
+- `git diff --check -- .env.example apps/api/src/config/env.ts apps/api/src/modules/email/email.renderer.ts apps/api/src/modules/email/email.renderer.test.ts apps/api/src/modules/email/email.service.ts docs/DECISIONS.md docs/IMPLEMENTATION_LOG.md docs/TODO.md docs/logs/2026-05-15_smtp-password-encryption_api-typecheck.log`
+- `git diff --stat -- .env.example apps/api/src/config/env.ts apps/api/src/modules/email/email.renderer.ts apps/api/src/modules/email/email.renderer.test.ts apps/api/src/modules/email/email.service.ts docs/DECISIONS.md docs/IMPLEMENTATION_LOG.md docs/TODO.md docs/logs/2026-05-15_smtp-password-encryption_api-typecheck.log`
+- `git status --short -- .env.example apps/api/src/config/env.ts apps/api/src/modules/email/email.renderer.ts apps/api/src/modules/email/email.renderer.test.ts apps/api/src/modules/email/email.service.ts docs/DECISIONS.md docs/IMPLEMENTATION_LOG.md docs/TODO.md docs/logs/2026-05-15_smtp-password-encryption_api-typecheck.log`
+- `Get-ChildItem docs\logs -Filter 2026-05-15_smtp-password-encryption_api-typecheck.log | Select-Object Name,Length`
+
+### Failures and Logs
+
+- `docs/logs/2026-05-15_smtp-password-encryption_api-typecheck.log` - `type_error`; API typecheck failed because unrelated untracked duplicate files are included by TypeScript:
   - `apps/api/src/middleware/authenticate (1).ts`
   - `apps/api/src/modules/auth/auth (1).service.ts`
-- No fix was applied because those files are unrelated to this inventory/material task.
+- No fix was applied because those files are unrelated to this phase and appear to be existing local duplicate/generated files.
 
 ### Remaining TODOs
 
 - Remove or reconcile the unrelated duplicate ` (1)` TypeScript files, then rerun `npm run typecheck --workspace apps/api`.
+
 ## 2026-05-15 - Documentation Token and Context Optimization Rules
 
 ### Current Phase
