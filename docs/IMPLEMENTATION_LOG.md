@@ -1,5 +1,49 @@
 # Implementation Log
 
+## 2026-05-15 - Stock In Material Search Autocomplete
+
+### Current Phase
+
+Inventory Stock In material search and autocomplete refinement.
+
+### Scope
+
+- Refine only the Stock In section on the Inventory Materials page.
+- Reuse the existing materials list API search by material code and material name.
+- Keep backend batch Stock In endpoint unchanged and keep Stock Out out of the UI.
+
+### Result
+
+- Stock In now includes a search input with placeholder `Search by Material Code or Material Name`.
+- Search suggestions show Material Code, Material Name, Current Stock, and Unit.
+- Selecting a suggestion stores the material ID internally and displays code, name, current stock, and ID.
+- Add to Stock In List is enabled only after selecting a material.
+- Duplicate material selection is prevented, the existing row is highlighted, and the UI shows `This material is already in the Stock In list.`
+- Empty Stock In state now says `Search and add materials to start a stock-in transaction.`
+
+### Changed Files Summary
+
+- `apps/web/features/inventory/inventory-client.tsx`
+- `API.md`
+- `docs/INVENTORY_PLAN.md`
+- `docs/IMPLEMENTATION_LOG.md`
+
+### Commands Run
+
+- `npm.cmd run typecheck --workspace apps/web`
+
+### Errors Found
+
+- None.
+
+### Fixes Applied
+
+- No retry was needed.
+
+### Known TODOs
+
+- Manual browser smoke test autocomplete search, duplicate selection highlighting, and batch save.
+
 ## 2026-05-15 - Batch Stock In and Hidden Stock Out UI
 
 ### Current Phase

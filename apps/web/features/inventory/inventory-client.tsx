@@ -91,6 +91,11 @@ export function InventoryClient() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [materialErrors, setMaterialErrors] = useState<MaterialErrors>({});
   const [stockInDrafts, setStockInDrafts] = useState<StockInDraft[]>([]);
+  const [stockInSearch, setStockInSearch] = useState("");
+  const [stockInSuggestions, setStockInSuggestions] = useState<InventoryItem[]>([]);
+  const [stockInSearchLoading, setStockInSearchLoading] = useState(false);
+  const [stockInSelectedMaterial, setStockInSelectedMaterial] = useState<InventoryItem | null>(null);
+  const [stockInDuplicateId, setStockInDuplicateId] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -130,6 +135,29 @@ export function InventoryClient() {
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    const query = stockInSearch.trim();
+    if (catalogPanel !== "stock-in" || !query || stockInSelectedMaterial) {
+      setStockInSuggestions([]);
+      setStockInSearchLoading(false);
+      return;
+    }
+
+    setStockInSearchLoading(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetchInventoryItems({ search: query, pageSize: 10, status: "active" });
+        setStockInSuggestions(response.data.items);
+      } catch {
+        setStockInSuggestions([]);
+      } finally {
+        setStockInSearchLoading(false);
+      }
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [catalogPanel, stockInSearch, stockInSelectedMaterial]);
 
   async function previewMaterialCode(categoryId: string) {
     if (!categoryId || form.id) return "";
@@ -273,13 +301,24 @@ export function InventoryClient() {
   }
 
   function addStockInMaterial(materialId: string) {
-    if (!materialId || stockInDrafts.some((draft) => draft.materialId === materialId)) return;
+    if (!materialId) return;
+    if (stockInDrafts.some((draft) => draft.materialId === materialId)) {
+      setStockInDuplicateId(materialId);
+      setMessage("This material is already in the Stock In list.");
+      return;
+    }
+    setStockInDuplicateId("");
     setStockInDrafts((current) => [...current, { materialId, quantity: "", note: "" }]);
   }
 
   function addSelectedMaterialsToStockIn() {
     setStockInDrafts((current) => {
       const existing = new Set(current.map((draft) => draft.materialId));
+      const duplicate = selectedIds.find((id) => existing.has(id));
+      if (duplicate) {
+        setStockInDuplicateId(duplicate);
+        setMessage("This material is already in the Stock In list.");
+      }
       const additions = selectedIds
         .filter((id) => !existing.has(id))
         .map((id) => ({ materialId: id, quantity: "", note: "" }));
@@ -294,6 +333,25 @@ export function InventoryClient() {
 
   function removeStockInDraft(materialId: string) {
     setStockInDrafts((current) => current.filter((draft) => draft.materialId !== materialId));
+    if (stockInDuplicateId === materialId) setStockInDuplicateId("");
+  }
+
+  function updateStockInSearch(value: string) {
+    setStockInSearch(value);
+    setStockInSelectedMaterial(null);
+  }
+
+  function selectStockInSuggestion(item: InventoryItem) {
+    setStockInSelectedMaterial(item);
+    setStockInSearch(`${item.materialCode} - ${item.materialName}`);
+    setStockInSuggestions([]);
+  }
+
+  function addSelectedStockInSuggestion() {
+    if (!stockInSelectedMaterial) return;
+    addStockInMaterial(stockInSelectedMaterial.id);
+    setStockInSelectedMaterial(null);
+    setStockInSearch("");
   }
 
   async function submitStockIn(event: FormEvent) {
@@ -453,12 +511,18 @@ export function InventoryClient() {
       {canStockIn && catalogPanel === "stock-in" ? (
         <StockInPanel
           drafts={stockInDrafts}
-          items={items}
+          duplicateId={stockInDuplicateId}
           itemsById={itemsById}
           selectedCount={selectedIds.length}
-          onAddMaterial={addStockInMaterial}
           onAddSelected={addSelectedMaterialsToStockIn}
+          onAddSelectedSuggestion={addSelectedStockInSuggestion}
           onRemove={removeStockInDraft}
+          onSearchChange={updateStockInSearch}
+          onSelectSuggestion={selectStockInSuggestion}
+          searchLoading={stockInSearchLoading}
+          searchQuery={stockInSearch}
+          selectedMaterial={stockInSelectedMaterial}
+          suggestions={stockInSuggestions}
           onSubmit={submitStockIn}
           onUpdate={updateStockInDraft}
         />
@@ -652,43 +716,93 @@ function FormField({ label, error, children, className = "" }: { label: string; 
 
 function StockInPanel({
   drafts,
-  items,
+  duplicateId,
   itemsById,
   selectedCount,
-  onAddMaterial,
   onAddSelected,
+  onAddSelectedSuggestion,
   onRemove,
+  onSearchChange,
+  onSelectSuggestion,
+  searchLoading,
+  searchQuery,
+  selectedMaterial,
+  suggestions,
   onSubmit,
   onUpdate
 }: {
   drafts: StockInDraft[];
-  items: InventoryItem[];
+  duplicateId: string;
   itemsById: Map<string, InventoryItem>;
   selectedCount: number;
-  onAddMaterial: (materialId: string) => void;
   onAddSelected: () => void;
+  onAddSelectedSuggestion: () => void;
   onRemove: (materialId: string) => void;
+  onSearchChange: (value: string) => void;
+  onSelectSuggestion: (item: InventoryItem) => void;
+  searchLoading: boolean;
+  searchQuery: string;
+  selectedMaterial: InventoryItem | null;
+  suggestions: InventoryItem[];
   onSubmit: (event: FormEvent) => void;
   onUpdate: (materialId: string, patch: Partial<StockInDraft>) => void;
 }) {
+  const showNoResults = searchQuery.trim() && !selectedMaterial && !searchLoading && suggestions.length === 0;
   return (
     <form className="space-y-4 rounded-md border border-border bg-white p-4" noValidate onSubmit={(event) => void onSubmit(event)}>
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
         <div>
           <h2 className="text-base font-semibold text-ink">Stock In</h2>
           <p className="text-sm text-muted">Select multiple materials, enter quantity for each, then save once.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <select className={fieldClassName("min-w-64")} defaultValue="" onChange={(event) => {
-            onAddMaterial(event.target.value);
-            event.currentTarget.value = "";
-          }}>
-            <option value="">Add material</option>
-            {items.map((item) => <option key={item.id} value={item.id}>{item.materialCode} - {item.materialName}</option>)}
-          </select>
+        <div className="flex items-end justify-start lg:justify-end">
           <ToolbarButton disabled={selectedCount === 0} onClick={onAddSelected}>Add Selected Materials</ToolbarButton>
         </div>
       </div>
+
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="relative">
+          <label className="block space-y-1.5 text-sm font-medium text-ink">
+            <span>Search Material</span>
+            <input
+              className={fieldClassName("w-full")}
+              placeholder="Search by Material Code or Material Name"
+              value={searchQuery}
+              onChange={(event) => onSearchChange(event.target.value)}
+            />
+          </label>
+          {searchQuery.trim() ? (
+            <div className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-md border border-border bg-white shadow-lg">
+              {searchLoading ? <div className="px-3 py-3 text-sm text-muted">Searching...</div> : null}
+              {!searchLoading && suggestions.map((item) => (
+                <button
+                  className="block w-full border-b border-border px-3 py-2 text-left text-sm last:border-b-0 hover:bg-surface"
+                  key={item.id}
+                  type="button"
+                  onClick={() => onSelectSuggestion(item)}
+                >
+                  <span className="font-semibold">{item.materialCode}</span>
+                  <span> - {item.materialName}</span>
+                  <span className="text-muted"> - Stock: {formatNumber(item.stockQuantity)} {item.unit}</span>
+                </button>
+              ))}
+              {showNoResults ? <div className="px-3 py-3 text-sm text-muted">No materials found.</div> : null}
+            </div>
+          ) : null}
+        </div>
+        <div className="flex items-end">
+          <ToolbarButton disabled={!selectedMaterial} variant="primary" onClick={onAddSelectedSuggestion}>Add to Stock In List</ToolbarButton>
+        </div>
+      </div>
+
+      {selectedMaterial ? (
+        <div className="grid gap-3 rounded-md border border-border bg-surface p-3 text-sm md:grid-cols-4">
+          <div><span className="text-muted">Material Code</span><div className="font-semibold">{selectedMaterial.materialCode}</div></div>
+          <div><span className="text-muted">Material Name</span><div className="font-semibold">{selectedMaterial.materialName}</div></div>
+          <div><span className="text-muted">Current Stock</span><div className="font-semibold">{formatNumber(selectedMaterial.stockQuantity)} {selectedMaterial.unit}</div></div>
+          <div><span className="text-muted">Material ID</span><div className="truncate font-mono text-xs">{selectedMaterial.id}</div></div>
+        </div>
+      ) : null}
 
       <div className="overflow-x-auto rounded-md border border-border">
         <table className="min-w-[920px] w-full text-sm">
@@ -705,12 +819,12 @@ function StockInPanel({
           <tbody>
             {drafts.length === 0 ? (
               <tr>
-                <td className="px-3 py-6 text-center text-muted" colSpan={6}>No materials selected for Stock In.</td>
+                <td className="px-3 py-6 text-center text-muted" colSpan={6}>Search and add materials to start a stock-in transaction.</td>
               </tr>
             ) : drafts.map((draft) => {
               const item = itemsById.get(draft.materialId);
               return (
-                <tr className="border-t border-border" key={draft.materialId}>
+                <tr className={`border-t border-border ${duplicateId === draft.materialId ? "bg-amber-50" : ""}`} key={draft.materialId}>
                   <td className="whitespace-nowrap px-3 py-3 font-semibold">{item?.materialCode ?? "-"}</td>
                   <td className="px-3 py-3">{item?.materialName ?? "-"}</td>
                   <td className="whitespace-nowrap px-3 py-3 text-right">{formatNumber(item?.stockQuantity)} {item?.unit ?? ""}</td>

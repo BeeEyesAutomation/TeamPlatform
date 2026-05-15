@@ -414,3 +414,12 @@ Implemented:
 - Stock In is a major Materials page section alongside Material Groups and Suppliers.
 - Stock In supports selecting multiple materials, entering one quantity per material, and saving all selected materials in one batch.
 - Batch Stock In is all-or-nothing and creates one transaction history record per material with timestamp and user.
+
+## Stock In Search and Autocomplete - 2026-05-15
+
+Implemented:
+
+- Stock In supports searching materials by Material Code or Material Name.
+- Autocomplete suggestions show Material Code, Material Name, Current Stock, and Unit.
+- Selecting a suggestion auto-loads Material Code, Material Name, Current Stock, Unit, and the internal Material ID.
+- Duplicate selected materials are blocked and highlighted in the Stock In list.
