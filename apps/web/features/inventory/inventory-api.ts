@@ -11,14 +11,17 @@ const buildQuery = (params: Record<string, string | number | boolean | undefined
 };
 
 export const fetchInventoryItems = (params: Record<string, string | number | boolean | undefined> = {}) =>
-  apiGet<ListResponse<InventoryItem>>(`/api/inventory/items${buildQuery(params)}`);
+  apiGet<ListResponse<InventoryItem>>(`/api/inventory/materials${buildQuery(params)}`);
 
-export const fetchInventoryItem = (id: string) => apiGet<InventoryItem>(`/api/inventory/items/${id}`);
+export const fetchInventoryItem = (id: string) => apiGet<InventoryItem>(`/api/inventory/materials/${id}`);
 
 export const saveInventoryItem = (body: Record<string, unknown>, id?: string) =>
-  id ? apiJson<InventoryItem>(`/api/inventory/items/${id}`, "PUT", body) : apiJson<InventoryItem>("/api/inventory/items", "POST", body);
+  id ? apiJson<InventoryItem>(`/api/inventory/materials/${id}`, "PUT", body) : apiJson<InventoryItem>("/api/inventory/materials", "POST", body);
 
-export const deleteInventoryItem = (id: string) => apiJson<InventoryItem>(`/api/inventory/items/${id}`, "DELETE");
+export const deleteInventoryItem = (id: string) => apiJson<InventoryItem>(`/api/inventory/materials/${id}`, "DELETE");
+
+export const bulkDeactivateInventoryItems = (ids: string[]) =>
+  apiJson<{ results: Array<{ id: string; status: string; reason: string }> }>("/api/inventory/materials/bulk-deactivate", "POST", { ids });
 
 export const fetchInventoryCategories = (params: Record<string, string | number | boolean | undefined> = {}) =>
   apiGet<ListResponse<InventoryCategory>>(`/api/inventory/categories${buildQuery(params)}`);
@@ -26,11 +29,15 @@ export const fetchInventoryCategories = (params: Record<string, string | number 
 export const saveInventoryCategory = (body: Record<string, unknown>, id?: string) =>
   id ? apiJson<InventoryCategory>(`/api/inventory/categories/${id}`, "PUT", body) : apiJson<InventoryCategory>("/api/inventory/categories", "POST", body);
 
+export const deleteInventoryCategory = (id: string) => apiJson<InventoryCategory>(`/api/inventory/categories/${id}`, "DELETE");
+
 export const fetchInventorySuppliers = (params: Record<string, string | number | boolean | undefined> = {}) =>
   apiGet<ListResponse<InventorySupplier>>(`/api/inventory/suppliers${buildQuery(params)}`);
 
 export const saveInventorySupplier = (body: Record<string, unknown>, id?: string) =>
   id ? apiJson<InventorySupplier>(`/api/inventory/suppliers/${id}`, "PUT", body) : apiJson<InventorySupplier>("/api/inventory/suppliers", "POST", body);
+
+export const deleteInventorySupplier = (id: string) => apiJson<InventorySupplier>(`/api/inventory/suppliers/${id}`, "DELETE");
 
 export const fetchInventoryMovements = (params: Record<string, string | number | boolean | undefined> = {}) =>
   apiGet<ListResponse<InventoryStockMovement>>(`/api/inventory/movements${buildQuery(params)}`);

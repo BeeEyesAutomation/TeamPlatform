@@ -18,7 +18,8 @@ import type {
   receiptSchema,
   issueSchema,
   stockMovementCreateSchema,
-  stockMovementQuerySchema
+  stockMovementQuerySchema,
+  bulkMaterialDeactivateSchema
 } from "./inventory.schemas";
 
 type ItemQuery = z.infer<typeof inventoryItemQuerySchema>;
@@ -35,6 +36,7 @@ type MovementCreate = z.infer<typeof stockMovementCreateSchema>;
 type ReceiptInput = z.infer<typeof receiptSchema>;
 type IssueInput = z.infer<typeof issueSchema>;
 type AdjustmentInput = z.infer<typeof adjustmentSchema>;
+type BulkDeactivateInput = z.infer<typeof bulkMaterialDeactivateSchema>;
 
 interface RequestContext {
   actorId?: string;
@@ -98,7 +100,8 @@ function listWhere(query: ItemQuery): Prisma.InventoryItemWhereInput {
           ]
         }
       : {}),
-    ...(query.lowStock ? { stockQuantity: { lte: prisma.inventoryItem.fields.minimumStockQuantity } } : {})
+    ...(query.lowStock || query.stockStatus === "low" ? { stockQuantity: { lte: prisma.inventoryItem.fields.minimumStockQuantity } } : {}),
+    ...(query.stockStatus === "ok" ? { stockQuantity: { gt: prisma.inventoryItem.fields.minimumStockQuantity } } : {})
   };
 }
 
@@ -191,6 +194,55 @@ export async function deactivateInventoryItem(id: string, context: RequestContex
   return item;
 }
 
+export async function bulkDeactivateInventoryItems(data: BulkDeactivateInput, context: RequestContext) {
+  const uniqueIds = Array.from(new Set(data.ids));
+  const results = [];
+
+  for (const id of uniqueIds) {
+    const existing = await prisma.inventoryItem.findFirst({
+      where: { id, deletedAt: null },
+      include: { _count: { select: { movements: true } } }
+    });
+
+    if (!existing) {
+      results.push({ id, status: "skipped", reason: "Material not found or already inactive" });
+      continue;
+    }
+
+    const item = await prisma.inventoryItem.update({
+      where: { id },
+      data: { status: "inactive", deletedAt: new Date(), updatedById: context.actorId },
+      include: itemInclude
+    });
+
+    results.push({ id, status: "deactivated", reason: existing._count.movements > 0 ? "Material has stock history; soft deactivated" : "Soft deactivated" });
+
+    await createAuditLog({
+      actorId: context.actorId,
+      action: "bulk_deactivate",
+      module: "inventory",
+      targetType: "inventory_item",
+      targetId: id,
+      oldValue: existing,
+      newValue: item,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent
+    });
+  }
+
+  await createAuditLog({
+    actorId: context.actorId,
+    action: "bulk_deactivate",
+    module: "inventory",
+    targetType: "inventory_items",
+    metadata: { results },
+    ipAddress: context.ipAddress,
+    userAgent: context.userAgent
+  });
+
+  return { results };
+}
+
 export async function listInventoryCategories(query: CategoryQuery) {
   const pagination = getPagination(query);
   const where: Prisma.InventoryCategoryWhereInput = {
@@ -229,6 +281,34 @@ export async function saveInventoryCategory(data: CategoryCreate | CategoryUpdat
   }
 }
 
+export async function deactivateInventoryCategory(id: string, context: RequestContext) {
+  const existing = await prisma.inventoryCategory.findFirst({
+    where: { id, deletedAt: null },
+    include: { _count: { select: { items: true } } }
+  });
+  if (!existing) throw new AppError(404, "Inventory category not found");
+
+  const category = await prisma.inventoryCategory.update({
+    where: { id },
+    data: { status: "inactive", deletedAt: new Date() }
+  });
+
+  await createAuditLog({
+    actorId: context.actorId,
+    action: existing._count.items > 0 ? "deactivate_linked" : "deactivate",
+    module: "inventory",
+    targetType: "inventory_category",
+    targetId: id,
+    oldValue: existing,
+    newValue: category,
+    metadata: existing._count.items > 0 ? { reason: "Category has linked materials; soft deactivated" } : undefined,
+    ipAddress: context.ipAddress,
+    userAgent: context.userAgent
+  });
+
+  return category;
+}
+
 export async function listInventorySuppliers(query: SupplierQuery) {
   const pagination = getPagination(query);
   const where: Prisma.InventorySupplierWhereInput = {
@@ -265,6 +345,34 @@ export async function saveInventorySupplier(data: SupplierCreate | SupplierUpdat
   } catch (error) {
     handlePrismaError(error);
   }
+}
+
+export async function deactivateInventorySupplier(id: string, context: RequestContext) {
+  const existing = await prisma.inventorySupplier.findFirst({
+    where: { id, deletedAt: null },
+    include: { _count: { select: { items: true } } }
+  });
+  if (!existing) throw new AppError(404, "Inventory supplier not found");
+
+  const supplier = await prisma.inventorySupplier.update({
+    where: { id },
+    data: { status: "inactive", deletedAt: new Date() }
+  });
+
+  await createAuditLog({
+    actorId: context.actorId,
+    action: existing._count.items > 0 ? "deactivate_linked" : "deactivate",
+    module: "inventory",
+    targetType: "inventory_supplier",
+    targetId: id,
+    oldValue: existing,
+    newValue: supplier,
+    metadata: existing._count.items > 0 ? { reason: "Supplier has linked materials; soft deactivated" } : undefined,
+    ipAddress: context.ipAddress,
+    userAgent: context.userAgent
+  });
+
+  return supplier;
 }
 
 export async function listInventoryMovements(query: MovementQuery) {

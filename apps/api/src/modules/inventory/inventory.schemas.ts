@@ -21,14 +21,15 @@ export const inventoryItemQuerySchema = paginationQuerySchema.extend({
   categoryId: optionalUuidSchema,
   supplierId: optionalUuidSchema,
   status: z.preprocess(emptyToUndefined, inventoryStatusSchema.optional()),
-  lowStock: z.coerce.boolean().optional()
+  lowStock: z.coerce.boolean().optional(),
+  stockStatus: z.preprocess(emptyToUndefined, z.enum(["low", "ok"]).optional())
 });
 
 export const inventoryItemCreateSchema = z.object({
   materialCode: z.string().trim().min(1).max(100),
   materialName: z.string().trim().min(1).max(255),
-  categoryId: optionalUuidSchema,
-  supplierId: optionalUuidSchema,
+  categoryId: z.string().uuid(),
+  supplierId: z.string().uuid(),
   purchasePrice: nonNegativeDecimalSchema.default(0),
   sellingPrice: nonNegativeDecimalSchema.default(0),
   markupPercentage: nonNegativeDecimalSchema.default(0),
@@ -48,6 +49,7 @@ export const inventoryCategoryQuerySchema = paginationQuerySchema.extend({
 export const inventoryCategoryCreateSchema = z.object({
   code: z.string().trim().min(1).max(100),
   name: z.string().trim().min(1).max(255),
+  department: optionalShortTextSchema,
   description: optionalTextSchema,
   status: recordStatusSchema.default("active")
 });
@@ -62,7 +64,7 @@ export const inventorySupplierCreateSchema = z.object({
   code: z.string().trim().min(1).max(100),
   name: z.string().trim().min(1).max(255),
   contactName: optionalShortTextSchema,
-  phone: z.preprocess(emptyToUndefined, z.string().trim().max(50).optional()),
+  phone: z.preprocess(emptyToUndefined, z.string().trim().regex(/^[0-9+\-\s().]{7,20}$/, "Invalid phone number").optional()),
   email: z.preprocess(emptyToUndefined, z.string().trim().email().max(255).optional()),
   address: optionalTextSchema,
   taxCode: z.preprocess(emptyToUndefined, z.string().trim().max(100).optional()),
@@ -71,6 +73,10 @@ export const inventorySupplierCreateSchema = z.object({
 });
 
 export const inventorySupplierUpdateSchema = inventorySupplierCreateSchema.partial();
+
+export const bulkMaterialDeactivateSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(100)
+});
 
 export const stockMovementQuerySchema = paginationQuerySchema.extend({
   itemId: optionalUuidSchema,

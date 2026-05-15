@@ -252,6 +252,8 @@ Add inventory permissions:
 ```txt
 inventory.view
 inventory.manage
+inventory.categories.manage
+inventory.suppliers.manage
 inventory.adjust_stock
 inventory.import
 inventory.export
@@ -349,3 +351,16 @@ Remaining extensions:
 
 - Separate reservation and purchase receipt tables can be added later if workflow detail beyond stock movements is required.
 - Manual browser smoke testing should be run after applying the migration to a local database.
+
+## List Management Refinement - 2026-05-15
+
+Implemented:
+
+- `/api/inventory/materials` aliases for material list/create/detail/update/deactivate.
+- `/api/inventory/materials/bulk-deactivate` and `/api/inventory/materials/bulk-delete` with per-item results.
+- Category and supplier deactivate endpoints.
+- Separate `inventory.categories.manage` and `inventory.suppliers.manage` permissions.
+- Required category and supplier on material create/update.
+- Category `department` field.
+- Inline material add/edit/deactivate and bulk deactivate on the material list page.
+- Category and supplier list pages now support edit and deactivate in place.

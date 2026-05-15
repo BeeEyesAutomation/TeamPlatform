@@ -1,0 +1,11 @@
+Command: npx prisma generate
+Working directory: apps/api
+Classification: unknown
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Error:
+EPERM: operation not permitted, rename 'C:\TeamPlatform\node_modules\.prisma\client\query_engine-windows.dll.node.tmp24360' -> 'C:\TeamPlatform\node_modules\.prisma\client\query_engine-windows.dll.node'
+
+Fix attempt:
+Stop API Node processes that hold the Prisma query engine DLL, then retry once.

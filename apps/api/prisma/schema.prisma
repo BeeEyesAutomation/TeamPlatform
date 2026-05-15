@@ -681,6 +681,7 @@ model InventoryCategory {
   id          String          @id @default(uuid())
   code        String          @unique @db.VarChar(100)
   name        String          @db.VarChar(255)
+  department  String?         @db.VarChar(255)
   description String?         @db.Text
   status      RecordStatus    @default(active)
   items       InventoryItem[]

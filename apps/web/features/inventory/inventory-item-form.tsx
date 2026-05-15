@@ -91,14 +91,14 @@ export function InventoryItemForm({ id }: { id?: string }) {
         <Field label="Ten vat tu" required value={form.materialName} onChange={(value) => setForm({ ...form, materialName: value })} />
         <label className="block text-sm font-medium">
           Nhom vat tu
-          <select className={`${fieldClassName()} mt-1 w-full`} value={form.categoryId} onChange={(event) => setForm({ ...form, categoryId: event.target.value })}>
+          <select className={`${fieldClassName()} mt-1 w-full`} required value={form.categoryId} onChange={(event) => setForm({ ...form, categoryId: event.target.value })}>
             <option value="">Chua chon</option>
             {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
           </select>
         </label>
         <label className="block text-sm font-medium">
           Nha cung cap
-          <select className={`${fieldClassName()} mt-1 w-full`} value={form.supplierId} onChange={(event) => setForm({ ...form, supplierId: event.target.value })}>
+          <select className={`${fieldClassName()} mt-1 w-full`} required value={form.supplierId} onChange={(event) => setForm({ ...form, supplierId: event.target.value })}>
             <option value="">Chua chon</option>
             {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
           </select>

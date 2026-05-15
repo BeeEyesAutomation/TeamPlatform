@@ -33,6 +33,8 @@ export const permissions = [
   "exports.manage",
   "inventory.view",
   "inventory.manage",
+  "inventory.categories.manage",
+  "inventory.suppliers.manage",
   "inventory.adjust_stock",
   "inventory.import",
   "inventory.export",

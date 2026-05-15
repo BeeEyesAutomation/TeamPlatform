@@ -1,5 +1,71 @@
 # Implementation Log
 
+## 2026-05-15 - Refine Inventory List, Categories, and Suppliers
+
+### Current Phase
+
+Inventory list management refinement.
+
+### Scope
+
+- Add material list inline create/edit/deactivate and bulk deactivate.
+- Add material `/api/inventory/materials` aliases and bulk deactivate endpoints.
+- Add category/supplier deactivate endpoints and management permissions.
+- Add category department support.
+- Keep stock in/out, reports, dashboards, and unrelated modules out of scope.
+
+### Result
+
+- Materials can be added, edited, single-deactivated, and bulk-deactivated from the list page.
+- Material list includes checkbox selection, code, name, category, supplier, prices, stock, minimum stock, stock status, status, and actions.
+- Categories support code, name, department, description, status, inline edit, and deactivate.
+- Suppliers support name, address, email, phone, contact person, tax code, note, status, inline edit, and deactivate.
+- Backend now exposes `/materials` aliases, category/supplier delete-deactivate routes, and bulk material deactivate/delete routes.
+- Category and supplier management use `inventory.categories.manage` and `inventory.suppliers.manage`.
+
+### Changed Files Summary
+
+- `apps/api/prisma/schema.prisma`
+- `apps/api/prisma/migrations/20260515103000_inventory_list_management/migration.sql`
+- `apps/api/prisma/seed.ts`
+- `apps/api/src/modules/inventory/inventory.schemas.ts`
+- `apps/api/src/modules/inventory/inventory.service.ts`
+- `apps/api/src/modules/inventory/inventory.routes.ts`
+- `apps/web/features/inventory/inventory-api.ts`
+- `apps/web/features/inventory/inventory-client.tsx`
+- `apps/web/features/inventory/inventory-catalog-client.tsx`
+- `apps/web/features/inventory/inventory-item-form.tsx`
+- `apps/web/types/inventory.ts`
+- `packages/shared/src/permissions.ts`
+- `API.md`
+- `DATABASE.md`
+- `docs/INVENTORY_PLAN.md`
+- `docs/IMPLEMENTATION_LOG.md`
+- `docs/logs/2026-05-15_inventory-list-management_*.log`
+
+### Commands Run
+
+- `npx prisma format`
+- `npx prisma validate`
+- `npx prisma generate`
+- `npx prisma migrate dev --name inventory_list_management`
+- `npx prisma db execute --file prisma/migrations/20260515103000_inventory_list_management/migration.sql --schema prisma/schema.prisma`
+- `npx prisma migrate resolve --applied 20260515103000_inventory_list_management --schema prisma/schema.prisma`
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+- Targeted inventory permission upsert with `npx tsx -`
+- Targeted API smoke checks for materials, bulk deactivate, categories, and suppliers
+
+### Failures and Logs
+
+- `docs/logs/2026-05-15_inventory-list-management_prisma-generate.log` - `unknown`; Prisma query engine DLL was locked by a running API process. Stopped the API Node process and retried once successfully.
+- `docs/logs/2026-05-15_inventory-list-management_prisma-migrate-dev.log` - `migration_error`; `migrate dev` is blocked by the non-interactive shell. Applied the migration SQL directly and marked it applied.
+
+### Remaining TODOs
+
+- Refresh browser login if the stored session was created before the new category/supplier permissions.
+
+
 ## 2026-05-15 - Inventory Module Backend and UI
 
 ### Current Phase

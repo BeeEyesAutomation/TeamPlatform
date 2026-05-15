@@ -10,6 +10,7 @@ export interface InventoryCategory {
   id: string;
   code: string;
   name: string;
+  department?: string | null;
   description?: string | null;
   status: RecordStatus;
 }

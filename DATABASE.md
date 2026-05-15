@@ -47,6 +47,7 @@ updated_at
 id
 code
 name
+department
 description
 status
 created_at

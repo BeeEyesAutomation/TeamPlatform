@@ -47,6 +47,8 @@ const permissions = [
   "exports.manage",
   "inventory.view",
   "inventory.manage",
+  "inventory.categories.manage",
+  "inventory.suppliers.manage",
   "inventory.adjust_stock",
   "inventory.import",
   "inventory.export",
@@ -284,7 +286,7 @@ async function seedRolesAndPermissions() {
   const inventoryRolePermissions: Record<string, string[]> = {
     director: ["inventory.view", "inventory.export", "inventory.view_cost"],
     accountant: ["inventory.view", "inventory.export", "inventory.view_cost"],
-    project_manager: ["inventory.view", "inventory.manage", "inventory.adjust_stock", "inventory.import", "inventory.export", "inventory.view_cost"],
+    project_manager: ["inventory.view", "inventory.manage", "inventory.categories.manage", "inventory.suppliers.manage", "inventory.adjust_stock", "inventory.import", "inventory.export", "inventory.view_cost"],
     team_leader: ["inventory.view", "inventory.adjust_stock"],
     project_employee: ["inventory.view"]
   };
