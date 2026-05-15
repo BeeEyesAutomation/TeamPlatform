@@ -27,7 +27,6 @@ export const inventoryItemQuerySchema = paginationQuerySchema.extend({
 });
 
 export const inventoryItemCreateSchema = z.object({
-  materialCode: z.string().trim().min(1).max(100),
   materialName: z.string().trim().min(1).max(255),
   categoryId: z.string().uuid(),
   supplierId: z.string().uuid(),
@@ -43,6 +42,10 @@ export const inventoryItemCreateSchema = z.object({
 });
 
 export const inventoryItemUpdateSchema = inventoryItemCreateSchema.partial();
+
+export const materialCodePreviewQuerySchema = z.object({
+  categoryId: z.string().uuid()
+});
 
 export const inventoryCategoryQuerySchema = paginationQuerySchema.extend({
   status: z.preprocess(emptyToUndefined, recordStatusSchema.optional())

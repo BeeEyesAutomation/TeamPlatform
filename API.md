@@ -320,6 +320,7 @@ POST   /api/inventory/materials
 GET    /api/inventory/materials/:id
 PUT    /api/inventory/materials/:id
 DELETE /api/inventory/materials/:id
+GET    /api/inventory/materials/next-code?categoryId=:categoryId
 POST   /api/inventory/materials/:id/image
 POST   /api/inventory/materials/bulk-deactivate
 POST   /api/inventory/materials/bulk-delete
@@ -346,7 +347,9 @@ GET    /api/inventory/reports/low-stock
 GET    /api/inventory/reports/movements
 ```
 
-Inventory item payload fields include `materialCode`, `materialName`, `categoryId`, `supplierId`, `imageUrl`, `purchasePrice`, `sellingPrice`, `markupPercentage`, `stockQuantity`, `minimumStockQuantity`, `unit`, `status`, and `description`. `categoryId` and `supplierId` are required. List requests support `search` by material code or material name plus category, supplier, status, and stock-status filters.
+Inventory item payload fields include `materialName`, `categoryId`, `supplierId`, `imageUrl`, `purchasePrice`, `sellingPrice`, `markupPercentage`, `stockQuantity`, `minimumStockQuantity`, `unit`, `status`, and `description`. `categoryId` and `supplierId` are required. `materialCode` is generated server-side from the selected Material Group code plus a 5-digit sequence scoped to that Material Group, for example `CK00001`. List requests support `search` by material code or material name plus category, supplier, status, and stock-status filters.
+
+`GET /api/inventory/materials/next-code?categoryId=:categoryId` returns a preview of the next generated Material Code. The create API remains authoritative and regenerates the final code on save.
 
 `POST /api/inventory/materials/:id/image` accepts multipart form field `image` with jpg, jpeg, png, or webp up to 5MB. Files are stored in local API storage under `/uploads/materials/`, and the material record stores only the returned `imageUrl` path.
 

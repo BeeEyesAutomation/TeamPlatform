@@ -32,24 +32,24 @@ export function InventoryReportsClient() {
 
   return (
     <section className="space-y-4">
-      <PageHeader title="Bao cao kho vat tu" description="Tong quan ton kho va danh sach vat tu can bo sung." />
+      <PageHeader title="Inventory Reports" description="Inventory overview and materials that need replenishment." />
       <ErrorBanner message={error} />
       <div className="grid gap-3 md:grid-cols-4">
-        <Tile label="Vat tu" value={summary?.totalItems ?? 0} />
-        <Tile label="Sap het" value={summary?.lowStockItems ?? 0} />
-        <Tile label="Nhom vat tu" value={summary?.activeCategories ?? 0} />
-        <Tile label="Gia tri ton" value={formatVnd(summary?.stockValue ?? 0)} />
+        <Tile label="Materials" value={summary?.totalItems ?? 0} />
+        <Tile label="Low Stock" value={summary?.lowStockItems ?? 0} />
+        <Tile label="Material Groups" value={summary?.activeCategories ?? 0} />
+        <Tile label="Stock Value" value={formatVnd(summary?.stockValue ?? 0)} />
       </div>
       <DataTable
         items={lowStock}
         getRowKey={(item) => item.id}
-        emptyTitle="Khong co vat tu sap het"
+        emptyTitle="No low-stock materials"
         columns={[
-          { key: "code", header: "Ma", render: (item) => item.materialCode },
-          { key: "name", header: "Ten vat tu", render: (item) => item.materialName },
-          { key: "stock", header: "Ton", render: (item) => `${formatNumber(item.stockQuantity, 3)} ${item.unit}` },
-          { key: "min", header: "Toi thieu", render: (item) => formatNumber(item.minimumStockQuantity, 3) },
-          { key: "supplier", header: "Nha cung cap", render: (item) => item.supplier?.name ?? "-" }
+          { key: "code", header: "Material Code", render: (item) => item.materialCode },
+          { key: "name", header: "Material Name", render: (item) => item.materialName },
+          { key: "stock", header: "Stock Quantity", render: (item) => `${formatNumber(item.stockQuantity, 3)} ${item.unit}` },
+          { key: "min", header: "Minimum Stock", render: (item) => formatNumber(item.minimumStockQuantity, 3) },
+          { key: "supplier", header: "Supplier", render: (item) => item.supplier?.name ?? "-" }
         ]}
       />
     </section>

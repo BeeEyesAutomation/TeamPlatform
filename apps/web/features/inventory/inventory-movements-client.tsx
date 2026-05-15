@@ -30,35 +30,35 @@ export function InventoryMovementsClient() {
 
   return (
     <section className="space-y-4">
-      <PageHeader title="Lich su kho" description="Theo doi nhap, xuat va dieu chinh ton kho vat tu." />
+      <PageHeader title="Inventory Movements" description="Track material receipts, issues, and stock adjustments." />
       <FilterBar>
-        <input className={fieldClassName("md:col-span-2")} placeholder="Tim ma hoac ten vat tu" value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} />
+        <input className={fieldClassName("md:col-span-2")} placeholder="Search Material Code or Material Name" value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} />
         <select className={fieldClassName()} value={filters.movementType} onChange={(event) => setFilters({ ...filters, movementType: event.target.value })}>
-          <option value="">Tat ca loai</option>
-          <option value="receipt">Nhap</option>
-          <option value="issue">Xuat</option>
-          <option value="adjustment">Dieu chinh</option>
-          <option value="return">Tra lai</option>
-          <option value="reservation">Giu hang</option>
-          <option value="release">Bo giu</option>
+          <option value="">All Movement Types</option>
+          <option value="receipt">Receipt</option>
+          <option value="issue">Issue</option>
+          <option value="adjustment">Adjustment</option>
+          <option value="return">Return</option>
+          <option value="reservation">Reservation</option>
+          <option value="release">Release</option>
         </select>
-        <ToolbarButton onClick={() => void load()}>Loc</ToolbarButton>
+        <ToolbarButton onClick={() => void load()}>Filter</ToolbarButton>
       </FilterBar>
       <ErrorBanner message={error} />
       <DataTable
         items={items}
         getRowKey={(item) => item.id}
         minWidth={920}
-        emptyTitle="Chua co giao dich kho"
+        emptyTitle="No inventory movements"
         columns={[
-          { key: "date", header: "Ngay", render: (item) => new Date(item.createdAt).toLocaleString("vi-VN") },
-          { key: "code", header: "Ma vat tu", render: (item) => item.item?.materialCode ?? item.itemId },
-          { key: "name", header: "Ten vat tu", render: (item) => item.item?.materialName ?? "-" },
-          { key: "type", header: "Loai", render: (item) => statusLabel(item.movementType) },
-          { key: "qty", header: "So luong", render: (item) => `${formatNumber(item.quantity, 3)} ${item.item?.unit ?? ""}` },
-          { key: "cost", header: "Don gia", render: (item) => item.unitCost ? formatVnd(item.unitCost) : "-" },
-          { key: "after", header: "Ton sau", render: (item) => formatNumber(item.resultingStock, 3) },
-          { key: "note", header: "Ghi chu", render: (item) => item.note ?? "-" }
+          { key: "date", header: "Date", render: (item) => new Date(item.createdAt).toLocaleString("en-US") },
+          { key: "code", header: "Material Code", render: (item) => item.item?.materialCode ?? item.itemId },
+          { key: "name", header: "Material Name", render: (item) => item.item?.materialName ?? "-" },
+          { key: "type", header: "Type", render: (item) => statusLabel(item.movementType) },
+          { key: "qty", header: "Quantity", render: (item) => `${formatNumber(item.quantity, 3)} ${item.item?.unit ?? ""}` },
+          { key: "cost", header: "Unit Cost", render: (item) => item.unitCost ? formatVnd(item.unitCost) : "-" },
+          { key: "after", header: "Resulting Stock", render: (item) => formatNumber(item.resultingStock, 3) },
+          { key: "note", header: "Note", render: (item) => item.note ?? "-" }
         ]}
       />
     </section>

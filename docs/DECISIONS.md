@@ -47,3 +47,9 @@ SMTP settings support direct stored placeholders or `env:VARIABLE_NAME` referenc
 ### Import Foundation
 
 Phase 10 stores import preview rows and row errors in `ImportLog.metadata`. Excel template generation and error workbook generation are implemented; multipart Excel upload parsing is deferred.
+
+## 2026-05-15 - Inventory Material Codes
+
+Material Code is generated server-side from the selected Material Group code plus a 5-digit increasing sequence scoped to that Material Group, for example `CK00001` or `DT00001`. `inventory_items.material_code` remains unique in the database, and create retries code generation once if a duplicate is detected.
+
+Material Code is not manually editable in the UI or API create flow. If a material's Material Group changes later, the existing Material Code is kept unchanged for audit safety unless a future requirement explicitly asks for regeneration.

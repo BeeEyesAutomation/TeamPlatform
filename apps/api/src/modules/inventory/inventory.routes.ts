@@ -20,6 +20,7 @@ import {
   inventorySupplierQuerySchema,
   inventorySupplierUpdateSchema,
   issueSchema,
+  materialCodePreviewQuerySchema,
   receiptSchema,
   stockMovementCreateSchema,
   stockMovementQuerySchema
@@ -37,6 +38,7 @@ import {
   listInventoryItems,
   listInventoryMovements,
   listInventorySuppliers,
+  previewNextInventoryMaterialCode,
   saveInventoryCategory,
   saveInventorySupplier,
   updateInventoryItem,
@@ -128,6 +130,15 @@ inventoryRouter.post(
   asyncHandler(async (req, res) => {
     const body = bulkMaterialDeactivateSchema.parse(req.body);
     res.json({ status: "ok", data: await bulkDeactivateInventoryItems(body, contextFromRequest(req)) });
+  })
+);
+
+inventoryRouter.get(
+  "/materials/next-code",
+  requirePermission("inventory.view"),
+  asyncHandler(async (req, res) => {
+    const { categoryId } = materialCodePreviewQuerySchema.parse(req.query);
+    res.json({ status: "ok", data: await previewNextInventoryMaterialCode(categoryId) });
   })
 );
 

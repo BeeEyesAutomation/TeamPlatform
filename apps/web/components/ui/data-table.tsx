@@ -22,7 +22,7 @@ export function DataTable<T>({ columns, items, getRowKey, minWidth = 760, loadin
   if (loading) {
     return (
       <div className="rounded-md border border-border bg-white p-5 text-sm text-muted">
-        Đang tải dữ liệu...
+        Loading data...
       </div>
     );
   }

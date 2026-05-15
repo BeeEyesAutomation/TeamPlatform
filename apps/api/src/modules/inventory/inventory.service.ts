@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../prisma/client";
 import { AppError } from "../../utils/app-error";
 import { createAuditLog } from "../audit/audit.service";
@@ -37,6 +37,7 @@ type ReceiptInput = z.infer<typeof receiptSchema>;
 type IssueInput = z.infer<typeof issueSchema>;
 type AdjustmentInput = z.infer<typeof adjustmentSchema>;
 type BulkDeactivateInput = z.infer<typeof bulkMaterialDeactivateSchema>;
+type ItemCreateWithCode = ItemCreate & { materialCode: string };
 
 interface RequestContext {
   actorId?: string;
@@ -61,7 +62,7 @@ const decimalData = (data: Partial<ItemCreate>) => ({
   ...(data.minimumStockQuantity !== undefined ? { minimumStockQuantity: data.minimumStockQuantity.toString() } : {})
 });
 
-const itemCreateData = (data: ItemCreate, actorId?: string): Prisma.InventoryItemUncheckedCreateInput => ({
+const itemCreateData = (data: ItemCreateWithCode, actorId?: string): Prisma.InventoryItemUncheckedCreateInput => ({
   materialCode: data.materialCode,
   materialName: data.materialName,
   categoryId: data.categoryId,
@@ -76,7 +77,6 @@ const itemCreateData = (data: ItemCreate, actorId?: string): Prisma.InventoryIte
 });
 
 const itemUpdateData = (data: ItemUpdate, actorId?: string): Prisma.InventoryItemUncheckedUpdateInput => ({
-  ...(data.materialCode !== undefined ? { materialCode: data.materialCode } : {}),
   ...(data.materialName !== undefined ? { materialName: data.materialName } : {}),
   ...(data.categoryId !== undefined ? { categoryId: data.categoryId } : {}),
   ...(data.supplierId !== undefined ? { supplierId: data.supplierId } : {}),
@@ -87,6 +87,35 @@ const itemUpdateData = (data: ItemUpdate, actorId?: string): Prisma.InventoryIte
   updatedById: actorId,
   ...decimalData(data)
 });
+
+async function getInventoryCategoryForCode(categoryId: string) {
+  const category = await prisma.inventoryCategory.findFirst({
+    where: { id: categoryId, deletedAt: null },
+    select: { id: true, code: true }
+  });
+  if (!category) throw new AppError(400, "Material Group does not exist");
+  const code = category.code.trim().toUpperCase();
+  if (!code) throw new AppError(400, "Material Group code is required before generating Material Code");
+  return { ...category, code };
+}
+
+async function generateMaterialCode(categoryId: string) {
+  const category = await getInventoryCategoryForCode(categoryId);
+  const existingCodes = await prisma.inventoryItem.findMany({
+    where: { categoryId, materialCode: { startsWith: category.code } },
+    select: { materialCode: true }
+  });
+  const nextSequence = existingCodes.reduce((max, item) => {
+    const suffix = item.materialCode.slice(category.code.length);
+    const sequence = /^\d{5}$/.test(suffix) ? Number(suffix) : 0;
+    return Math.max(max, sequence);
+  }, 0) + 1;
+  return `${category.code}${String(nextSequence).padStart(5, "0")}`;
+}
+
+export async function previewNextInventoryMaterialCode(categoryId: string) {
+  return { materialCode: await generateMaterialCode(categoryId) };
+}
 
 function listWhere(query: ItemQuery): Prisma.InventoryItemWhereInput {
   return {
@@ -132,7 +161,8 @@ export async function getInventoryItem(id: string) {
 
 export async function createInventoryItem(data: ItemCreate, context: RequestContext) {
   try {
-    const item = await prisma.inventoryItem.create({ data: itemCreateData(data, context.actorId), include: itemInclude });
+    const materialCode = await generateMaterialCode(data.categoryId);
+    const item = await prisma.inventoryItem.create({ data: itemCreateData({ ...data, materialCode }, context.actorId), include: itemInclude });
     await createAuditLog({
       actorId: context.actorId,
       action: "create",
@@ -140,11 +170,35 @@ export async function createInventoryItem(data: ItemCreate, context: RequestCont
       targetType: "inventory_item",
       targetId: item.id,
       newValue: item,
+      metadata: { materialCode },
       ipAddress: context.ipAddress,
       userAgent: context.userAgent
     });
     return item;
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const materialCode = await generateMaterialCode(data.categoryId);
+      try {
+        const item = await prisma.inventoryItem.create({ data: itemCreateData({ ...data, materialCode }, context.actorId), include: itemInclude });
+        await createAuditLog({
+          actorId: context.actorId,
+          action: "create",
+          module: "inventory",
+          targetType: "inventory_item",
+          targetId: item.id,
+          newValue: item,
+          metadata: { materialCode },
+          ipAddress: context.ipAddress,
+          userAgent: context.userAgent
+        });
+        return item;
+      } catch (retryError) {
+        if (retryError instanceof Prisma.PrismaClientKnownRequestError && retryError.code === "P2002") {
+          throw new AppError(409, "Material Code already exists. Please try again.");
+        }
+        handlePrismaError(retryError);
+      }
+    }
     handlePrismaError(error);
   }
 }

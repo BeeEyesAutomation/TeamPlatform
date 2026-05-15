@@ -5,7 +5,7 @@ export default function EditInventoryItemPage({ params }: { params: { id: string
   return (
     <AppShell>
       <section className="space-y-4">
-        <h1 className="text-2xl font-semibold">Sua vat tu</h1>
+        <h1 className="text-2xl font-semibold">Edit Material</h1>
         <InventoryItemForm id={params.id} />
       </section>
     </AppShell>

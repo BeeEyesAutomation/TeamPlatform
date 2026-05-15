@@ -1,5 +1,64 @@
 # Implementation Log
 
+## 2026-05-15 - English Inventory UI and Auto Material Codes
+
+### Current Phase
+
+Inventory Materials UI text and Material Code generation refinement.
+
+### Scope
+
+- Convert Inventory Materials page user-facing text to English.
+- Make Material Code read-only in the Material form.
+- Generate Material Code server-side from Material Group code and a 5-digit group-scoped sequence.
+- Add Material Code preview endpoint for the UI.
+- Keep stock in/out, reports, dashboards, and unrelated modules out of scope.
+
+### Result
+
+- Inventory Materials page labels, buttons, placeholders, confirmations, messages, table headers, and empty states are English.
+- `POST /api/inventory/materials` no longer requires client-submitted `materialCode`.
+- Backend generates codes such as `CK00001`, `CK00002`, and `DT00001` from the selected Material Group.
+- `GET /api/inventory/materials/next-code?categoryId=...` previews the next generated code.
+- Material Code remains unchanged if a material is edited and its Material Group changes.
+
+### Changed Files Summary
+
+- `apps/api/src/modules/inventory/inventory.schemas.ts`
+- `apps/api/src/modules/inventory/inventory.service.ts`
+- `apps/api/src/modules/inventory/inventory.routes.ts`
+- `apps/web/app/inventory/items/new/page.tsx`
+- `apps/web/app/inventory/items/[id]/edit/page.tsx`
+- `apps/web/features/inventory/inventory-catalog-client.tsx`
+- `apps/web/components/ui/data-table.tsx`
+- `apps/web/features/inventory/inventory-detail-client.tsx`
+- `apps/web/features/inventory/inventory-api.ts`
+- `apps/web/features/inventory/inventory-client.tsx`
+- `apps/web/features/inventory/inventory-format.ts`
+- `apps/web/features/inventory/inventory-item-form.tsx`
+- `apps/web/features/inventory/inventory-movements-client.tsx`
+- `apps/web/features/inventory/inventory-reports-client.tsx`
+- `API.md`
+- `docs/DECISIONS.md`
+- `docs/INVENTORY_PLAN.md`
+- `docs/IMPLEMENTATION_LOG.md`
+
+### Commands Run
+
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+- `Invoke-WebRequest -Uri http://localhost:4000/health`
+- Targeted API smoke check for `/api/inventory/materials/next-code?categoryId=...`
+
+### Failures and Logs
+
+- No command failures.
+
+### Remaining TODOs
+
+- Browser smoke test Material Code preview after selecting each Material Group.
+
+
 ## 2026-05-15 - Refine Inventory Materials Page UX and Images
 
 ### Current Phase

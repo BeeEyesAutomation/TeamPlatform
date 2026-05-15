@@ -23,6 +23,9 @@ export const deleteInventoryItem = (id: string) => apiJson<InventoryItem>(`/api/
 export const bulkDeactivateInventoryItems = (ids: string[]) =>
   apiJson<{ results: Array<{ id: string; status: string; reason: string }> }>("/api/inventory/materials/bulk-deactivate", "POST", { ids });
 
+export const fetchNextInventoryMaterialCode = (categoryId: string) =>
+  apiGet<{ materialCode: string }>(`/api/inventory/materials/next-code?categoryId=${encodeURIComponent(categoryId)}`);
+
 export const uploadInventoryItemImage = (id: string, file: File) => {
   const body = new FormData();
   body.append("image", file);

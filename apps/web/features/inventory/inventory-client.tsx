@@ -5,7 +5,6 @@ import { FilterBar, ToolbarButton, fieldClassName } from "../../components/ui/co
 import { DataTable } from "../../components/ui/data-table";
 import { ErrorBanner } from "../../components/ui/feedback";
 import { PageHeader } from "../../components/ui/page-header";
-import { StatusBadge } from "../../components/ui/status-badge";
 import { apiBaseUrl } from "../../lib/api-client";
 import { getStoredUser, hasPermission } from "../../lib/auth";
 import type { InventoryCategory, InventoryItem, InventorySummary, InventorySupplier } from "../../types/inventory";
@@ -18,6 +17,7 @@ import {
   fetchInventoryItems,
   fetchInventorySummary,
   fetchInventorySuppliers,
+  fetchNextInventoryMaterialCode,
   saveInventoryCategory,
   saveInventoryItem,
   saveInventorySupplier,
@@ -107,7 +107,7 @@ export function InventoryClient() {
       setSummary(summaryResponse.data);
       setError("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Cannot load inventory");
+      setError(err instanceof Error ? err.message : "Cannot load inventory data.");
     } finally {
       setLoading(false);
     }
@@ -117,10 +117,34 @@ export function InventoryClient() {
     void load();
   }, []);
 
+  async function previewMaterialCode(categoryId: string) {
+    if (!categoryId || form.id) return "";
+    try {
+      const response = await fetchNextInventoryMaterialCode(categoryId);
+      return response.data.materialCode;
+    } catch {
+      return "Will be generated after saving";
+    }
+  }
+
+  async function handleMaterialGroupChange(categoryId: string) {
+    setForm((current) => ({ ...current, categoryId, materialCode: current.id ? current.materialCode : "" }));
+    const materialCode = await previewMaterialCode(categoryId);
+    if (materialCode) {
+      setForm((current) => current.id ? current : { ...current, materialCode });
+    }
+  }
+
   function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
     setImageFile(file);
     setImagePreview(file ? URL.createObjectURL(file) : "");
+  }
+
+  function resetMaterialForm() {
+    setForm(emptyMaterialForm);
+    setImageFile(null);
+    setImagePreview("");
   }
 
   function edit(item: InventoryItem) {
@@ -149,7 +173,6 @@ export function InventoryClient() {
     event.preventDefault();
     try {
       const response = await saveInventoryItem({
-        materialCode: form.materialCode,
         materialName: form.materialName,
         categoryId: form.categoryId,
         supplierId: form.supplierId,
@@ -166,29 +189,28 @@ export function InventoryClient() {
       if (imageFile) {
         await uploadInventoryItemImage(response.data.id, imageFile);
       }
-      setForm(emptyMaterialForm);
-      setImageFile(null);
-      setImagePreview("");
-      setMessage("Da luu vat tu.");
+      resetMaterialForm();
+      setMessage("Material saved.");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Cannot save material");
+      const details = err instanceof Error ? err.message : "Cannot save material.";
+      setError(details.includes("material_code") || details.includes("Material Code already exists") ? "Material Code already exists. Please try again." : details);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!window.confirm("Ngung hoat dong vat tu nay?")) return;
+    if (!window.confirm("Deactivate this material?")) return;
     await deleteInventoryItem(id);
-    setMessage("Da ngung hoat dong vat tu.");
+    setMessage("Material deactivated.");
     await load();
   }
 
   async function handleBulkDelete() {
     if (selectedIds.length === 0) return;
-    if (!window.confirm(`Ngung hoat dong ${selectedIds.length} vat tu da chon?`)) return;
+    if (!window.confirm(`Deactivate ${selectedIds.length} selected materials?`)) return;
     const response = await bulkDeactivateInventoryItems(selectedIds);
     setSelectedIds([]);
-    setMessage(`Da xu ly ${response.data.results.length} vat tu.`);
+    setMessage(`Processed ${response.data.results.length} materials.`);
     await load();
   }
 
@@ -203,10 +225,10 @@ export function InventoryClient() {
         status: categoryForm.status
       }, categoryForm.id || undefined);
       setCategoryForm(emptyCategoryForm);
-      setMessage("Da luu nhom vat tu.");
+      setMessage("Material Group saved.");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Cannot save category");
+      setError(err instanceof Error ? err.message : "Cannot save Material Group.");
     }
   }
 
@@ -225,24 +247,24 @@ export function InventoryClient() {
         status: supplierForm.status
       }, supplierForm.id || undefined);
       setSupplierForm(emptySupplierForm);
-      setMessage("Da luu nha cung cap.");
+      setMessage("Supplier saved.");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Cannot save supplier");
+      setError(err instanceof Error ? err.message : "Cannot save Supplier.");
     }
   }
 
   async function deactivateCategory(id: string) {
-    if (!window.confirm("Ngung nhom vat tu nay?")) return;
+    if (!window.confirm("Deactivate this Material Group?")) return;
     await deleteInventoryCategory(id);
-    setMessage("Da ngung nhom vat tu.");
+    setMessage("Material Group deactivated.");
     await load();
   }
 
   async function deactivateSupplier(id: string) {
-    if (!window.confirm("Ngung nha cung cap nay?")) return;
+    if (!window.confirm("Deactivate this Supplier?")) return;
     await deleteInventorySupplier(id);
-    setMessage("Da ngung nha cung cap.");
+    setMessage("Supplier deactivated.");
     await load();
   }
 
@@ -256,29 +278,29 @@ export function InventoryClient() {
 
   return (
     <section className="space-y-4">
-      <PageHeader title="Kho vat tu" description="Quan ly vat tu, nhom vat tu, nha cung cap va hinh anh trong mot man hinh." />
+      <PageHeader title="Inventory Materials" description="Manage materials, material groups, suppliers, and material images in one workspace." />
 
       <div className="grid gap-3 md:grid-cols-4">
-        <SummaryTile label="Vat tu" value={summary?.totalItems ?? 0} />
-        <SummaryTile label="Sap het" value={summary?.lowStockItems ?? 0} />
-        <SummaryTile label="Nhom vat tu" value={summary?.activeCategories ?? 0} />
-        <SummaryTile label="Gia tri ton" value={canViewCost ? formatVnd(summary?.stockValue ?? 0) : "***"} />
+        <SummaryTile label="Materials" value={summary?.totalItems ?? 0} />
+        <SummaryTile label="Low Stock" value={summary?.lowStockItems ?? 0} />
+        <SummaryTile label="Material Groups" value={summary?.activeCategories ?? 0} />
+        <SummaryTile label="Stock Value" value={canViewCost ? formatVnd(summary?.stockValue ?? 0) : "***"} />
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {canManageCategories ? <ToolbarButton variant={catalogPanel === "categories" ? "primary" : "secondary"} onClick={() => setCatalogPanel(catalogPanel === "categories" ? "" : "categories")}>Quan ly nhom</ToolbarButton> : null}
-        {canManageSuppliers ? <ToolbarButton variant={catalogPanel === "suppliers" ? "primary" : "secondary"} onClick={() => setCatalogPanel(catalogPanel === "suppliers" ? "" : "suppliers")}>Quan ly NCC</ToolbarButton> : null}
-        {canManage && selectedIds.length ? <ToolbarButton variant="danger" onClick={() => void handleBulkDelete()}>Ngung {selectedIds.length} vat tu</ToolbarButton> : null}
+        {canManageCategories ? <ToolbarButton variant={catalogPanel === "categories" ? "primary" : "secondary"} onClick={() => setCatalogPanel(catalogPanel === "categories" ? "" : "categories")}>Manage Material Groups</ToolbarButton> : null}
+        {canManageSuppliers ? <ToolbarButton variant={catalogPanel === "suppliers" ? "primary" : "secondary"} onClick={() => setCatalogPanel(catalogPanel === "suppliers" ? "" : "suppliers")}>Manage Suppliers</ToolbarButton> : null}
+        {canManage && selectedIds.length ? <ToolbarButton variant="danger" onClick={() => void handleBulkDelete()}>Deactivate {selectedIds.length} Materials</ToolbarButton> : null}
       </div>
 
       {canManageCategories && catalogPanel === "categories" ? (
-        <CatalogPanel title="Nhom vat tu" onSubmit={submitCategory}>
+        <CatalogPanel title="Material Groups" onSubmit={submitCategory}>
           <input className={fieldClassName()} required placeholder="Code, e.g. CK" value={categoryForm.code} onChange={(event) => setCategoryForm({ ...categoryForm, code: event.target.value })} />
           <input className={fieldClassName()} required placeholder="Name, e.g. Mechanical" value={categoryForm.name} onChange={(event) => setCategoryForm({ ...categoryForm, name: event.target.value })} />
           <input className={fieldClassName()} placeholder="Department" value={categoryForm.department} onChange={(event) => setCategoryForm({ ...categoryForm, department: event.target.value })} />
           <select className={fieldClassName()} value={categoryForm.status} onChange={(event) => setCategoryForm({ ...categoryForm, status: event.target.value })}>
-            <option value="active">Dang dung</option>
-            <option value="inactive">Ngung</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
           </select>
           <textarea className="min-h-20 rounded-md border border-border p-3 text-sm placeholder:text-gray-400 md:col-span-2" placeholder="Description" value={categoryForm.description} onChange={(event) => setCategoryForm({ ...categoryForm, description: event.target.value })} />
           <CatalogActions isEditing={Boolean(categoryForm.id)} onCancel={() => setCategoryForm(emptyCategoryForm)} />
@@ -287,16 +309,16 @@ export function InventoryClient() {
       ) : null}
 
       {canManageSuppliers && catalogPanel === "suppliers" ? (
-        <CatalogPanel title="Nha cung cap" onSubmit={submitSupplier}>
-          <input className={fieldClassName()} required placeholder="Supplier code" value={supplierForm.code} onChange={(event) => setSupplierForm({ ...supplierForm, code: event.target.value })} />
-          <input className={fieldClassName()} required placeholder="Supplier name" value={supplierForm.name} onChange={(event) => setSupplierForm({ ...supplierForm, name: event.target.value })} />
-          <input className={fieldClassName()} placeholder="Contact person" value={supplierForm.contactName} onChange={(event) => setSupplierForm({ ...supplierForm, contactName: event.target.value })} />
-          <input className={fieldClassName()} placeholder="Phone number" value={supplierForm.phone} onChange={(event) => setSupplierForm({ ...supplierForm, phone: event.target.value })} />
+        <CatalogPanel title="Suppliers" onSubmit={submitSupplier}>
+          <input className={fieldClassName()} required placeholder="Supplier Code" value={supplierForm.code} onChange={(event) => setSupplierForm({ ...supplierForm, code: event.target.value })} />
+          <input className={fieldClassName()} required placeholder="Supplier Name" value={supplierForm.name} onChange={(event) => setSupplierForm({ ...supplierForm, name: event.target.value })} />
+          <input className={fieldClassName()} placeholder="Contact Person" value={supplierForm.contactName} onChange={(event) => setSupplierForm({ ...supplierForm, contactName: event.target.value })} />
+          <input className={fieldClassName()} placeholder="Phone Number" value={supplierForm.phone} onChange={(event) => setSupplierForm({ ...supplierForm, phone: event.target.value })} />
           <input className={fieldClassName()} placeholder="Email" value={supplierForm.email} onChange={(event) => setSupplierForm({ ...supplierForm, email: event.target.value })} />
-          <input className={fieldClassName()} placeholder="Tax code" value={supplierForm.taxCode} onChange={(event) => setSupplierForm({ ...supplierForm, taxCode: event.target.value })} />
+          <input className={fieldClassName()} placeholder="Tax Code" value={supplierForm.taxCode} onChange={(event) => setSupplierForm({ ...supplierForm, taxCode: event.target.value })} />
           <select className={fieldClassName()} value={supplierForm.status} onChange={(event) => setSupplierForm({ ...supplierForm, status: event.target.value })}>
-            <option value="active">Dang dung</option>
-            <option value="inactive">Ngung</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
           </select>
           <textarea className="min-h-20 rounded-md border border-border p-3 text-sm placeholder:text-gray-400 md:col-span-2" placeholder="Address" value={supplierForm.address} onChange={(event) => setSupplierForm({ ...supplierForm, address: event.target.value })} />
           <textarea className="min-h-20 rounded-md border border-border p-3 text-sm placeholder:text-gray-400 md:col-span-2" placeholder="Note" value={supplierForm.description} onChange={(event) => setSupplierForm({ ...supplierForm, description: event.target.value })} />
@@ -307,26 +329,26 @@ export function InventoryClient() {
 
       {canManage ? (
         <form className="grid gap-3 rounded-md border border-border bg-white p-4 lg:grid-cols-6" onSubmit={(event) => void submit(event)}>
-          <input className={fieldClassName()} required placeholder="Material code" value={form.materialCode} onChange={(event) => setForm({ ...form, materialCode: event.target.value })} />
-          <input className={fieldClassName()} required placeholder="Material name" value={form.materialName} onChange={(event) => setForm({ ...form, materialName: event.target.value })} />
-          <select className={fieldClassName()} required value={form.categoryId} onChange={(event) => setForm({ ...form, categoryId: event.target.value })}>
-            <option value="">Material group</option>
+          <input className={fieldClassName()} readOnly placeholder="Auto-generated after selecting Material Group" title="Material Code is auto-generated from the selected Material Group" value={form.materialCode} />
+          <input className={fieldClassName()} required placeholder="Material Name" value={form.materialName} onChange={(event) => setForm({ ...form, materialName: event.target.value })} />
+          <select className={fieldClassName()} required value={form.categoryId} onChange={(event) => void handleMaterialGroupChange(event.target.value)}>
+            <option value="">Select Material Group</option>
             {categories.map((category) => <option key={category.id} value={category.id}>{category.code} - {category.name}</option>)}
           </select>
           <select className={fieldClassName()} required value={form.supplierId} onChange={(event) => setForm({ ...form, supplierId: event.target.value })}>
-            <option value="">Supplier</option>
+            <option value="">Select Supplier</option>
             {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
           </select>
-          <input className={fieldClassName()} min="0" step="1" type="number" placeholder="Purchase price" value={form.purchasePrice} onChange={(event) => setForm({ ...form, purchasePrice: event.target.value })} />
-          <input className={fieldClassName()} min="0" step="1" type="number" placeholder="Selling price" value={form.sellingPrice} onChange={(event) => setForm({ ...form, sellingPrice: event.target.value })} />
+          <input className={fieldClassName()} min="0" step="1" type="number" placeholder="Purchase Price" value={form.purchasePrice} onChange={(event) => setForm({ ...form, purchasePrice: event.target.value })} />
+          <input className={fieldClassName()} min="0" step="1" type="number" placeholder="Selling Price" value={form.sellingPrice} onChange={(event) => setForm({ ...form, sellingPrice: event.target.value })} />
           <input className={fieldClassName()} min="0" step="0.01" type="number" placeholder="Markup %" value={form.markupPercentage} onChange={(event) => setForm({ ...form, markupPercentage: event.target.value })} />
-          <input className={fieldClassName()} min="0" step="0.001" type="number" placeholder="Stock quantity" value={form.stockQuantity} onChange={(event) => setForm({ ...form, stockQuantity: event.target.value })} />
-          <input className={fieldClassName()} min="0" step="0.001" type="number" placeholder="Minimum stock" value={form.minimumStockQuantity} onChange={(event) => setForm({ ...form, minimumStockQuantity: event.target.value })} />
+          <input className={fieldClassName()} min="0" step="0.001" type="number" placeholder="Stock Quantity" value={form.stockQuantity} onChange={(event) => setForm({ ...form, stockQuantity: event.target.value })} />
+          <input className={fieldClassName()} min="0" step="0.001" type="number" placeholder="Minimum Stock" value={form.minimumStockQuantity} onChange={(event) => setForm({ ...form, minimumStockQuantity: event.target.value })} />
           <input className={fieldClassName()} required placeholder="Unit" value={form.unit} onChange={(event) => setForm({ ...form, unit: event.target.value })} />
           <select className={fieldClassName()} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>
-            <option value="active">Dang dung</option>
-            <option value="inactive">Ngung</option>
-            <option value="discontinued">Ngung ban</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="discontinued">Discontinued</option>
           </select>
           <label className="flex h-10 items-center rounded-md border border-border bg-white px-3 text-sm text-muted">
             <input accept="image/jpeg,image/png,image/webp" className="w-full text-sm" type="file" onChange={handleImageChange} />
@@ -334,8 +356,8 @@ export function InventoryClient() {
           <div className="flex items-center gap-3 lg:col-span-2">
             {imagePreview || form.imageUrl ? <img alt="" className="h-14 w-14 rounded-md border border-border object-cover" src={imagePreview || imageSrc(form.imageUrl)} /> : <div className="flex h-14 w-14 items-center justify-center rounded-md border border-dashed border-border text-xs text-muted">No image</div>}
             <div className="flex gap-2">
-              <ToolbarButton variant="primary" type="submit">{form.id ? "Cap nhat" : "Them"}</ToolbarButton>
-              {form.id ? <ToolbarButton onClick={() => { setForm(emptyMaterialForm); setImageFile(null); setImagePreview(""); }}>Huy</ToolbarButton> : null}
+              <ToolbarButton variant="primary" type="submit">{form.id ? "Save" : "Add"}</ToolbarButton>
+              {form.id ? <ToolbarButton onClick={resetMaterialForm}>Cancel</ToolbarButton> : null}
             </div>
           </div>
           <textarea className="min-h-20 rounded-md border border-border p-3 text-sm placeholder:text-gray-400 lg:col-span-6" placeholder="Description" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
@@ -343,27 +365,27 @@ export function InventoryClient() {
       ) : null}
 
       <FilterBar>
-        <input className={fieldClassName("md:col-span-2")} placeholder="Search material code or name" value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} />
+        <input className={fieldClassName("md:col-span-2")} placeholder="Search Material Code or Material Name" value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} />
         <select className={fieldClassName()} value={filters.categoryId} onChange={(event) => setFilters({ ...filters, categoryId: event.target.value })}>
-          <option value="">All groups</option>
+          <option value="">All Material Groups</option>
           {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
         </select>
         <select className={fieldClassName()} value={filters.supplierId} onChange={(event) => setFilters({ ...filters, supplierId: event.target.value })}>
-          <option value="">All suppliers</option>
+          <option value="">All Suppliers</option>
           {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
         </select>
         <select className={fieldClassName()} value={filters.stockStatus} onChange={(event) => setFilters({ ...filters, stockStatus: event.target.value })}>
-          <option value="">All stock</option>
-          <option value="low">Low stock</option>
-          <option value="ok">In stock</option>
+          <option value="">All Stock Status</option>
+          <option value="low">Low Stock</option>
+          <option value="ok">Enough</option>
         </select>
         <select className={fieldClassName()} value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}>
-          <option value="">All status</option>
-          <option value="active">Dang dung</option>
-          <option value="inactive">Ngung</option>
-          <option value="discontinued">Ngung ban</option>
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="discontinued">Discontinued</option>
         </select>
-        <ToolbarButton onClick={() => void load()}>Loc</ToolbarButton>
+        <ToolbarButton onClick={() => void load()}>Filter</ToolbarButton>
       </FilterBar>
 
       <ErrorBanner message={error} />
@@ -374,37 +396,47 @@ export function InventoryClient() {
         loading={loading}
         getRowKey={(item) => item.id}
         minWidth={1360}
-        emptyTitle="Chua co vat tu"
+        emptyTitle="No materials"
+        emptyDescription="Add a material after creating at least one Material Group and Supplier."
         columns={[
           { key: "select", header: canManage ? <input checked={items.length > 0 && selectedIds.length === items.length} type="checkbox" onChange={toggleAll} /> : null, render: (item) => canManage ? <input checked={selectedSet.has(item.id)} type="checkbox" onChange={() => toggleSelected(item.id)} /> : null },
-          { key: "image", header: "Hinh", render: (item) => item.imageUrl ? <img alt="" className="h-12 w-12 rounded-md border border-border object-cover" src={imageSrc(item.imageUrl)} /> : <div className="h-12 w-12 rounded-md border border-dashed border-border" /> },
-          { key: "code", header: "Ma vat tu", render: (item) => <span className="font-semibold">{item.materialCode}</span> },
-          { key: "name", header: "Ten vat tu", render: (item) => item.materialName },
-          { key: "category", header: "Nhom", render: (item) => item.category?.name ?? "-" },
-          { key: "supplier", header: "Nha cung cap", render: (item) => item.supplier?.name ?? "-" },
-          { key: "unit", header: "Don vi", render: (item) => item.unit },
+          { key: "image", header: "Image", render: (item) => item.imageUrl ? <img alt="" className="h-12 w-12 rounded-md border border-border object-cover" src={imageSrc(item.imageUrl)} /> : <div className="h-12 w-12 rounded-md border border-dashed border-border" /> },
+          { key: "code", header: "Material Code", render: (item) => <span className="font-semibold">{item.materialCode}</span> },
+          { key: "name", header: "Material Name", render: (item) => item.materialName },
+          { key: "category", header: "Material Group", render: (item) => item.category?.name ?? "-" },
+          { key: "supplier", header: "Supplier", render: (item) => item.supplier?.name ?? "-" },
+          { key: "unit", header: "Unit", render: (item) => item.unit },
           ...(canViewCost ? [
-            { key: "purchase", header: "Gia mua", render: (item: InventoryItem) => formatVnd(item.purchasePrice) },
-            { key: "selling", header: "Gia ban", render: (item: InventoryItem) => formatVnd(item.sellingPrice) }
+            { key: "purchase", header: "Purchase Price", render: (item: InventoryItem) => formatVnd(item.purchasePrice) },
+            { key: "selling", header: "Selling Price", render: (item: InventoryItem) => formatVnd(item.sellingPrice) }
           ] : []),
-          { key: "stock", header: "Ton", render: (item) => formatNumber(item.stockQuantity, 3) },
-          { key: "min", header: "Toi thieu", render: (item) => formatNumber(item.minimumStockQuantity, 3) },
-          { key: "stockStatus", header: "Tinh trang", render: (item) => Number(item.stockQuantity) <= Number(item.minimumStockQuantity) ? "Sap het" : "Du ton" },
-          { key: "status", header: "Trang thai", render: (item) => <StatusBadge value={item.status} /> },
+          { key: "stock", header: "Stock Quantity", render: (item) => formatNumber(item.stockQuantity, 3) },
+          { key: "min", header: "Minimum Stock", render: (item) => formatNumber(item.minimumStockQuantity, 3) },
+          { key: "stockStatus", header: "Stock Status", render: (item) => Number(item.stockQuantity) <= 0 ? "Out of Stock" : Number(item.stockQuantity) <= Number(item.minimumStockQuantity) ? "Low Stock" : "Enough" },
+          { key: "status", header: "Status", render: (item) => <EnglishStatusBadge value={item.status} /> },
           {
             key: "actions",
-            header: "",
+            header: "Actions",
             className: "text-right",
             render: (item) => canManage ? (
               <div className="flex justify-end gap-3">
-                <button className="font-medium text-primary" type="button" onClick={() => edit(item)}>Sua</button>
-                <button className="font-medium text-red-700" type="button" onClick={() => void handleDelete(item.id)}>Ngung</button>
+                <button className="font-medium text-primary" type="button" onClick={() => edit(item)}>Edit</button>
+                <button className="font-medium text-red-700" type="button" onClick={() => void handleDelete(item.id)}>Delete</button>
               </div>
             ) : null
           }
         ]}
       />
     </section>
+  );
+}
+
+function EnglishStatusBadge({ value }: { value: string }) {
+  const label = value.replaceAll("_", " ");
+  return (
+    <span className="inline-flex max-w-full items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium capitalize text-slate-700">
+      <span className="truncate">{label}</span>
+    </span>
   );
 }
 
@@ -429,8 +461,8 @@ function CatalogPanel({ title, children, onSubmit }: { title: string; children: 
 function CatalogActions({ isEditing, onCancel }: { isEditing: boolean; onCancel: () => void }) {
   return (
     <div className="flex gap-2">
-      <ToolbarButton variant="primary" type="submit">{isEditing ? "Cap nhat" : "Them"}</ToolbarButton>
-      {isEditing ? <ToolbarButton onClick={onCancel}>Huy</ToolbarButton> : null}
+      <ToolbarButton variant="primary" type="submit">{isEditing ? "Save" : "Add"}</ToolbarButton>
+      {isEditing ? <ToolbarButton onClick={onCancel}>Cancel</ToolbarButton> : null}
     </div>
   );
 }
@@ -444,8 +476,8 @@ function CompactList<T extends { id: string; code: string; name: string; status:
             <span className="font-semibold">{item.code}</span> - {item.name} <span className="text-muted">({item.status})</span>
           </div>
           <div className="flex gap-3">
-            <button className="font-medium text-primary" type="button" onClick={() => onEdit(item)}>Sua</button>
-            <button className="font-medium text-red-700" type="button" onClick={() => void onDelete(item.id)}>Ngung</button>
+            <button className="font-medium text-primary" type="button" onClick={() => onEdit(item)}>Edit</button>
+            <button className="font-medium text-red-700" type="button" onClick={() => void onDelete(item.id)}>Delete</button>
           </div>
         </div>
       ))}

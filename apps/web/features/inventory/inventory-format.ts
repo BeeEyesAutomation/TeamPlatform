@@ -10,14 +10,14 @@ export function formatVnd(value: string | number | null | undefined) {
 
 export function statusLabel(value: string) {
   return {
-    active: "Dang dung",
-    inactive: "Ngung",
-    discontinued: "Ngung ban",
-    receipt: "Nhap",
-    issue: "Xuat",
-    adjustment: "Dieu chinh",
-    return: "Tra lai",
-    reservation: "Giu hang",
-    release: "Bo giu"
+    active: "Active",
+    inactive: "Inactive",
+    discontinued: "Discontinued",
+    receipt: "Receipt",
+    issue: "Issue",
+    adjustment: "Adjustment",
+    return: "Return",
+    reservation: "Reservation",
+    release: "Release"
   }[value] ?? value;
 }
