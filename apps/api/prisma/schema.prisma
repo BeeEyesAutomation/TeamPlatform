@@ -721,6 +721,7 @@ model InventoryItem {
   id                   String                   @id @default(uuid())
   materialCode         String                   @unique @map("material_code") @db.VarChar(100)
   materialName         String                   @map("material_name") @db.VarChar(255)
+  model                String?                  @db.VarChar(255)
   categoryId           String?                  @map("category_id")
   supplierId           String?                  @map("supplier_id")
   purchasePrice        Decimal                  @default(0) @map("purchase_price") @db.Decimal(18, 2)

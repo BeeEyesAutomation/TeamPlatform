@@ -46,6 +46,7 @@ export const inventoryItemQuerySchema = paginationQuerySchema.extend({
 
 export const inventoryItemCreateSchema = z.object({
   materialName: z.string().trim().min(1, "Material Name is required").max(255),
+  model: optionalShortTextSchema,
   categoryId: z.string().uuid("Material Group is required"),
   supplierId: z.string().uuid("Supplier is required"),
   purchasePrice: requiredNonNegativeDecimalSchema("Purchase Price"),

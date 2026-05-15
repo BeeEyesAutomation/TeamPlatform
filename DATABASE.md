@@ -713,6 +713,7 @@ deleted_at
 id
 material_code
 material_name
+model
 category_id
 supplier_id
 purchase_price

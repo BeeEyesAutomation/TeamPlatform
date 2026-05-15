@@ -31,6 +31,7 @@ const emptyMaterialForm = {
   id: "",
   materialCode: "",
   materialName: "",
+  model: "",
   categoryId: "",
   supplierId: "",
   purchasePrice: "",
@@ -210,6 +211,7 @@ export function InventoryClient() {
       id: item.id,
       materialCode: item.materialCode,
       materialName: item.materialName,
+      model: item.model ?? "",
       categoryId: item.categoryId ?? "",
       supplierId: item.supplierId ?? "",
       purchasePrice: formatInputNumber(item.purchasePrice),
@@ -276,6 +278,7 @@ export function InventoryClient() {
       setError("");
       const response = await saveInventoryItem({
         materialName: form.materialName,
+        model: form.model || undefined,
         categoryId: form.categoryId,
         supplierId: form.supplierId,
         purchasePrice: numberOrUndefined(form.purchasePrice),
@@ -565,13 +568,16 @@ export function InventoryClient() {
             <FormField label="Material Name" error={materialErrors.materialName}>
               <input className={materialInputClass("materialName")} placeholder="Material Name" value={form.materialName} onChange={(event) => updateMaterialField("materialName", event.target.value)} />
             </FormField>
+            <FormField label="Model">
+              <input className={materialInputClass("model")} placeholder="Model" value={form.model} onChange={(event) => updateMaterialField("model", event.target.value)} />
+            </FormField>
+
             <FormField label="Supplier" error={materialErrors.supplierId}>
               <select className={materialInputClass("supplierId")} value={form.supplierId} onChange={(event) => updateMaterialField("supplierId", event.target.value)}>
                 <option value="">Select Supplier</option>
                 {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
               </select>
             </FormField>
-
             <FormField label="Purchase Price" error={materialErrors.purchasePrice}>
               <input className={materialInputClass("purchasePrice")} inputMode="numeric" min="0" step="1" type="text" placeholder="Purchase Price" value={form.purchasePrice} onChange={(event) => updateMaterialNumber("purchasePrice", event.target.value)} />
             </FormField>
@@ -658,6 +664,7 @@ export function InventoryClient() {
           { key: "image", header: "Image", className: "whitespace-nowrap", render: (item) => item.imageUrl ? <img alt="" className="h-12 w-12 rounded-md border border-border object-cover" src={imageSrc(item.imageUrl)} /> : <div className="h-12 w-12 rounded-md border border-dashed border-border" /> },
           { key: "code", header: "Material Code", className: "whitespace-nowrap", render: (item) => <span className="font-semibold">{item.materialCode}</span> },
           { key: "name", header: "Material Name", className: "min-w-40 whitespace-nowrap", render: (item) => item.materialName },
+          { key: "model", header: "Model", className: "min-w-32 whitespace-nowrap", render: (item) => item.model || "-" },
           { key: "category", header: "Material Group", className: "min-w-36 whitespace-nowrap", render: (item) => item.category?.name ?? "-" },
           { key: "supplier", header: "Supplier", className: "min-w-36 whitespace-nowrap", render: (item) => item.supplier?.name ?? "-" },
           { key: "unit", header: "Unit", className: "whitespace-nowrap", render: (item) => item.unit },

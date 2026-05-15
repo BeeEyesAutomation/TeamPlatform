@@ -11,6 +11,7 @@ import { calculateSellingPriceInput, formatInputNumber, parseFormattedNumber } f
 const initialForm = {
   materialCode: "",
   materialName: "",
+  model: "",
   categoryId: "",
   supplierId: "",
   purchasePrice: "",
@@ -48,6 +49,7 @@ export function InventoryItemForm({ id }: { id?: string }) {
           setForm({
             materialCode: response.data.materialCode,
             materialName: response.data.materialName,
+            model: response.data.model ?? "",
             categoryId: response.data.categoryId ?? "",
             supplierId: response.data.supplierId ?? "",
             purchasePrice: formatInputNumber(response.data.purchasePrice),
@@ -75,6 +77,7 @@ export function InventoryItemForm({ id }: { id?: string }) {
       setError("");
       await saveInventoryItem({
         materialName: form.materialName,
+        model: form.model || undefined,
         purchasePrice: numberOrUndefined(form.purchasePrice),
         markupPercentage: numberOrUndefined(form.markupPercentage),
         stockQuantity: numberOrUndefined(form.stockQuantity),
@@ -148,6 +151,7 @@ export function InventoryItemForm({ id }: { id?: string }) {
         </label>
         <Field label="Material Code" readOnly placeholder="Auto-generated after selecting Material Group" value={form.materialCode} onChange={() => undefined} />
         <Field error={fieldErrors.materialName} label="Material Name" value={form.materialName} onChange={(value) => setField("materialName", value)} />
+        <Field label="Model" placeholder="Model" value={form.model} onChange={(value) => setField("model", value)} />
         <label className="block text-sm font-medium">
           Supplier
           <select className={`${fieldClassName(fieldErrors.supplierId ? "w-full border-red-500 focus:border-red-500 focus:ring-red-500/20" : "w-full")} mt-1`} value={form.supplierId} onChange={(event) => setField("supplierId", event.target.value)}>

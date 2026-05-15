@@ -1,5 +1,71 @@
 # Implementation Log
 
+## 2026-05-15 - Inventory Material Model Field
+
+### Current Phase
+
+Inventory Materials optional Model field.
+
+### Scope
+
+- Add optional `model` support to Inventory Materials database/API validation/service responses and frontend material forms/list/detail.
+- Keep Stock In behavior, Material Code generation, Selling Price calculation, and unrelated modules unchanged.
+
+### Assumptions
+
+- `Model` is optional and should not be highlighted as required when empty.
+- Existing Prisma API responses can return the new scalar field directly with material records.
+
+### Result
+
+- Added optional `model` to `InventoryItem` and created a minimal migration SQL for `inventory_items.model`.
+- Material create/update validation accepts optional trimmed `model`.
+- Material create/update persists `model`, list search also checks model, and update audit metadata captures model changes.
+- Add/Edit Material forms now include a `Model` input.
+- Materials table and material detail view now show `Model`.
+
+### Changed Files Summary
+
+- `apps/api/prisma/schema.prisma`
+- `apps/api/prisma/migrations/20260515123000_add_inventory_material_model/migration.sql`
+- `apps/api/src/modules/inventory/inventory.schemas.ts`
+- `apps/api/src/modules/inventory/inventory.service.ts`
+- `apps/web/types/inventory.ts`
+- `apps/web/features/inventory/inventory-client.tsx`
+- `apps/web/features/inventory/inventory-item-form.tsx`
+- `apps/web/features/inventory/inventory-detail-client.tsx`
+- `DATABASE.md`
+- `API.md`
+- `docs/INVENTORY_PLAN.md`
+- `docs/IMPLEMENTATION_LOG.md`
+- `docs/logs/2026-05-15_inventory-add-material-model-field_prisma-generate.log`
+- `docs/logs/2026-05-15_inventory-add-material-model-field_prisma-migrate-dev.log`
+
+### Commands Run
+
+- `npx prisma format`
+- `npx prisma validate`
+- `npx prisma generate`
+- `npx prisma generate` retry
+- `npx prisma migrate dev --name add_inventory_material_model --skip-generate`
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+
+### Errors Found
+
+- `npx prisma generate` failed twice with `EPERM` while renaming the Windows Prisma query engine file. Classification: `unknown`.
+- `npx prisma migrate dev --name add_inventory_material_model --skip-generate` failed because Prisma Migrate does not support this non-interactive environment. Classification: `config_error`.
+
+### Fixes Applied
+
+- Saved both failure logs under `docs/logs/`.
+- Added a minimal migration SQL file for the nullable `inventory_items.model` column because `migrate dev` could not run interactively.
+
+### Known TODOs
+
+- Run `npx prisma generate` locally after stopping any process that may lock `node_modules/.prisma/client/query_engine-windows.dll.node`.
+- Apply the new migration in a local interactive shell or deployment migration flow.
+
 ## 2026-05-15 - Add Material Section Tab Layout
 
 ### Current Phase

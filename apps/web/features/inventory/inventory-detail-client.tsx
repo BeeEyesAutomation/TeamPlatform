@@ -68,6 +68,7 @@ export function InventoryDetailClient({ id }: { id: string }) {
           <dl className="grid gap-3 text-sm md:grid-cols-2">
             <Info label="Material Code" value={item.materialCode} />
             <Info label="Material Name" value={item.materialName} />
+            <Info label="Model" value={item.model ?? "-"} />
             <Info label="Material Group" value={item.category?.name ?? "-"} />
             <Info label="Supplier" value={item.supplier?.name ?? "-"} />
             <Info label="Purchase Price" value={canViewCost ? formatVnd(item.purchasePrice) : "***"} />

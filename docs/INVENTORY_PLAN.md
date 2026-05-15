@@ -12,6 +12,7 @@ Inventory items must include:
 
 - `materialCode`
 - `materialName`
+- `model`
 - `category`
 - `supplier`
 - `purchasePrice`
@@ -45,6 +46,7 @@ Recommended `inventory_items` fields:
 id
 material_code unique
 material_name
+model nullable
 category_id nullable
 supplier_id nullable
 purchase_price Decimal

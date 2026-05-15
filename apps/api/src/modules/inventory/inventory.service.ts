@@ -79,6 +79,7 @@ const createPricingData = (data: ItemCreate) =>
 const itemCreateData = (data: ItemCreateWithCode, actorId?: string): Prisma.InventoryItemUncheckedCreateInput => ({
   materialCode: data.materialCode,
   materialName: data.materialName,
+  model: data.model,
   categoryId: data.categoryId,
   supplierId: data.supplierId,
   unit: data.unit,
@@ -101,6 +102,7 @@ const itemUpdateData = (
 
   return {
     ...(data.materialName !== undefined ? { materialName: data.materialName } : {}),
+    ...(data.model !== undefined ? { model: data.model } : {}),
     ...(data.categoryId !== undefined ? { categoryId: data.categoryId } : {}),
     ...(data.supplierId !== undefined ? { supplierId: data.supplierId } : {}),
     ...(data.unit !== undefined ? { unit: data.unit } : {}),
@@ -154,7 +156,8 @@ function listWhere(query: ItemQuery): Prisma.InventoryItemWhereInput {
       ? {
           OR: [
             { materialCode: { contains: query.search, mode: "insensitive" } },
-            { materialName: { contains: query.search, mode: "insensitive" } }
+            { materialName: { contains: query.search, mode: "insensitive" } },
+            { model: { contains: query.search, mode: "insensitive" } }
           ]
         }
       : {}),
@@ -243,9 +246,10 @@ export async function updateInventoryItem(id: string, data: ItemUpdate, context:
       Number(existing.markupPercentage) !== Number(item.markupPercentage) ||
       Number(existing.sellingPrice) !== Number(item.sellingPrice);
     const nameChanged = existing.materialName !== item.materialName;
+    const modelChanged = existing.model !== item.model;
     await createAuditLog({
       actorId: context.actorId,
-      action: nameChanged ? "update_material_name" : pricingChanged ? "update_pricing" : "update",
+      action: nameChanged ? "update_material_name" : modelChanged ? "update_model" : pricingChanged ? "update_pricing" : "update",
       module: "inventory",
       targetType: "inventory_item",
       targetId: id,
@@ -253,6 +257,8 @@ export async function updateInventoryItem(id: string, data: ItemUpdate, context:
       newValue: item,
       metadata: nameChanged
         ? { from: existing.materialName, to: item.materialName }
+        : modelChanged
+          ? { model: { from: existing.model, to: item.model } }
         : pricingChanged
           ? {
               purchasePrice: { from: existing.purchasePrice, to: item.purchasePrice },

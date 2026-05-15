@@ -32,6 +32,7 @@ export interface InventoryItem {
   id: string;
   materialCode: string;
   materialName: string;
+  model?: string | null;
   categoryId?: string | null;
   supplierId?: string | null;
   purchasePrice: string | number;
