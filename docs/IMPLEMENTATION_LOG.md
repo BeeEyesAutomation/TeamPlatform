@@ -1,5 +1,59 @@
 # Implementation Log
 
+## 2026-05-15 - Inventory UI and Basic Stock In / Stock Out
+
+### Current Phase
+
+Inventory Materials UI layout refinement and basic Stock In / Stock Out implementation.
+
+### Scope
+
+- Refine only the Inventory Materials form/table layout, Stock In/Out API aliases, movement validation, permissions, audit metadata, and Materials page stock controls/history.
+- Reuse the existing `InventoryStockMovement` model instead of adding a new transaction model.
+- Keep project-linked stock out, exports, approvals, dashboards, reports, and unrelated modules out of scope.
+
+### Result
+
+- Materials form fields are balanced into clean rows, with gray read-only styling for Material Code and Selling Price.
+- Materials table numeric columns are right-aligned and short/action columns avoid wrapping.
+- Added `POST /api/inventory/materials/:id/stock-in`, `POST /api/inventory/materials/:id/stock-out`, and `GET /api/inventory/transactions`.
+- Stock In/Out run inside a Prisma transaction, validate positive quantity, prevent negative Stock Out, update material stock, and create stock movement history with `createdAt` and `createdById`.
+- Materials page row actions open Stock In/Out dialogs and refresh the material list/history after success.
+- Recent Inventory History is shown on the Materials page when the user has `inventory.history.view`.
+
+### Changed Files Summary
+
+- `apps/api/prisma/seed.ts`
+- `apps/api/src/modules/inventory/inventory.routes.ts`
+- `apps/api/src/modules/inventory/inventory.schemas.ts`
+- `apps/api/src/modules/inventory/inventory.service.ts`
+- `apps/web/features/inventory/inventory-api.ts`
+- `apps/web/features/inventory/inventory-client.tsx`
+- `apps/web/features/inventory/inventory-item-form.tsx`
+- `apps/web/types/inventory.ts`
+- `API.md`
+- `docs/DECISIONS.md`
+- `docs/INVENTORY_PLAN.md`
+- `docs/IMPLEMENTATION_LOG.md`
+
+### Commands Run
+
+- `npm.cmd run typecheck --workspace apps/api`
+- `npm.cmd run typecheck --workspace apps/web`
+
+### Errors Found
+
+- None.
+
+### Fixes Applied
+
+- No retry was needed.
+
+### Known TODOs
+
+- Run a manual browser smoke test for Stock In/Out dialogs with a real authenticated user after reseeding permissions.
+- Run seed or otherwise grant `inventory.stock_in`, `inventory.stock_out`, and `inventory.history.view` to existing roles in the target database.
+
 ## 2026-05-15 - Inventory Pricing Inputs and Validation UX
 
 ### Current Phase

@@ -23,11 +23,14 @@ import {
   materialCodePreviewQuerySchema,
   receiptSchema,
   stockMovementCreateSchema,
-  stockMovementQuerySchema
+  stockMovementQuerySchema,
+  stockInOutSchema
 } from "./inventory.schemas";
 import {
   createInventoryItem,
   createInventoryMovement,
+  createInventoryStockIn,
+  createInventoryStockOut,
   bulkDeactivateInventoryItems,
   deactivateInventoryCategory,
   deactivateInventoryItem,
@@ -251,6 +254,26 @@ inventoryRouter.post(
 );
 
 inventoryRouter.post(
+  "/materials/:id/stock-in",
+  requirePermission("inventory.stock_in"),
+  asyncHandler(async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const body = stockInOutSchema.parse(req.body);
+    res.status(201).json({ status: "ok", data: await createInventoryStockIn(id, body, contextFromRequest(req)) });
+  })
+);
+
+inventoryRouter.post(
+  "/materials/:id/stock-out",
+  requirePermission("inventory.stock_out"),
+  asyncHandler(async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const body = stockInOutSchema.parse(req.body);
+    res.status(201).json({ status: "ok", data: await createInventoryStockOut(id, body, contextFromRequest(req)) });
+  })
+);
+
+inventoryRouter.post(
   "/items/:id/adjustments",
   requirePermission("inventory.adjust_stock"),
   asyncHandler(async (req, res) => {
@@ -337,6 +360,15 @@ inventoryRouter.delete(
 inventoryRouter.get(
   "/movements",
   requirePermission("inventory.view"),
+  asyncHandler(async (req, res) => {
+    const query = stockMovementQuerySchema.parse(req.query);
+    res.json({ status: "ok", data: await listInventoryMovements(query) });
+  })
+);
+
+inventoryRouter.get(
+  "/transactions",
+  requirePermission("inventory.history.view"),
   asyncHandler(async (req, res) => {
     const query = stockMovementQuerySchema.parse(req.query);
     res.json({ status: "ok", data: await listInventoryMovements(query) });

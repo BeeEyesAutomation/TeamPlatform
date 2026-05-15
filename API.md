@@ -340,7 +340,10 @@ POST   /api/inventory/items/:id/movements
 POST   /api/inventory/items/:id/receipts
 POST   /api/inventory/items/:id/issues
 POST   /api/inventory/items/:id/adjustments
+POST   /api/inventory/materials/:id/stock-in
+POST   /api/inventory/materials/:id/stock-out
 GET    /api/inventory/movements
+GET    /api/inventory/transactions
 
 GET    /api/inventory/reports/summary
 GET    /api/inventory/reports/low-stock
@@ -354,6 +357,10 @@ Inventory item payload fields include `materialName`, `categoryId`, `supplierId`
 `POST /api/inventory/materials/:id/image` accepts multipart form field `image` with jpg, jpeg, png, or webp up to 5MB. Files are stored in local API storage under `/uploads/materials/`, and the material record stores only the returned `imageUrl` path.
 
 Bulk material deactivation accepts `{ "ids": ["uuid"] }` and returns per-item results with `deactivated` or `skipped` plus a reason. Delete endpoints use soft deactivate to preserve stock history and audit logs.
+
+`POST /api/inventory/materials/:id/stock-in` and `POST /api/inventory/materials/:id/stock-out` accept `{ "quantity": number, "note": "optional" }`. Quantity is required and must be greater than 0. Stock Out rejects requests that would make stock negative with `Insufficient stock quantity.` Both endpoints run inside a database transaction, update material stock quantity, create an immutable stock movement, store the timestamp in `createdAt`, and store the current user in `createdById`.
+
+`GET /api/inventory/transactions` returns inventory movement history with material code/name, movement type, quantity before/after, timestamp, note, and created-by user details when available. Supported simple filters include `itemId`, `movementType`, `dateFrom`, `dateTo`, and `createdById`.
 
 ## Statistics
 

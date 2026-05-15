@@ -61,3 +61,7 @@ Material Code is not manually editable in the UI or API create flow. If a materi
 ## 2026-05-15 - Inventory Material Pricing
 
 Selling Price is calculated from Purchase Price and Markup % using `purchasePrice * (1 + markupPercentage / 100)`. The backend is authoritative and recalculates Selling Price on create and when Purchase Price or Markup % changes on update; the UI shows Selling Price as a read-only calculated value.
+
+## 2026-05-15 - Inventory Stock Movements
+
+Stock In and Stock Out use immutable `InventoryStockMovement` history records. Stock Out cannot reduce material stock below zero. Future correction, edit, or delete workflows should use reversal movements instead of hard-deleting stock movement history.

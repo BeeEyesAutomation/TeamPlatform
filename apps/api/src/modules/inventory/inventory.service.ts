@@ -496,13 +496,23 @@ export async function listInventoryMovements(query: MovementQuery) {
     ...(query.itemId ? { itemId: query.itemId } : {}),
     ...(query.projectId ? { projectId: query.projectId } : {}),
     ...(query.movementType ? { movementType: query.movementType } : {}),
+    ...(query.createdById ? { createdById: query.createdById } : {}),
+    ...(query.dateFrom || query.dateTo ? { createdAt: { ...(query.dateFrom ? { gte: query.dateFrom } : {}), ...(query.dateTo ? { lte: query.dateTo } : {}) } } : {}),
     ...(query.search ? { OR: [{ item: { materialCode: { contains: query.search, mode: "insensitive" } } }, { item: { materialName: { contains: query.search, mode: "insensitive" } } }] } : {})
   };
   const [total, items] = await Promise.all([
     prisma.inventoryStockMovement.count({ where }),
     prisma.inventoryStockMovement.findMany({ where, include: movementInclude, orderBy: { createdAt: "desc" }, ...pagination })
   ]);
-  return { items, meta: getPaginationMeta(query, total) };
+  const userIds = [...new Set(items.map((item) => item.createdById).filter((id): id is string => Boolean(id)))];
+  const users = userIds.length
+    ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, fullName: true, email: true } })
+    : [];
+  const usersById = new Map(users.map((user) => [user.id, user]));
+  return {
+    items: items.map((item) => ({ ...item, createdBy: item.createdById ? usersById.get(item.createdById) ?? null : null })),
+    meta: getPaginationMeta(query, total)
+  };
 }
 
 function stockDelta(input: MovementCreate) {
@@ -511,17 +521,23 @@ function stockDelta(input: MovementCreate) {
   return input.direction === "decrease" ? -input.quantity : input.quantity;
 }
 
-export async function createInventoryMovement(itemId: string, data: MovementCreate | ReceiptInput | IssueInput | AdjustmentInput, context: RequestContext) {
-  const item = await getInventoryItem(itemId);
+async function applyInventoryMovement(itemId: string, data: MovementCreate | ReceiptInput | IssueInput | AdjustmentInput, context: RequestContext) {
   const delta = stockDelta(data);
-  const previousStock = Number(item.stockQuantity);
-  const resultingStock = previousStock + delta;
-  if (resultingStock < 0) throw new AppError(400, "Insufficient stock quantity");
 
   const result = await prisma.$transaction(async (tx) => {
+    const item = await tx.inventoryItem.findFirst({
+      where: { id: itemId, deletedAt: null },
+      include: itemInclude
+    });
+    if (!item) throw new AppError(404, "Material not found.");
+    const previousStock = Number(item.stockQuantity);
+    const resultingStock = previousStock + delta;
+    if (resultingStock < 0) throw new AppError(400, "Insufficient stock quantity.");
+
     const updatedItem = await tx.inventoryItem.update({
       where: { id: itemId },
-      data: { stockQuantity: resultingStock.toString(), updatedById: context.actorId }
+      data: { stockQuantity: resultingStock.toString(), updatedById: context.actorId },
+      include: itemInclude
     });
     const movement = await tx.inventoryStockMovement.create({
       data: {
@@ -540,22 +556,47 @@ export async function createInventoryMovement(itemId: string, data: MovementCrea
       },
       include: movementInclude
     });
-    return { item: updatedItem, movement };
+    return { previousItem: item, item: updatedItem, movement };
   });
 
   await createAuditLog({
     actorId: context.actorId,
-    action: data.movementType,
+    action: data.movementType === "receipt" ? "stock_in" : data.movementType === "issue" ? "stock_out" : data.movementType,
     module: "inventory",
     targetType: "inventory_stock_movement",
     targetId: result.movement.id,
-    oldValue: item,
+    oldValue: result.previousItem,
     newValue: result,
+    metadata: {
+      materialId: itemId,
+      materialCode: result.item.materialCode,
+      quantity: data.quantity,
+      quantityBefore: result.movement.previousStock,
+      quantityAfter: result.movement.resultingStock,
+      transactionType: data.movementType === "receipt" ? "stock_in" : data.movementType === "issue" ? "stock_out" : data.movementType,
+      createdById: context.actorId,
+      timestamp: result.movement.createdAt
+    },
     ipAddress: context.ipAddress,
     userAgent: context.userAgent
   });
 
+  return result;
+}
+
+export async function createInventoryMovement(itemId: string, data: MovementCreate | ReceiptInput | IssueInput | AdjustmentInput, context: RequestContext) {
+  const result = await applyInventoryMovement(itemId, data, context);
   return result.movement;
+}
+
+export async function createInventoryStockIn(itemId: string, data: Pick<ReceiptInput, "quantity" | "note">, context: RequestContext) {
+  const result = await applyInventoryMovement(itemId, { ...data, movementType: "receipt" }, context);
+  return { item: result.item, transaction: result.movement };
+}
+
+export async function createInventoryStockOut(itemId: string, data: Pick<IssueInput, "quantity" | "note">, context: RequestContext) {
+  const result = await applyInventoryMovement(itemId, { ...data, movementType: "issue" }, context);
+  return { item: result.item, transaction: result.movement };
 }
 
 export async function getInventorySummary() {

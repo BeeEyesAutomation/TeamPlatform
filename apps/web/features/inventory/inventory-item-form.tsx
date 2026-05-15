@@ -200,7 +200,17 @@ function Field({
   return (
     <label className="block text-sm font-medium">
       {label}
-      <input className={`${fieldClassName(error ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : "")} mt-1 w-full`} inputMode={inputMode} min={inputMode ? 0 : undefined} placeholder={placeholder} readOnly={readOnly} step={inputMode ? 1 : undefined} type="text" value={value} onChange={(event) => onChange(event.target.value)} />
+      <input
+        className={`${fieldClassName(`${error ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""} ${readOnly ? "border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed placeholder:text-gray-400" : ""}`)} mt-1 w-full`}
+        inputMode={inputMode}
+        min={inputMode ? 0 : undefined}
+        placeholder={placeholder}
+        readOnly={readOnly}
+        step={inputMode ? 1 : undefined}
+        type="text"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
       <FieldError message={error} />
     </label>
   );

@@ -51,7 +51,16 @@ export const deleteInventorySupplier = (id: string) => apiJson<InventorySupplier
 export const fetchInventoryMovements = (params: Record<string, string | number | boolean | undefined> = {}) =>
   apiGet<ListResponse<InventoryStockMovement>>(`/api/inventory/movements${buildQuery(params)}`);
 
+export const fetchInventoryTransactions = (params: Record<string, string | number | boolean | undefined> = {}) =>
+  apiGet<ListResponse<InventoryStockMovement>>(`/api/inventory/transactions${buildQuery(params)}`);
+
 export const createInventoryMovement = (itemId: string, body: Record<string, unknown>) =>
   apiJson<InventoryStockMovement>(`/api/inventory/items/${itemId}/movements`, "POST", body);
+
+export const stockInInventoryItem = (itemId: string, body: Record<string, unknown>) =>
+  apiJson<{ item: InventoryItem; transaction: InventoryStockMovement }>(`/api/inventory/materials/${itemId}/stock-in`, "POST", body);
+
+export const stockOutInventoryItem = (itemId: string, body: Record<string, unknown>) =>
+  apiJson<{ item: InventoryItem; transaction: InventoryStockMovement }>(`/api/inventory/materials/${itemId}/stock-out`, "POST", body);
 
 export const fetchInventorySummary = () => apiGet<InventorySummary>("/api/inventory/reports/summary");

@@ -394,3 +394,14 @@ Implemented:
 - Material number inputs and table values use comma formatting, for example `100,000`.
 - Required material fields highlight in red on save with `This field is required.` helper text.
 - Optional numeric fields remain empty when there is no value.
+
+## Materials UI and Basic Stock In / Stock Out - 2026-05-15
+
+Implemented:
+
+- Materials form fields are grouped into balanced rows for material identity, pricing, stock levels, and media/description.
+- Auto-generated Material Code and auto-calculated Selling Price use gray read-only styling.
+- Materials table keeps short values and actions on one line and right-aligns numeric stock/price columns.
+- Basic Stock In and Stock Out actions are available from the Materials list when the user has permission.
+- Stock In and Stock Out update material stock immediately and write immutable stock movement history with timestamp and user ID.
+- The Materials page includes a recent Inventory History section with time, user, material, type, quantity before/after, and note.

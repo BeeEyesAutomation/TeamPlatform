@@ -7,7 +7,7 @@ import { ErrorBanner } from "../../components/ui/feedback";
 import { PageHeader } from "../../components/ui/page-header";
 import { apiBaseUrl } from "../../lib/api-client";
 import { getStoredUser, hasPermission } from "../../lib/auth";
-import type { InventoryCategory, InventoryItem, InventorySummary, InventorySupplier } from "../../types/inventory";
+import type { InventoryCategory, InventoryItem, InventoryStockMovement, InventorySummary, InventorySupplier } from "../../types/inventory";
 import {
   bulkDeactivateInventoryItems,
   deleteInventoryCategory,
@@ -15,15 +15,18 @@ import {
   deleteInventorySupplier,
   fetchInventoryCategories,
   fetchInventoryItems,
+  fetchInventoryTransactions,
   fetchInventorySummary,
   fetchInventorySuppliers,
   fetchNextInventoryMaterialCode,
   saveInventoryCategory,
   saveInventoryItem,
   saveInventorySupplier,
+  stockInInventoryItem,
+  stockOutInventoryItem,
   uploadInventoryItemImage
 } from "./inventory-api";
-import { calculateSellingPriceInput, formatInputNumber, formatNumber, formatVnd, parseFormattedNumber } from "./inventory-format";
+import { calculateSellingPriceInput, formatInputNumber, formatNumber, formatVnd, parseFormattedNumber, statusLabel } from "./inventory-format";
 
 const emptyMaterialForm = {
   id: "",
@@ -65,14 +68,17 @@ const emptySupplierForm = {
 };
 
 type CatalogPanel = "categories" | "suppliers" | "";
+type StockAction = "stock_in" | "stock_out";
 
 const numberOrUndefined = (value: string) => parseFormattedNumber(value);
 const imageSrc = (path?: string | null) => path ? (path.startsWith("http") ? path : `${apiBaseUrl}${path}`) : "";
 type MaterialFormField = keyof typeof emptyMaterialForm;
 type MaterialErrors = Partial<Record<MaterialFormField, string>>;
+const autoFieldClass = fieldClassName("border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed placeholder:text-gray-400");
 
 export function InventoryClient() {
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [history, setHistory] = useState<InventoryStockMovement[]>([]);
   const [categories, setCategories] = useState<InventoryCategory[]>([]);
   const [suppliers, setSuppliers] = useState<InventorySupplier[]>([]);
   const [summary, setSummary] = useState<InventorySummary>();
@@ -85,6 +91,7 @@ export function InventoryClient() {
   const [imagePreview, setImagePreview] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [materialErrors, setMaterialErrors] = useState<MaterialErrors>({});
+  const [stockDialog, setStockDialog] = useState<{ action: StockAction; item: InventoryItem; quantity: string; note: string; error: string } | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -93,18 +100,23 @@ export function InventoryClient() {
   const canManageCategories = hasPermission(user, "inventory.categories.manage");
   const canManageSuppliers = hasPermission(user, "inventory.suppliers.manage");
   const canViewCost = hasPermission(user, "inventory.view_cost");
+  const canStockIn = hasPermission(user, "inventory.stock_in");
+  const canStockOut = hasPermission(user, "inventory.stock_out");
+  const canViewHistory = hasPermission(user, "inventory.history.view");
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   async function load() {
     setLoading(true);
     try {
-      const [itemsResponse, categoriesResponse, suppliersResponse, summaryResponse] = await Promise.all([
+      const [itemsResponse, categoriesResponse, suppliersResponse, summaryResponse, historyResponse] = await Promise.all([
         fetchInventoryItems(filters),
         fetchInventoryCategories({ pageSize: 100 }),
         fetchInventorySuppliers({ pageSize: 100 }),
-        fetchInventorySummary()
+        fetchInventorySummary(),
+        canViewHistory ? fetchInventoryTransactions({ pageSize: 20 }) : Promise.resolve(undefined)
       ]);
       setItems(itemsResponse.data.items);
+      setHistory(historyResponse?.data.items ?? []);
       setCategories(categoriesResponse.data.items);
       setSuppliers(suppliersResponse.data.items);
       setSummary(summaryResponse.data);
@@ -261,6 +273,47 @@ export function InventoryClient() {
     await load();
   }
 
+  function openStockDialog(action: StockAction, item: InventoryItem) {
+    setStockDialog({ action, item, quantity: "", note: "", error: "" });
+    setError("");
+    setMessage("");
+  }
+
+  function updateStockDialogQuantity(value: string) {
+    setStockDialog((current) => current ? { ...current, quantity: formatInputNumber(value), error: "" } : current);
+  }
+
+  async function submitStockDialog(event: FormEvent) {
+    event.preventDefault();
+    if (!stockDialog) return;
+    const quantity = parseFormattedNumber(stockDialog.quantity);
+    if (quantity === undefined) {
+      setStockDialog({ ...stockDialog, error: "Quantity is required." });
+      return;
+    }
+    if (quantity <= 0) {
+      setStockDialog({ ...stockDialog, error: "Quantity must be greater than 0." });
+      return;
+    }
+
+    try {
+      setError("");
+      const body = { quantity, note: stockDialog.note || undefined };
+      if (stockDialog.action === "stock_in") {
+        await stockInInventoryItem(stockDialog.item.id, body);
+        setMessage("Stock in completed successfully.");
+      } else {
+        await stockOutInventoryItem(stockDialog.item.id, body);
+        setMessage("Stock out completed successfully.");
+      }
+      setStockDialog(null);
+      await load();
+    } catch (err) {
+      const details = err instanceof Error ? err.message : "Cannot update stock.";
+      setError(details.includes("Insufficient stock") ? "Insufficient stock quantity." : details);
+    }
+  }
+
   async function submitCategory(event: FormEvent) {
     event.preventDefault();
     try {
@@ -375,59 +428,80 @@ export function InventoryClient() {
       ) : null}
 
       {canManage ? (
-        <form className="grid gap-3 rounded-md border border-border bg-white p-4 md:grid-cols-2 xl:grid-cols-12" noValidate onSubmit={(event) => void submit(event)}>
-          <div className="xl:col-span-2">
-            <input className={fieldClassName()} readOnly placeholder="Auto-generated after selecting Material Group" title="Material Code is auto-generated from the selected Material Group" value={form.materialCode} />
+        <form className="space-y-4 rounded-md border border-border bg-white p-4" noValidate onSubmit={(event) => void submit(event)}>
+          <div className="grid gap-3 md:grid-cols-2">
+            <FormField label="Material Group" error={materialErrors.categoryId}>
+              <select className={materialInputClass("categoryId")} value={form.categoryId} onChange={(event) => void handleMaterialGroupChange(event.target.value)}>
+                <option value="">Select Material Group</option>
+                {categories.map((category) => <option key={category.id} value={category.id}>{category.code} - {category.name}</option>)}
+              </select>
+            </FormField>
+            <FormField label="Material Code">
+              <input className={autoFieldClass} readOnly placeholder="Auto-generated after selecting Material Group" title="Material Code is auto-generated from the selected Material Group" value={form.materialCode} />
+            </FormField>
           </div>
-          <div className="xl:col-span-3">
-            <input className={materialInputClass("materialName")} placeholder="Material Name" value={form.materialName} onChange={(event) => updateMaterialField("materialName", event.target.value)} />
-            <FieldError message={materialErrors.materialName} />
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <FormField label="Material Name" error={materialErrors.materialName}>
+              <input className={materialInputClass("materialName")} placeholder="Material Name" value={form.materialName} onChange={(event) => updateMaterialField("materialName", event.target.value)} />
+            </FormField>
+            <FormField label="Supplier" error={materialErrors.supplierId}>
+              <select className={materialInputClass("supplierId")} value={form.supplierId} onChange={(event) => updateMaterialField("supplierId", event.target.value)}>
+                <option value="">Select Supplier</option>
+                {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
+              </select>
+            </FormField>
           </div>
-          <div className="xl:col-span-3">
-            <select className={materialInputClass("categoryId")} value={form.categoryId} onChange={(event) => void handleMaterialGroupChange(event.target.value)}>
-              <option value="">Select Material Group</option>
-              {categories.map((category) => <option key={category.id} value={category.id}>{category.code} - {category.name}</option>)}
-            </select>
-            <FieldError message={materialErrors.categoryId} />
+
+          <div className="grid gap-3 md:grid-cols-3">
+            <FormField label="Purchase Price" error={materialErrors.purchasePrice}>
+              <input className={materialInputClass("purchasePrice")} inputMode="numeric" min="0" step="1" type="text" placeholder="Purchase Price" value={form.purchasePrice} onChange={(event) => updateMaterialNumber("purchasePrice", event.target.value)} />
+            </FormField>
+            <FormField label="Markup %" error={materialErrors.markupPercentage}>
+              <input className={materialInputClass("markupPercentage")} inputMode="numeric" min="0" step="1" type="text" placeholder="Markup %" value={form.markupPercentage} onChange={(event) => updateMaterialNumber("markupPercentage", event.target.value)} />
+            </FormField>
+            <FormField label="Selling Price">
+              <input className={autoFieldClass} inputMode="numeric" min="0" readOnly step="1" type="text" placeholder="Selling Price" value={form.sellingPrice} />
+            </FormField>
           </div>
-          <div className="xl:col-span-3">
-            <select className={materialInputClass("supplierId")} value={form.supplierId} onChange={(event) => updateMaterialField("supplierId", event.target.value)}>
-              <option value="">Select Supplier</option>
-              {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
-            </select>
-            <FieldError message={materialErrors.supplierId} />
+
+          <div className="grid gap-3 md:grid-cols-4">
+            <FormField label="Unit" error={materialErrors.unit}>
+              <input className={materialInputClass("unit")} placeholder="Unit" value={form.unit} onChange={(event) => updateMaterialField("unit", event.target.value)} />
+            </FormField>
+            <FormField label="Stock Quantity">
+              <input className={fieldClassName()} inputMode="numeric" min="0" step="1" type="text" placeholder="Stock Quantity" value={form.stockQuantity} onChange={(event) => updateMaterialNumber("stockQuantity", event.target.value)} />
+            </FormField>
+            <FormField label="Minimum Stock">
+              <input className={fieldClassName()} inputMode="numeric" min="0" step="1" type="text" placeholder="Minimum Stock" value={form.minimumStockQuantity} onChange={(event) => updateMaterialNumber("minimumStockQuantity", event.target.value)} />
+            </FormField>
+            <FormField label="Status">
+              <select className={fieldClassName()} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="discontinued">Discontinued</option>
+              </select>
+            </FormField>
           </div>
-          <select className={fieldClassName("xl:col-span-1")} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="discontinued">Discontinued</option>
-          </select>
-          <div className="xl:col-span-2">
-            <input className={materialInputClass("purchasePrice")} inputMode="numeric" min="0" step="1" type="text" placeholder="Purchase Price" value={form.purchasePrice} onChange={(event) => updateMaterialNumber("purchasePrice", event.target.value)} />
-            <FieldError message={materialErrors.purchasePrice} />
+
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+            <FormField label="Image">
+              <label className="flex h-10 items-center rounded-md border border-border bg-white px-3 text-sm text-muted">
+                <input accept="image/jpeg,image/png,image/webp" className="w-full text-sm" type="file" onChange={handleImageChange} />
+              </label>
+              <div className="mt-2">
+                {imagePreview || form.imageUrl ? <img alt="" className="h-14 w-14 rounded-md border border-border object-cover" src={imagePreview || imageSrc(form.imageUrl)} /> : <div className="flex h-14 w-14 items-center justify-center rounded-md border border-dashed border-border text-xs text-muted">No image</div>}
+              </div>
+            </FormField>
+            <FormField label="Description">
+              <textarea className="min-h-24 w-full rounded-md border border-border p-3 text-sm placeholder:text-gray-400" placeholder="Description" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
+            </FormField>
           </div>
-          <div className="xl:col-span-2">
-            <input className={materialInputClass("markupPercentage")} inputMode="numeric" min="0" step="1" type="text" placeholder="Markup %" value={form.markupPercentage} onChange={(event) => updateMaterialNumber("markupPercentage", event.target.value)} />
-            <FieldError message={materialErrors.markupPercentage} />
+
+          <div className="flex flex-wrap gap-2">
+            <ToolbarButton variant="primary" type="submit">{form.id ? "Save" : "Add"}</ToolbarButton>
+            {form.id ? <ToolbarButton onClick={resetMaterialForm}>Cancel</ToolbarButton> : null}
           </div>
-          <input className={fieldClassName("xl:col-span-2")} inputMode="numeric" min="0" readOnly step="1" type="text" placeholder="Selling Price" value={form.sellingPrice} />
-          <input className={fieldClassName("xl:col-span-2")} inputMode="numeric" min="0" step="1" type="text" placeholder="Stock Quantity" value={form.stockQuantity} onChange={(event) => updateMaterialNumber("stockQuantity", event.target.value)} />
-          <input className={fieldClassName("xl:col-span-2")} inputMode="numeric" min="0" step="1" type="text" placeholder="Minimum Stock" value={form.minimumStockQuantity} onChange={(event) => updateMaterialNumber("minimumStockQuantity", event.target.value)} />
-          <div className="xl:col-span-2">
-            <input className={materialInputClass("unit")} placeholder="Unit" value={form.unit} onChange={(event) => updateMaterialField("unit", event.target.value)} />
-            <FieldError message={materialErrors.unit} />
-          </div>
-          <label className="flex h-10 items-center rounded-md border border-border bg-white px-3 text-sm text-muted">
-            <input accept="image/jpeg,image/png,image/webp" className="w-full text-sm" type="file" onChange={handleImageChange} />
-          </label>
-          <div className="flex items-center gap-3 lg:col-span-2">
-            {imagePreview || form.imageUrl ? <img alt="" className="h-14 w-14 rounded-md border border-border object-cover" src={imagePreview || imageSrc(form.imageUrl)} /> : <div className="flex h-14 w-14 items-center justify-center rounded-md border border-dashed border-border text-xs text-muted">No image</div>}
-            <div className="flex gap-2">
-              <ToolbarButton variant="primary" type="submit">{form.id ? "Save" : "Add"}</ToolbarButton>
-              {form.id ? <ToolbarButton onClick={resetMaterialForm}>Cancel</ToolbarButton> : null}
-            </div>
-          </div>
-          <textarea className="min-h-20 rounded-md border border-border p-3 text-sm placeholder:text-gray-400 md:col-span-2 xl:col-span-12" placeholder="Description" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
         </form>
       ) : null}
 
@@ -474,26 +548,64 @@ export function InventoryClient() {
           { key: "supplier", header: "Supplier", className: "min-w-36 whitespace-nowrap", render: (item) => item.supplier?.name ?? "-" },
           { key: "unit", header: "Unit", className: "whitespace-nowrap", render: (item) => item.unit },
           ...(canViewCost ? [
-            { key: "purchase", header: "Purchase Price", className: "whitespace-nowrap", render: (item: InventoryItem) => formatNumber(item.purchasePrice) },
-            { key: "selling", header: "Selling Price", className: "whitespace-nowrap", render: (item: InventoryItem) => formatNumber(item.sellingPrice) }
+            { key: "purchase", header: "Purchase Price", className: "whitespace-nowrap text-right", render: (item: InventoryItem) => formatNumber(item.purchasePrice) },
+            { key: "selling", header: "Selling Price", className: "whitespace-nowrap text-right", render: (item: InventoryItem) => formatNumber(item.sellingPrice) }
           ] : []),
-          { key: "stock", header: "Stock Quantity", className: "whitespace-nowrap", render: (item) => formatNumber(item.stockQuantity) },
-          { key: "min", header: "Minimum Stock", className: "whitespace-nowrap", render: (item) => formatNumber(item.minimumStockQuantity) },
+          { key: "stock", header: "Stock Quantity", className: "whitespace-nowrap text-right", render: (item) => formatNumber(item.stockQuantity) },
+          { key: "min", header: "Minimum Stock", className: "whitespace-nowrap text-right", render: (item) => formatNumber(item.minimumStockQuantity) },
           { key: "stockStatus", header: "Stock Status", className: "whitespace-nowrap", render: (item) => Number(item.stockQuantity) <= 0 ? "Out of Stock" : Number(item.stockQuantity) <= Number(item.minimumStockQuantity) ? "Low Stock" : "Enough" },
           { key: "status", header: "Status", className: "whitespace-nowrap", render: (item) => <EnglishStatusBadge value={item.status} /> },
           {
             key: "actions",
             header: "Actions",
             className: "whitespace-nowrap text-right",
-            render: (item) => canManage ? (
-              <div className="flex justify-end gap-3">
-                <button className="font-medium text-primary" type="button" onClick={() => edit(item)}>Edit</button>
-                <button className="font-medium text-red-700" type="button" onClick={() => void handleDelete(item.id)}>Delete</button>
+            render: (item) => canManage || canStockIn || canStockOut ? (
+              <div className="flex flex-nowrap justify-end gap-3">
+                {canStockIn ? <button className="font-medium text-emerald-700" type="button" onClick={() => openStockDialog("stock_in", item)}>Stock In</button> : null}
+                {canStockOut ? <button className="font-medium text-amber-700" type="button" onClick={() => openStockDialog("stock_out", item)}>Stock Out</button> : null}
+                {canManage ? <button className="font-medium text-primary" type="button" onClick={() => edit(item)}>Edit</button> : null}
+                {canManage ? <button className="font-medium text-red-700" type="button" onClick={() => void handleDelete(item.id)}>Delete</button> : null}
               </div>
             ) : null
           }
         ]}
       />
+
+      {canViewHistory ? (
+        <div className="space-y-3">
+          <div>
+            <h2 className="text-base font-semibold text-ink">Inventory History</h2>
+            <p className="text-sm text-muted">Recent Stock In and Stock Out transactions.</p>
+          </div>
+          <DataTable
+            items={history}
+            getRowKey={(movement) => movement.id}
+            minWidth={980}
+            emptyTitle="No inventory history"
+            columns={[
+              { key: "time", header: "Time", className: "whitespace-nowrap", render: (movement) => new Date(movement.createdAt).toLocaleString("en-US") },
+              { key: "user", header: "User", className: "whitespace-nowrap", render: (movement) => movement.createdBy?.fullName ?? movement.createdBy?.email ?? "-" },
+              { key: "code", header: "Material Code", className: "whitespace-nowrap", render: (movement) => movement.item?.materialCode ?? "-" },
+              { key: "name", header: "Material Name", className: "min-w-40 whitespace-nowrap", render: (movement) => movement.item?.materialName ?? "-" },
+              { key: "type", header: "Type", className: "whitespace-nowrap", render: (movement) => movement.movementType === "receipt" ? "Stock In" : movement.movementType === "issue" ? "Stock Out" : statusLabel(movement.movementType) },
+              { key: "qty", header: "Quantity", className: "whitespace-nowrap text-right", render: (movement) => formatNumber(movement.quantity) },
+              { key: "before", header: "Quantity Before", className: "whitespace-nowrap text-right", render: (movement) => formatNumber(movement.previousStock) },
+              { key: "after", header: "Quantity After", className: "whitespace-nowrap text-right", render: (movement) => formatNumber(movement.resultingStock) },
+              { key: "note", header: "Note", render: (movement) => movement.note ?? "-" }
+            ]}
+          />
+        </div>
+      ) : null}
+
+      {stockDialog ? (
+        <StockDialog
+          dialog={stockDialog}
+          onCancel={() => setStockDialog(null)}
+          onQuantityChange={updateStockDialogQuantity}
+          onNoteChange={(note) => setStockDialog((current) => current ? { ...current, note } : current)}
+          onSubmit={submitStockDialog}
+        />
+      ) : null}
     </section>
   );
 }
@@ -509,6 +621,64 @@ function EnglishStatusBadge({ value }: { value: string }) {
 
 function FieldError({ message }: { message?: string }) {
   return message ? <p className="mt-1 text-xs font-medium text-red-600">{message}</p> : null;
+}
+
+function FormField({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
+  return (
+    <label className="block space-y-1.5 text-sm font-medium text-ink">
+      <span>{label}</span>
+      {children}
+      <FieldError message={error} />
+    </label>
+  );
+}
+
+function StockDialog({
+  dialog,
+  onCancel,
+  onQuantityChange,
+  onNoteChange,
+  onSubmit
+}: {
+  dialog: { action: StockAction; item: InventoryItem; quantity: string; note: string; error: string };
+  onCancel: () => void;
+  onQuantityChange: (value: string) => void;
+  onNoteChange: (value: string) => void;
+  onSubmit: (event: FormEvent) => void;
+}) {
+  const title = dialog.action === "stock_in" ? "Stock In" : "Stock Out";
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+      <form className="w-full max-w-md space-y-4 rounded-md bg-white p-5 shadow-xl" noValidate onSubmit={(event) => void onSubmit(event)}>
+        <div>
+          <h2 className="text-lg font-semibold text-ink">{title}</h2>
+          <p className="text-sm text-muted">{dialog.item.materialCode} - {dialog.item.materialName}</p>
+        </div>
+        <div className="rounded-md border border-border bg-surface p-3 text-sm">
+          Current Stock Quantity: <span className="font-semibold">{formatNumber(dialog.item.stockQuantity)} {dialog.item.unit}</span>
+        </div>
+        <FormField label="Quantity" error={dialog.error}>
+          <input
+            className={fieldClassName(dialog.error ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : "")}
+            inputMode="numeric"
+            min="1"
+            placeholder="Quantity"
+            step="1"
+            type="text"
+            value={dialog.quantity}
+            onChange={(event) => onQuantityChange(event.target.value)}
+          />
+        </FormField>
+        <FormField label="Note">
+          <textarea className="min-h-24 w-full rounded-md border border-border p-3 text-sm placeholder:text-gray-400" placeholder="Note" value={dialog.note} onChange={(event) => onNoteChange(event.target.value)} />
+        </FormField>
+        <div className="flex justify-end gap-2">
+          <ToolbarButton onClick={onCancel}>Cancel</ToolbarButton>
+          <ToolbarButton variant="primary" type="submit">Save</ToolbarButton>
+        </div>
+      </form>
+    </div>
+  );
 }
 
 function SummaryTile({ label, value }: { label: string; value: string | number }) {

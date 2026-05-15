@@ -62,6 +62,7 @@ export interface InventoryStockMovement {
   note?: string | null;
   createdAt: string;
   item?: Pick<InventoryItem, "id" | "materialCode" | "materialName" | "unit">;
+  createdBy?: { id: string; fullName: string; email: string } | null;
 }
 
 export interface InventorySummary {

@@ -18,7 +18,6 @@ const requiredNonNegativeDecimalSchema = (label: string) =>
       })
       .min(0, `${label} must be non-negative`)
   );
-const positiveDecimalSchema = z.coerce.number().positive();
 
 export const idParamSchema = z.object({
   id: z.string().uuid()
@@ -96,12 +95,23 @@ export const bulkMaterialDeactivateSchema = z.object({
 export const stockMovementQuerySchema = paginationQuerySchema.extend({
   itemId: optionalUuidSchema,
   projectId: optionalUuidSchema,
-  movementType: z.preprocess(emptyToUndefined, movementTypeSchema.optional())
+  movementType: z.preprocess(emptyToUndefined, movementTypeSchema.optional()),
+  createdById: optionalUuidSchema,
+  dateFrom: z.preprocess(emptyToUndefined, z.coerce.date().optional()),
+  dateTo: z.preprocess(emptyToUndefined, z.coerce.date().optional())
 });
 
 export const stockMovementCreateSchema = z.object({
   movementType: movementTypeSchema,
-  quantity: positiveDecimalSchema,
+  quantity: z.preprocess(
+    emptyToUndefined,
+    z.coerce
+      .number({
+        required_error: "Quantity is required.",
+        invalid_type_error: "Quantity is required."
+      })
+      .positive("Quantity must be greater than 0.")
+  ),
   direction: z.enum(["increase", "decrease"]).optional(),
   unitCost: z.preprocess(emptyToUndefined, nonNegativeDecimalSchema.optional()),
   referenceType: z.preprocess(emptyToUndefined, z.string().trim().max(100).optional()),
@@ -117,6 +127,8 @@ export const receiptSchema = stockMovementCreateSchema.omit({ movementType: true
 export const issueSchema = stockMovementCreateSchema.omit({ movementType: true, direction: true }).extend({
   movementType: z.literal("issue").default("issue")
 });
+
+export const stockInOutSchema = stockMovementCreateSchema.pick({ quantity: true, note: true });
 
 export const adjustmentSchema = stockMovementCreateSchema.omit({ movementType: true }).extend({
   movementType: z.literal("adjustment").default("adjustment"),
