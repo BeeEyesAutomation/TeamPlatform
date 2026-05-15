@@ -752,6 +752,77 @@ created_by_id
 created_at
 ```
 
+## quotations
+
+```txt
+id
+quotation_code unique
+project_id nullable
+customer_name
+customer_request nullable
+quotation_date
+number_of_sets
+vat_enabled
+vat_rate
+subtotal_one_set
+total_before_vat
+vat_amount
+grand_total
+signature_image_url nullable
+status
+metadata
+created_by_id
+updated_by_id
+created_at
+updated_at
+deleted_at
+```
+
+Money, quantity, and percentage fields must use Decimal. `quotation_code` is generated server-side using `Q-YYYYMMDD-XXX` with a sequence scoped per day.
+
+## quotation_items
+
+```txt
+id
+quotation_id
+line_index
+material_id nullable
+material_code_snapshot
+material_name_snapshot
+unit_snapshot
+quantity
+unit_price
+amount
+created_at
+updated_at
+```
+
+Quotation items snapshot inventory material code, name, unit, and unit price so old quotations do not change when inventory data changes later.
+
+## quotation_images
+
+```txt
+id
+quotation_id
+file_name
+file_url
+file_size
+mime_type
+uploaded_by_id
+created_at
+```
+
+## quotation_exports
+
+```txt
+id
+quotation_id
+exported_by_id
+format
+file_name
+created_at
+```
+
 ## project_statistics_snapshots
 
 ```txt

@@ -365,6 +365,25 @@ Bulk material deactivation accepts `{ "ids": ["uuid"] }` and returns per-item re
 
 `GET /api/inventory/transactions` returns inventory movement history with material code/name, movement type, quantity before/after, timestamp, note, and created-by user details when available. Supported simple filters include `itemId`, `movementType`, `dateFrom`, `dateTo`, and `createdById`.
 
+## Quotations
+
+```txt
+GET    /api/quotations
+POST   /api/quotations
+GET    /api/quotations/:id
+PUT    /api/quotations/:id
+DELETE /api/quotations/:id
+GET    /api/quotations/next-code?date=YYYY-MM-DD
+
+POST   /api/quotations/:id/images
+DELETE /api/quotation-images/:id
+POST   /api/quotations/:id/signature
+
+GET    /api/quotations/:id/export/excel
+```
+
+Quotation create/update payloads should include project/customer header fields, `numberOfSets`, VAT settings, and an `items` array. The API generates `quotationCode` server-side using `Q-YYYYMMDD-XXX`, snapshots inventory material code/name/unit/unit price for each item, recalculates all totals, and ignores client-submitted totals for persistence. MVP material search should reuse `GET /api/inventory/materials?search=...&status=active&pageSize=10`. Excel export downloads `quotation-Q-YYYYMMDD-XXX.xlsx` and creates export/audit logs.
+
 ## Statistics
 
 ```txt

@@ -67,3 +67,17 @@ Selling Price is calculated from Purchase Price and Markup % using `purchasePric
 Stock In and Stock Out use immutable `InventoryStockMovement` history records. Stock Out cannot reduce material stock below zero. Future correction, edit, or delete workflows should use reversal movements instead of hard-deleting stock movement history.
 
 Stock Out remains supported in backend history for existing data but is not part of the current Inventory Materials UI workflow. Stock In is batch-based in the Materials page, and batch Stock In is all-or-nothing inside one database transaction.
+
+## 2026-05-15 - Quotation Management Planning
+
+Quotation Code is generated server-side using `Q-YYYYMMDD-XXX`, with the sequence scoped per quotation date and protected by a unique database constraint. Users must not manually edit Quotation Code.
+
+Quotation items snapshot Inventory material code, material name, unit, and unit price at the time the item is added. Existing quotations do not auto-update if Inventory material data or selling price changes later.
+
+Project linkage is optional for MVP. TeamPlatform has project/customer data, so the UI should support selecting a project and auto-loading project/customer fields, but customer-only quotations remain allowed.
+
+VAT is optional per quotation. The backend recalculates `subtotalOneSet`, `totalBeforeVat`, `vatAmount`, and `grandTotal` from submitted items and ignores client-submitted totals for persistence.
+
+Signature is implemented as an uploaded image for MVP. Canvas/drawn signature capture is deferred.
+
+Excel export is required for MVP. PDF export, approval workflow, and email sending are future phases.

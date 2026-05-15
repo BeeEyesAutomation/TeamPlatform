@@ -143,3 +143,38 @@ Document Upload
 -> Access Logs
 -> Download/View Permission Check
 ```
+## Quotation Module Map
+
+Planned backend:
+
+```txt
+/api/quotations                   Quotation list/create/detail/update/deactivate
+/api/quotations/:id/images        Quotation image upload
+/api/quotations/:id/signature     Signature image upload
+/api/quotations/:id/export/excel  Quotation Excel export
+apps/api/src/modules/quotations/  routes, schemas, service, Excel builder
+```
+
+Planned frontend:
+
+```txt
+/quotations                       Quotation list
+/quotations/new                   Create quotation
+/quotations/:id                   Quotation detail and Excel export
+/quotations/:id/edit              Edit quotation
+apps/web/features/quotations/     API wrapper, list, form, detail, item selector, totals panel
+apps/web/types/quotations.ts      Quotation frontend types
+```
+
+Planned data flow:
+
+```txt
+Quotation
+-> Select project or enter customer directly
+-> Search Inventory materials
+-> Snapshot material code, name, unit, and selling price
+-> Calculate one-set subtotal, total before VAT, VAT amount, and grand total
+-> Upload quotation images and signature image
+-> Export quotation Excel file
+-> Write audit and export logs
+```

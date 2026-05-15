@@ -1,5 +1,52 @@
 # Implementation Log
 
+## 2026-05-15 - Quotation Management Planning
+
+### Current Phase
+
+Planning only for a new Quotation Management module.
+
+### Scope
+
+- Analyze existing documentation and targeted Inventory, Project, upload, and Excel export patterns.
+- Create `docs/QUOTATION_PLAN.md`.
+- Update database, API, workflow, map, decisions, and implementation log documentation.
+- Do not implement backend or frontend code.
+
+### Result
+
+- Planned quotation header, item snapshots, image/signature upload metadata, optional export log, REST APIs, frontend routes/components, calculations, RBAC, audit logs, edge cases, and phased implementation.
+- Documented key design decisions: server-generated quotation code, item snapshots, optional project linkage, backend-authoritative totals, optional VAT, signature image MVP, and Excel export MVP.
+
+### Changed Files Summary
+
+- `docs/QUOTATION_PLAN.md`
+- `DATABASE.md`
+- `API.md`
+- `WORKFLOWS.md`
+- `MAP.md`
+- `docs/DECISIONS.md`
+- `docs/IMPLEMENTATION_LOG.md`
+
+### Commands Run
+
+- Documentation and targeted search/read commands only.
+- No test suite, production build, Prisma command, or code generation was run.
+
+### Errors Found
+
+- `gh` is not installed, so PR creation/update through GitHub CLI is blocked.
+- GitHub connector token was already expired in previous attempts.
+
+### Fixes Applied
+
+- None; this was a planning task.
+
+### Known TODOs
+
+- Open/update the PR manually or after GitHub authentication/tooling is restored.
+- Start Quotation Phase 1 when ready: Prisma models, migration, permissions seed, and basic backend CRUD.
+
 ## 2026-05-15 - Inventory Material Entry Internal Server Error Follow-up
 
 ### Symptoms

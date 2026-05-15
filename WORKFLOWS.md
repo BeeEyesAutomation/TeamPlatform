@@ -409,3 +409,51 @@ Recommended dashboards:
 - Material dashboard
 - Cost dashboard
 - Employee performance dashboard
+
+## 15. Quotation Workflow
+
+Create quotation:
+
+```txt
+User opens Quotation Management
+-> Create quotation
+-> Select project if applicable
+-> Project code, project name, and customer data auto-load when available
+-> Enter or confirm customer name
+-> Enter customer request
+-> Quotation date defaults to today
+-> Search and select Inventory materials
+-> Material code, material name, unit, and selling price auto-load
+-> Enter quantity for each item
+-> System calculates item amount
+-> Enter number of sets
+-> Choose No VAT or Include VAT
+-> System calculates subtotal for 1 set, total before VAT, VAT amount, and grand total
+-> Upload optional quotation images
+-> Upload optional signature image
+-> Save
+-> Backend generates quotation code
+-> Backend snapshots material fields and recalculates totals
+-> Create audit log
+```
+
+Edit quotation:
+
+```txt
+User opens quotation detail
+-> Edit quotation
+-> Update header, items, images, signature, VAT, or number of sets
+-> Save
+-> Backend recalculates totals
+-> Create audit log with old/new values
+```
+
+Export quotation:
+
+```txt
+User opens quotation detail
+-> Export Excel
+-> Backend generates quotation-Q-YYYYMMDD-XXX.xlsx
+-> Excel includes header, material list, calculations, image/signature links where practical
+-> Create export log and audit log
+```
