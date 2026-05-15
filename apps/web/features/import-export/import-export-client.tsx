@@ -2,8 +2,8 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { getStoredAccessToken } from "../../lib/api-client";
-import type { ExportLog, ImportLog } from "../../types/import-export";
-import { exportUrl, fetchExportLogs, fetchImportLogs, importTemplateUrl, previewImport } from "./import-export-api";
+import type { ExportLog, ImportLog, ImportPreviewRow } from "../../types/import-export";
+import { exportUrl, fetchExportLogs, fetchImportLogs, importTemplateUrl, previewImport, uploadImportFile } from "./import-export-api";
 
 const importTypes = ["employees", "projects", "project-plans", "project-tasks", "project-issues", "project-materials", "project-costs", "allowances"];
 const exportTypes = ["employees", "attendance", "payroll", "projects", "project-progress", "project-costs", "project-issues", "project-materials"];
@@ -11,6 +11,7 @@ const exportTypes = ["employees", "attendance", "payroll", "projects", "project-
 export function ImportExportClient() {
   const [importLogs, setImportLogs] = useState<ImportLog[]>([]);
   const [exportLogs, setExportLogs] = useState<ExportLog[]>([]);
+  const [previewRows, setPreviewRows] = useState<ImportPreviewRow[]>([]);
   const [error, setError] = useState("");
 
   async function load() {
@@ -33,15 +34,42 @@ export function ImportExportClient() {
     const form = new FormData(event.currentTarget);
     const rowsText = String(form.get("rows") ?? "[]");
     try {
-      await previewImport(String(form.get("type")), {
+      const response = await previewImport(String(form.get("type")), {
         fileName: form.get("fileName") || "manual-json.json",
         rows: JSON.parse(rowsText),
         confirm: form.get("confirm") === "on"
       });
+      setPreviewRows(response.data.rows);
       event.currentTarget.reset();
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot preview import rows");
+    }
+  }
+
+  async function submitExcelImport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const type = String(form.get("type"));
+    const file = form.get("file");
+
+    if (!(file instanceof File) || file.size === 0) {
+      setError("Excel file is required");
+      return;
+    }
+
+    try {
+      const upload = new FormData();
+      upload.set("file", file);
+      if (form.get("confirm") === "on") upload.set("confirm", "true");
+
+      const response = await uploadImportFile(type, upload);
+      setPreviewRows(response.data.rows);
+      if (form.get("confirm") === "on") formElement.reset();
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Cannot upload import file");
     }
   }
 
@@ -94,6 +122,12 @@ export function ImportExportClient() {
         <div className="rounded-md border border-border bg-white p-4">
           <h2 className="mb-3 text-lg font-semibold">Import center</h2>
           <div className="mb-4 flex flex-wrap gap-2">{importTypes.map((type) => <button key={type} className="rounded-md border border-border px-3 py-2 text-sm" type="button" onClick={() => void downloadTemplate(type)}>Template {type}</button>)}</div>
+          <form className="mb-4 space-y-3" onSubmit={(event) => void submitExcelImport(event)}>
+            <select className="h-10 rounded-md border border-border px-3 text-sm" name="type">{importTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select>
+            <input className="h-10 rounded-md border border-border px-3 text-sm" name="file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+            <label className="flex items-center gap-2 text-sm"><input name="confirm" type="checkbox" /> Confirm import if valid</label>
+            <button className="h-10 rounded-md bg-primary px-4 text-sm font-semibold text-white" type="submit">Upload Excel / Preview</button>
+          </form>
           <form className="space-y-3" onSubmit={(event) => void submitImport(event)}>
             <select className="h-10 rounded-md border border-border px-3 text-sm" name="type">{importTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select>
             <input className="h-10 rounded-md border border-border px-3 text-sm" name="fileName" placeholder="file name" />
@@ -117,6 +151,10 @@ export function ImportExportClient() {
           </div>
         </div>
       </div>
+
+      {previewRows.length ? (
+        <SimpleTable title="Preview import rows" headers={["Row", "Status", "Errors"]} rows={previewRows.map((row) => [row.rowNumber, row.valid ? "Valid" : "Invalid", row.errors.join("; ") || "-"])} />
+      ) : null}
 
       <SimpleTable title="Import logs" headers={["Type", "File", "Status", "Rows", "Failed"]} rows={importLogs.map((log) => [log.importType, log.fileName, log.status, log.totalRows, log.failedRows])} />
       <SimpleTable title="Export logs" headers={["Type", "File", "Format", "Created"]} rows={exportLogs.map((log) => [log.exportType, log.fileName, log.format, new Date(log.createdAt).toLocaleString("vi-VN")])} />

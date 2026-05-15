@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../../prisma/client";
 import { AppError } from "../../utils/app-error";
 import { getPagination, getPaginationMeta } from "../hr/hr.utils";
-import { buildRowsWorkbook, buildTemplateWorkbook, isImportType, validateRows, type ImportType } from "./imports.utils";
+import { buildRowsWorkbook, buildTemplateWorkbook, isImportType, parseRowsWorkbook, validateRows, type ImportType } from "./imports.utils";
 import type { z } from "zod";
 import type { importLogQuerySchema, importPreviewSchema } from "./imports.schemas";
 
@@ -99,6 +99,17 @@ export async function previewOrConfirmImport(type: string, input: ImportPreviewI
     log,
     rows: validation
   };
+}
+
+export async function previewOrConfirmImportWorkbook(
+  type: string,
+  fileName: string,
+  buffer: Buffer,
+  confirm: boolean,
+  context: RequestContext
+) {
+  const rows = await parseRowsWorkbook(buffer);
+  return previewOrConfirmImport(type, { fileName, rows, confirm }, context);
 }
 
 export async function listImportLogs(query: ImportLogQuery) {

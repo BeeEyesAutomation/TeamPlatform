@@ -9,6 +9,13 @@ export interface ImportLog {
   createdAt: string;
 }
 
+export interface ImportPreviewRow {
+  rowNumber: number;
+  row: Record<string, unknown>;
+  valid: boolean;
+  errors: string[];
+}
+
 export interface ExportLog {
   id: string;
   exportType: string;

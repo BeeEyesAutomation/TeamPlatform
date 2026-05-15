@@ -1,5 +1,69 @@
 # Implementation Log
 
+## 2026-05-15 - Multipart Excel Import Upload and Row Preview
+
+### Current Phase
+
+Production hardening: multipart Excel upload parsing and row-level import confirmation UI.
+
+### Scope
+
+- Add Excel `.xlsx` upload parsing for existing import endpoints.
+- Reuse existing validation, preview, confirm, import log, and error-file behavior.
+- Add frontend Excel upload and row preview UI in the import/export page.
+- Do not implement unrelated import mappings or dashboard features.
+
+### Assumptions
+
+- Existing JSON-row import remains supported for advanced/manual use.
+- The first worksheet and first row headers are the import source for uploaded Excel files.
+- No new dependency is needed; the backend uses the existing ExcelJS dependency and a small single-file multipart parser.
+- Existing unrelated working tree changes remain out of scope.
+
+### Result
+
+- Added workbook row parsing from uploaded `.xlsx` files.
+- Added multipart file handling to existing import routes.
+- Added frontend Excel upload form with optional confirm checkbox.
+- Added row-level preview table showing row number, valid/invalid status, and errors.
+- Removed the completed multipart import TODO.
+
+### Changed Files Summary
+
+- `apps/api/src/modules/imports/imports.routes.ts`
+- `apps/api/src/modules/imports/imports.service.ts`
+- `apps/api/src/modules/imports/imports.utils.ts`
+- `apps/web/features/import-export/import-export-api.ts`
+- `apps/web/features/import-export/import-export-client.tsx`
+- `apps/web/types/import-export.ts`
+- `docs/IMPLEMENTATION_LOG.md`
+- `docs/TODO.md`
+
+### Commands Run
+
+- `Get-Content -Raw AGENTS.md`
+- `Get-Content docs\IMPLEMENTATION_LOG.md -TotalCount 140`
+- `Get-Content -Raw docs\TODO.md`
+- `git status --short --branch`
+- `Get-Content -Raw apps\api\src\modules\imports\imports.routes.ts`
+- `Get-Content -Raw apps\api\src\modules\imports\imports.service.ts`
+- `Get-Content -Raw apps\api\src\modules\imports\imports.schemas.ts`
+- `Get-Content -Raw apps\api\src\modules\imports\imports.utils.ts`
+- `Get-Content -Raw apps\web\features\import-export\import-export-client.tsx`
+- `Get-Content -Raw apps\web\features\import-export\import-export-api.ts`
+- `Get-Content -Raw apps\web\types\import-export.ts`
+- `Get-Content -Raw apps\web\lib\api-client.ts`
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+- `npm run test --workspace apps/api -- imports.utils`
+
+### Failures and Logs
+
+- `docs/logs/2026-05-15_multipart-import_api-typecheck.log` - `type_error`; fixed by passing ExcelJS an `ArrayBuffer` derived from the uploaded Node buffer.
+
+### Remaining TODOs
+
+- Confirmed imports still only persist the import types currently supported by `applyImport`; additional mappings can be added in separate scoped tasks.
 ## 2026-05-15 - Cleanup Duplicate Auth Files Blocking API Typecheck
 
 ### Current Phase
