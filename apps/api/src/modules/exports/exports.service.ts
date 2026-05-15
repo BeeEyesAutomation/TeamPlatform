@@ -58,6 +58,55 @@ async function rowsForExport(type: string, query: ExportQuery) {
     const rows = await prisma.projectMaterial.findMany({ where: query.projectId ? { projectId: query.projectId } : {}, orderBy: { materialName: "asc" } });
     return normalizeRows(rows.map((row) => ({ projectId: row.projectId, materialCode: row.materialCode, materialName: row.materialName, plannedQuantity: row.plannedQuantity.toString(), usedQuantity: row.usedQuantity.toString(), status: row.status })));
   }
+  if (type === "inventory_items") {
+    const rows = await prisma.inventoryItem.findMany({
+      where: {
+        deletedAt: null,
+        ...(query.categoryId ? { categoryId: query.categoryId } : {}),
+        ...(query.supplierId ? { supplierId: query.supplierId } : {})
+      },
+      include: {
+        category: { select: { code: true, name: true } },
+        supplier: { select: { code: true, name: true } }
+      },
+      orderBy: { materialName: "asc" }
+    });
+    return normalizeRows(rows.map((row) => ({
+      materialCode: row.materialCode,
+      materialName: row.materialName,
+      category: row.category?.name,
+      supplier: row.supplier?.name,
+      purchasePrice: row.purchasePrice.toString(),
+      sellingPrice: row.sellingPrice.toString(),
+      markupPercentage: row.markupPercentage.toString(),
+      stockQuantity: row.stockQuantity.toString(),
+      minimumStockQuantity: row.minimumStockQuantity.toString(),
+      unit: row.unit,
+      status: row.status,
+      description: row.description
+    })));
+  }
+  if (type === "inventory_movements") {
+    const rows = await prisma.inventoryStockMovement.findMany({
+      where: query.projectId ? { projectId: query.projectId } : {},
+      include: { item: { select: { materialCode: true, materialName: true, unit: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 1000
+    });
+    return normalizeRows(rows.map((row) => ({
+      materialCode: row.item.materialCode,
+      materialName: row.item.materialName,
+      movementType: row.movementType,
+      quantity: row.quantity.toString(),
+      unit: row.item.unit,
+      unitCost: row.unitCost?.toString(),
+      previousStock: row.previousStock.toString(),
+      resultingStock: row.resultingStock.toString(),
+      referenceType: row.referenceType,
+      projectId: row.projectId,
+      createdAt: row.createdAt
+    })));
+  }
   const rows = await prisma.projectTask.findMany({ where: query.projectId ? { projectId: query.projectId } : {}, orderBy: { createdAt: "desc" } });
   return normalizeRows(rows.map((row) => ({ projectId: row.projectId, title: row.title, status: row.status, progressPercent: row.progressPercent.toString(), deadline: row.deadline })));
 }

@@ -8,6 +8,7 @@ import { emailRouter } from "./modules/email/email.routes";
 import { employeesRouter } from "./modules/employees/employees.routes";
 import { exportsRouter } from "./modules/exports/exports.routes";
 import { importsRouter } from "./modules/imports/imports.routes";
+import { inventoryRouter } from "./modules/inventory/inventory.routes";
 import { payrollRouter, payrollsRouter, payslipsRouter } from "./modules/payroll/payroll.routes";
 import { positionsRouter } from "./modules/positions/positions.routes";
 import {
@@ -64,6 +65,7 @@ apiRouter.use("/document-permissions", documentPermissionsRouter);
 apiRouter.use("/project-documents", projectDocumentsRouter);
 apiRouter.use("/email", emailRouter);
 apiRouter.use("/imports", importsRouter);
+apiRouter.use("/inventory", inventoryRouter);
 apiRouter.use("/exports", exportsRouter);
 apiRouter.use("/statistics", statisticsRouter);
 apiRouter.use("/reports", reportsRouter);

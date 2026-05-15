@@ -1,0 +1,18 @@
+Command: npm run typecheck --workspace apps/web
+Working directory: repository root
+Classification: type_error
+
+> @team-platform/web@0.1.0 typecheck
+> tsc -p tsconfig.json --noEmit
+
+components/layout/app-shell.tsx(61,149): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+components/layout/app-shell.tsx(70,78): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+npm error Lifecycle script `typecheck` failed with error:
+npm error code 2
+npm error path C:\TeamPlatform\apps\web
+npm error workspace @team-platform/web@0.1.0
+npm error location C:\TeamPlatform\apps\web
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c tsc -p tsconfig.json --noEmit

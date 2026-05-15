@@ -158,6 +158,20 @@ enum ExportFormat {
   pdf
 }
 
+enum InventoryItemStatus {
+  active
+  inactive
+  discontinued
+}
+
+enum InventoryMovementType {
+  receipt
+  issue
+  adjustment
+  return
+  reservation
+  release
+}
 model User {
   id           String     @id @default(uuid())
   email        String     @unique @db.VarChar(255)
@@ -663,6 +677,102 @@ model ProjectMaterial {
   @@map("project_materials")
 }
 
+model InventoryCategory {
+  id          String          @id @default(uuid())
+  code        String          @unique @db.VarChar(100)
+  name        String          @db.VarChar(255)
+  description String?         @db.Text
+  status      RecordStatus    @default(active)
+  items       InventoryItem[]
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  deletedAt   DateTime?       @map("deleted_at")
+
+  @@index([code])
+  @@index([status])
+  @@index([createdAt])
+  @@map("inventory_categories")
+}
+
+model InventorySupplier {
+  id          String          @id @default(uuid())
+  code        String          @unique @db.VarChar(100)
+  name        String          @db.VarChar(255)
+  contactName String?         @map("contact_name") @db.VarChar(255)
+  phone       String?         @db.VarChar(50)
+  email       String?         @db.VarChar(255)
+  address     String?         @db.Text
+  taxCode     String?         @map("tax_code") @db.VarChar(100)
+  description String?         @db.Text
+  status      RecordStatus    @default(active)
+  items       InventoryItem[]
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  deletedAt   DateTime?       @map("deleted_at")
+
+  @@index([code])
+  @@index([status])
+  @@index([createdAt])
+  @@map("inventory_suppliers")
+}
+
+model InventoryItem {
+  id                   String                   @id @default(uuid())
+  materialCode         String                   @unique @map("material_code") @db.VarChar(100)
+  materialName         String                   @map("material_name") @db.VarChar(255)
+  categoryId           String?                  @map("category_id")
+  supplierId           String?                  @map("supplier_id")
+  purchasePrice        Decimal                  @default(0) @map("purchase_price") @db.Decimal(18, 2)
+  sellingPrice         Decimal                  @default(0) @map("selling_price") @db.Decimal(18, 2)
+  markupPercentage     Decimal                  @default(0) @map("markup_percentage") @db.Decimal(9, 3)
+  stockQuantity        Decimal                  @default(0) @map("stock_quantity") @db.Decimal(18, 3)
+  minimumStockQuantity Decimal                  @default(0) @map("minimum_stock_quantity") @db.Decimal(18, 3)
+  unit                 String                   @db.VarChar(50)
+  status               InventoryItemStatus      @default(active)
+  description          String?                  @db.Text
+  metadata             Json?
+  category             InventoryCategory?       @relation(fields: [categoryId], references: [id])
+  supplier             InventorySupplier?       @relation(fields: [supplierId], references: [id])
+  movements            InventoryStockMovement[]
+  createdById          String?                  @map("created_by_id")
+  updatedById          String?                  @map("updated_by_id")
+  createdAt            DateTime                 @default(now()) @map("created_at")
+  updatedAt            DateTime                 @updatedAt @map("updated_at")
+  deletedAt            DateTime?                @map("deleted_at")
+
+  @@index([materialCode])
+  @@index([materialName])
+  @@index([categoryId])
+  @@index([supplierId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("inventory_items")
+}
+
+model InventoryStockMovement {
+  id             String                @id @default(uuid())
+  itemId         String                @map("item_id")
+  movementType   InventoryMovementType @map("movement_type")
+  quantity       Decimal               @db.Decimal(18, 3)
+  unitCost       Decimal?              @map("unit_cost") @db.Decimal(18, 2)
+  previousStock  Decimal               @map("previous_stock") @db.Decimal(18, 3)
+  resultingStock Decimal               @map("resulting_stock") @db.Decimal(18, 3)
+  referenceType  String?               @map("reference_type") @db.VarChar(100)
+  referenceId    String?               @map("reference_id") @db.VarChar(100)
+  projectId      String?               @map("project_id")
+  note           String?               @db.Text
+  metadata       Json?
+  createdById    String?               @map("created_by_id")
+  item           InventoryItem         @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  createdAt      DateTime              @default(now()) @map("created_at")
+
+  @@index([itemId])
+  @@index([movementType])
+  @@index([referenceType, referenceId])
+  @@index([projectId])
+  @@index([createdAt])
+  @@map("inventory_stock_movements")
+}
 model ProjectCost {
   id          String   @id @default(uuid())
   projectId   String   @map("project_id")

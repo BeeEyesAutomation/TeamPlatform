@@ -8,6 +8,10 @@ export const importTemplates = {
   project_issues: ["projectId", "taskId", "title", "severity", "assignedToId", "deadline"],
   project_materials: ["projectId", "materialCode", "materialName", "unit", "plannedQuantity", "usedQuantity", "estimatedUnitPrice"],
   project_costs: ["projectId", "costType", "name", "amount", "costDate"],
+  inventory_categories: ["code", "name", "description", "status"],
+  inventory_suppliers: ["code", "name", "contactName", "phone", "email", "address", "taxCode", "status"],
+  inventory_items: ["materialCode", "materialName", "categoryCode", "supplierCode", "purchasePrice", "sellingPrice", "markupPercentage", "stockQuantity", "minimumStockQuantity", "unit", "status", "description"],
+  inventory_stock_adjustments: ["materialCode", "direction", "quantity", "unitCost", "referenceType", "referenceId", "note"],
   allowances: ["employeeId", "allowanceCode", "amount", "month", "note"]
 } as const;
 

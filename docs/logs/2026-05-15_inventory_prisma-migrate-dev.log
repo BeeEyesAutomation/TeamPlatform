@@ -1,0 +1,12 @@
+Command: npx prisma migrate dev --name add_inventory_module
+Working directory: apps/api
+Classification: migration_error
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "team_platform", schema "public" at "localhost:5432"
+
+Error: Prisma Migrate has detected that the environment is non-interactive, which is not supported.
+
+`prisma migrate dev` is an interactive command designed to create new migrations and evolve the database in development.
+To apply existing migrations in deployments, use prisma migrate deploy.

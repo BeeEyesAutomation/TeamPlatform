@@ -1,0 +1,231 @@
+import { Router, type Request } from "express";
+import { requireAuth, requirePermission } from "../../middleware/rbac";
+import { asyncHandler } from "../../utils/async-handler";
+import {
+  adjustmentSchema,
+  idParamSchema,
+  inventoryCategoryCreateSchema,
+  inventoryCategoryQuerySchema,
+  inventoryCategoryUpdateSchema,
+  inventoryItemCreateSchema,
+  inventoryItemQuerySchema,
+  inventoryItemUpdateSchema,
+  inventorySupplierCreateSchema,
+  inventorySupplierQuerySchema,
+  inventorySupplierUpdateSchema,
+  issueSchema,
+  receiptSchema,
+  stockMovementCreateSchema,
+  stockMovementQuerySchema
+} from "./inventory.schemas";
+import {
+  createInventoryItem,
+  createInventoryMovement,
+  deactivateInventoryItem,
+  getInventoryItem,
+  getInventorySummary,
+  listInventoryCategories,
+  listInventoryItems,
+  listInventoryMovements,
+  listInventorySuppliers,
+  saveInventoryCategory,
+  saveInventorySupplier,
+  updateInventoryItem
+} from "./inventory.service";
+
+export const inventoryRouter = Router();
+
+const contextFromRequest = (req: Request) => ({
+  actorId: req.user?.id,
+  ipAddress: req.ip,
+  userAgent: req.header("user-agent")
+});
+
+inventoryRouter.use(requireAuth);
+
+inventoryRouter.get(
+  "/items",
+  requirePermission("inventory.view"),
+  asyncHandler(async (req, res) => {
+    const query = inventoryItemQuerySchema.parse(req.query);
+    res.json({ status: "ok", data: await listInventoryItems(query) });
+  })
+);
+
+inventoryRouter.post(
+  "/items",
+  requirePermission("inventory.manage"),
+  asyncHandler(async (req, res) => {
+    const body = inventoryItemCreateSchema.parse(req.body);
+    res.status(201).json({ status: "ok", data: await createInventoryItem(body, contextFromRequest(req)) });
+  })
+);
+
+inventoryRouter.get(
+  "/items/:id",
+  requirePermission("inventory.view"),
+  asyncHandler(async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    res.json({ status: "ok", data: await getInventoryItem(id) });
+  })
+);
+
+inventoryRouter.put(
+  "/items/:id",
+  requirePermission("inventory.manage"),
+  asyncHandler(async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const body = inventoryItemUpdateSchema.parse(req.body);
+    res.json({ status: "ok", data: await updateInventoryItem(id, body, contextFromRequest(req)) });
+  })
+);
+
+inventoryRouter.delete(
+  "/items/:id",
+  requirePermission("inventory.manage"),
+  asyncHandler(async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    res.json({ status: "ok", data: await deactivateInventoryItem(id, contextFromRequest(req)) });
+  })
+);
+
+inventoryRouter.post(
+  "/items/:id/movements",
+  requirePermission("inventory.adjust_stock"),
+  asyncHandler(async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const body = stockMovementCreateSchema.parse(req.body);
+    res.status(201).json({ status: "ok", data: await createInventoryMovement(id, body, contextFromRequest(req)) });
+  })
+);
+
+inventoryRouter.get(
+  "/items/:id/movements",
+  requirePermission("inventory.view"),
+  asyncHandler(async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const query = stockMovementQuerySchema.parse({ ...req.query, itemId: id });
+    res.json({ status: "ok", data: await listInventoryMovements(query) });
+  })
+);
+
+inventoryRouter.post(
+  "/items/:id/receipts",
+  requirePermission("inventory.adjust_stock"),
+  asyncHandler(async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const body = receiptSchema.parse(req.body);
+    res.status(201).json({ status: "ok", data: await createInventoryMovement(id, body, contextFromRequest(req)) });
+  })
+);
+
+inventoryRouter.post(
+  "/items/:id/issues",
+  requirePermission("inventory.adjust_stock"),
+  asyncHandler(async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const body = issueSchema.parse(req.body);
+    res.status(201).json({ status: "ok", data: await createInventoryMovement(id, body, contextFromRequest(req)) });
+  })
+);
+
+inventoryRouter.post(
+  "/items/:id/adjustments",
+  requirePermission("inventory.adjust_stock"),
+  asyncHandler(async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const body = adjustmentSchema.parse(req.body);
+    res.status(201).json({ status: "ok", data: await createInventoryMovement(id, body, contextFromRequest(req)) });
+  })
+);
+
+inventoryRouter.get(
+  "/categories",
+  requirePermission("inventory.view"),
+  asyncHandler(async (req, res) => {
+    const query = inventoryCategoryQuerySchema.parse(req.query);
+    res.json({ status: "ok", data: await listInventoryCategories(query) });
+  })
+);
+
+inventoryRouter.post(
+  "/categories",
+  requirePermission("inventory.manage"),
+  asyncHandler(async (req, res) => {
+    const body = inventoryCategoryCreateSchema.parse(req.body);
+    res.status(201).json({ status: "ok", data: await saveInventoryCategory(body, undefined, contextFromRequest(req)) });
+  })
+);
+
+inventoryRouter.put(
+  "/categories/:id",
+  requirePermission("inventory.manage"),
+  asyncHandler(async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const body = inventoryCategoryUpdateSchema.parse(req.body);
+    res.json({ status: "ok", data: await saveInventoryCategory(body, id, contextFromRequest(req)) });
+  })
+);
+
+inventoryRouter.get(
+  "/suppliers",
+  requirePermission("inventory.view"),
+  asyncHandler(async (req, res) => {
+    const query = inventorySupplierQuerySchema.parse(req.query);
+    res.json({ status: "ok", data: await listInventorySuppliers(query) });
+  })
+);
+
+inventoryRouter.post(
+  "/suppliers",
+  requirePermission("inventory.manage"),
+  asyncHandler(async (req, res) => {
+    const body = inventorySupplierCreateSchema.parse(req.body);
+    res.status(201).json({ status: "ok", data: await saveInventorySupplier(body, undefined, contextFromRequest(req)) });
+  })
+);
+
+inventoryRouter.put(
+  "/suppliers/:id",
+  requirePermission("inventory.manage"),
+  asyncHandler(async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const body = inventorySupplierUpdateSchema.parse(req.body);
+    res.json({ status: "ok", data: await saveInventorySupplier(body, id, contextFromRequest(req)) });
+  })
+);
+
+inventoryRouter.get(
+  "/movements",
+  requirePermission("inventory.view"),
+  asyncHandler(async (req, res) => {
+    const query = stockMovementQuerySchema.parse(req.query);
+    res.json({ status: "ok", data: await listInventoryMovements(query) });
+  })
+);
+
+inventoryRouter.get(
+  "/reports/summary",
+  requirePermission("inventory.view"),
+  asyncHandler(async (_req, res) => {
+    res.json({ status: "ok", data: await getInventorySummary() });
+  })
+);
+
+inventoryRouter.get(
+  "/reports/low-stock",
+  requirePermission("inventory.view"),
+  asyncHandler(async (req, res) => {
+    const query = inventoryItemQuerySchema.parse({ ...req.query, lowStock: true });
+    res.json({ status: "ok", data: await listInventoryItems(query) });
+  })
+);
+
+inventoryRouter.get(
+  "/reports/movements",
+  requirePermission("inventory.view"),
+  asyncHandler(async (req, res) => {
+    const query = stockMovementQuerySchema.parse(req.query);
+    res.json({ status: "ok", data: await listInventoryMovements(query) });
+  })
+);

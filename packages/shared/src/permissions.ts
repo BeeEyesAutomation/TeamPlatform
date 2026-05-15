@@ -31,6 +31,12 @@ export const permissions = [
   "project_documents.manage",
   "imports.manage",
   "exports.manage",
+  "inventory.view",
+  "inventory.manage",
+  "inventory.adjust_stock",
+  "inventory.import",
+  "inventory.export",
+  "inventory.view_cost",
   "email.manage",
   "audit_logs.view"
 ] as const;

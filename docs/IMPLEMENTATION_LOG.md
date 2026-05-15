@@ -1,5 +1,72 @@
 # Implementation Log
 
+## 2026-05-15 - Inventory Module Backend and UI
+
+### Current Phase
+
+Inventory / Materials full module implementation.
+
+### Scope
+
+- Add standalone inventory Prisma models and migration for categories, suppliers, items, and stock movements.
+- Add inventory CRUD APIs, stock receipt/issue/adjustment APIs, reports, RBAC checks, and audit logging.
+- Add inventory import/export template and export hooks.
+- Add frontend inventory list, create/edit form, detail, categories, suppliers, movement history, and reports pages.
+- Do not implement unrelated HR/payroll/project changes.
+
+### Result
+
+- Inventory items now include `materialName` with material code, category, supplier, prices, markup, stock quantity, minimum stock, unit, status, and description.
+- Stock changes are transactional and recorded in `inventory_stock_movements`.
+- Search supports material code and material name.
+- Cost/price display is gated by `inventory.view_cost`.
+- Targeted API and web typechecks passed.
+
+### Changed Files Summary
+
+- `apps/api/prisma/schema.prisma`
+- `apps/api/prisma/migrations/20260515093000_add_inventory_module/migration.sql`
+- `apps/api/prisma/seed.ts`
+- `apps/api/src/modules/inventory/*`
+- `apps/api/src/modules/imports/*`
+- `apps/api/src/modules/exports/*`
+- `apps/api/src/routes.ts`
+- `apps/web/app/inventory/*`
+- `apps/web/features/inventory/*`
+- `apps/web/types/inventory.ts`
+- `apps/web/components/layout/app-shell.tsx`
+- `apps/web/features/import-export/import-export-client.tsx`
+- `packages/shared/src/permissions.ts`
+- `API.md`
+- `DATABASE.md`
+- `docs/IMPLEMENTATION_LOG.md`
+- `docs/logs/2026-05-15_inventory_*.log`
+
+### Commands Run
+
+- `npx prisma format --schema apps/api/prisma/schema.prisma`
+- `npx prisma validate --schema apps/api/prisma/schema.prisma`
+- `npx prisma validate`
+- `npx prisma generate`
+- `npx prisma generate --no-engine`
+- `npx prisma migrate dev --name add_inventory_module`
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+- `git diff --check`
+
+### Failures and Logs
+
+- `docs/logs/2026-05-15_inventory_prisma-validate-root.log` - `env_missing`; root Prisma command could not read `DATABASE_URL`. Rerun from `apps/api` passed.
+- `docs/logs/2026-05-15_inventory_prisma-generate.log` - `unknown`; Prisma engine DLL was locked by a running Node process. Retried once with `--no-engine` and generated the TypeScript client successfully.
+- `docs/logs/2026-05-15_inventory_prisma-migrate-dev.log` - `migration_error`; `prisma migrate dev` is blocked in the non-interactive environment. Added the migration SQL manually.
+- `docs/logs/2026-05-15_inventory_web-typecheck.log` - `type_error`; fixed the inventory nav permission type guard, then web typecheck passed.
+
+### Remaining TODOs
+
+- Apply the new migration in an interactive/dev database environment.
+- Run a manual browser smoke test against a running API and database.
+- Standalone reservation and purchase receipt tables remain future extensions; this pass records receipts, issues, adjustments, reservations, releases, and returns in the canonical stock movement table.
+
 ## 2026-05-15 - Inventory A-Z Completion Plan
 
 ### Current Phase

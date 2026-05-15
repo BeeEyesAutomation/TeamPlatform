@@ -675,6 +675,80 @@ exported_by_id
 created_at
 ```
 
+## inventory_categories
+
+```txt
+id
+code
+name
+description
+status
+created_at
+updated_at
+deleted_at
+```
+
+## inventory_suppliers
+
+```txt
+id
+code
+name
+contact_name
+phone
+email
+address
+tax_code
+description
+status
+created_at
+updated_at
+deleted_at
+```
+
+## inventory_items
+
+```txt
+id
+material_code
+material_name
+category_id
+supplier_id
+purchase_price
+selling_price
+markup_percentage
+stock_quantity
+minimum_stock_quantity
+unit
+status
+description
+metadata
+created_by_id
+updated_by_id
+created_at
+updated_at
+deleted_at
+```
+
+## inventory_stock_movements
+
+```txt
+id
+item_id
+movement_type
+quantity
+unit_cost
+previous_stock
+resulting_stock
+reference_type
+reference_id
+project_id
+note
+metadata
+created_by_id
+created_at
+```
+
 ## project_statistics_snapshots
 
 ```txt

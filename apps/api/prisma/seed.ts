@@ -45,6 +45,12 @@ const permissions = [
   "project_documents.manage",
   "imports.manage",
   "exports.manage",
+  "inventory.view",
+  "inventory.manage",
+  "inventory.adjust_stock",
+  "inventory.import",
+  "inventory.export",
+  "inventory.view_cost",
   "email.manage",
   "audit_logs.view"
 ];
@@ -275,6 +281,39 @@ async function seedRolesAndPermissions() {
     });
   }
 
+  const inventoryRolePermissions: Record<string, string[]> = {
+    director: ["inventory.view", "inventory.export", "inventory.view_cost"],
+    accountant: ["inventory.view", "inventory.export", "inventory.view_cost"],
+    project_manager: ["inventory.view", "inventory.manage", "inventory.adjust_stock", "inventory.import", "inventory.export", "inventory.view_cost"],
+    team_leader: ["inventory.view", "inventory.adjust_stock"],
+    project_employee: ["inventory.view"]
+  };
+
+  for (const [roleCode, permissionCodes] of Object.entries(inventoryRolePermissions)) {
+    const role = await prisma.role.findUniqueOrThrow({
+      where: { code: roleCode }
+    });
+
+    for (const permissionCode of permissionCodes) {
+      const inventoryPermission = await prisma.permission.findUniqueOrThrow({
+        where: { code: permissionCode }
+      });
+
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId: role.id,
+            permissionId: inventoryPermission.id
+          }
+        },
+        update: {},
+        create: {
+          roleId: role.id,
+          permissionId: inventoryPermission.id
+        }
+      });
+    }
+  }
   const documentRolePermissions: Record<string, string[]> = {
     director: ["project_documents.view", "project_documents.download", "project_documents.approve", "project_documents.manage"],
     project_manager: ["project_documents.view", "project_documents.upload", "project_documents.download", "project_documents.approve", "project_documents.manage"],

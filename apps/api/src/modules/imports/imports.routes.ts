@@ -72,7 +72,7 @@ importsRouter.get(
   })
 );
 
-for (const type of ["employees", "attendance", "allowances", "projects", "project-plans", "project-tasks", "project-issues", "project-materials", "project-costs"]) {
+for (const type of ["employees", "attendance", "allowances", "projects", "project-plans", "project-tasks", "project-issues", "project-materials", "project-costs", "inventory-categories", "inventory-suppliers", "inventory-items", "inventory-stock-adjustments"]) {
   importsRouter.post(
     `/${type}`,
     asyncHandler(async (req, res) => {

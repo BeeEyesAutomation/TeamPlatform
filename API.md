@@ -281,6 +281,10 @@ POST /api/imports/project-tasks
 POST /api/imports/project-issues
 POST /api/imports/project-materials
 POST /api/imports/project-costs
+POST /api/imports/inventory-categories
+POST /api/imports/inventory-suppliers
+POST /api/imports/inventory-items
+POST /api/imports/inventory-stock-adjustments
 GET  /api/imports/logs
 GET  /api/imports/logs/:id/error-file
 ```
@@ -298,8 +302,41 @@ GET /api/exports/project-costs
 GET /api/exports/project-issues
 GET /api/exports/project-materials
 GET /api/exports/project-performance
+GET /api/exports/inventory-items
+GET /api/exports/inventory-movements
 GET /api/exports/logs
 ```
+
+## Inventory
+
+```txt
+GET    /api/inventory/items
+POST   /api/inventory/items
+GET    /api/inventory/items/:id
+PUT    /api/inventory/items/:id
+DELETE /api/inventory/items/:id
+
+GET    /api/inventory/categories
+POST   /api/inventory/categories
+PUT    /api/inventory/categories/:id
+
+GET    /api/inventory/suppliers
+POST   /api/inventory/suppliers
+PUT    /api/inventory/suppliers/:id
+
+GET    /api/inventory/items/:id/movements
+POST   /api/inventory/items/:id/movements
+POST   /api/inventory/items/:id/receipts
+POST   /api/inventory/items/:id/issues
+POST   /api/inventory/items/:id/adjustments
+GET    /api/inventory/movements
+
+GET    /api/inventory/reports/summary
+GET    /api/inventory/reports/low-stock
+GET    /api/inventory/reports/movements
+```
+
+Inventory item payload fields include `materialCode`, `materialName`, `categoryId`, `supplierId`, `purchasePrice`, `sellingPrice`, `markupPercentage`, `stockQuantity`, `minimumStockQuantity`, `unit`, `status`, and `description`. List requests support `search` by material code or material name.
 
 ## Statistics
 

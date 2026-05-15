@@ -62,6 +62,130 @@ async function applyImport(type: ImportType, validRows: Array<Record<string, unk
       });
     }
   }
+
+  if (type === "inventory_categories") {
+    for (const row of validRows) {
+      await prisma.inventoryCategory.upsert({
+        where: { code: String(row.code) },
+        update: {
+          name: String(row.name),
+          description: row.description ? String(row.description) : undefined,
+          status: row.status ? String(row.status) as "active" | "inactive" : undefined
+        },
+        create: {
+          code: String(row.code),
+          name: String(row.name),
+          description: row.description ? String(row.description) : undefined,
+          status: row.status ? String(row.status) as "active" | "inactive" : "active"
+        }
+      });
+    }
+  }
+
+  if (type === "inventory_suppliers") {
+    for (const row of validRows) {
+      await prisma.inventorySupplier.upsert({
+        where: { code: String(row.code) },
+        update: {
+          name: String(row.name),
+          contactName: row.contactName ? String(row.contactName) : undefined,
+          phone: row.phone ? String(row.phone) : undefined,
+          email: row.email ? String(row.email) : undefined,
+          address: row.address ? String(row.address) : undefined,
+          taxCode: row.taxCode ? String(row.taxCode) : undefined,
+          status: row.status ? String(row.status) as "active" | "inactive" : undefined
+        },
+        create: {
+          code: String(row.code),
+          name: String(row.name),
+          contactName: row.contactName ? String(row.contactName) : undefined,
+          phone: row.phone ? String(row.phone) : undefined,
+          email: row.email ? String(row.email) : undefined,
+          address: row.address ? String(row.address) : undefined,
+          taxCode: row.taxCode ? String(row.taxCode) : undefined,
+          status: row.status ? String(row.status) as "active" | "inactive" : "active"
+        }
+      });
+    }
+  }
+
+  if (type === "inventory_items") {
+    for (const row of validRows) {
+      const category = row.categoryCode
+        ? await prisma.inventoryCategory.findUnique({ where: { code: String(row.categoryCode) } })
+        : null;
+      const supplier = row.supplierCode
+        ? await prisma.inventorySupplier.findUnique({ where: { code: String(row.supplierCode) } })
+        : null;
+
+      await prisma.inventoryItem.upsert({
+        where: { materialCode: String(row.materialCode) },
+        update: {
+          materialName: String(row.materialName),
+          categoryId: category?.id,
+          supplierId: supplier?.id,
+          purchasePrice: row.purchasePrice ? String(row.purchasePrice) : "0",
+          sellingPrice: row.sellingPrice ? String(row.sellingPrice) : "0",
+          markupPercentage: row.markupPercentage ? String(row.markupPercentage) : "0",
+          stockQuantity: row.stockQuantity ? String(row.stockQuantity) : "0",
+          minimumStockQuantity: row.minimumStockQuantity ? String(row.minimumStockQuantity) : "0",
+          unit: String(row.unit),
+          status: row.status ? String(row.status) as "active" | "inactive" | "discontinued" : "active",
+          description: row.description ? String(row.description) : undefined
+        },
+        create: {
+          materialCode: String(row.materialCode),
+          materialName: String(row.materialName),
+          categoryId: category?.id,
+          supplierId: supplier?.id,
+          purchasePrice: row.purchasePrice ? String(row.purchasePrice) : "0",
+          sellingPrice: row.sellingPrice ? String(row.sellingPrice) : "0",
+          markupPercentage: row.markupPercentage ? String(row.markupPercentage) : "0",
+          stockQuantity: row.stockQuantity ? String(row.stockQuantity) : "0",
+          minimumStockQuantity: row.minimumStockQuantity ? String(row.minimumStockQuantity) : "0",
+          unit: String(row.unit),
+          status: row.status ? String(row.status) as "active" | "inactive" | "discontinued" : "active",
+          description: row.description ? String(row.description) : undefined
+        }
+      });
+    }
+  }
+
+  if (type === "inventory_stock_adjustments") {
+    for (const row of validRows) {
+      const item = await prisma.inventoryItem.findUnique({
+        where: { materialCode: String(row.materialCode) }
+      });
+      if (!item) throw new AppError(400, `Inventory item not found: ${String(row.materialCode)}`);
+
+      const quantity = Number(row.quantity);
+      const delta = String(row.direction) === "decrease" ? -quantity : quantity;
+      const previousStock = Number(item.stockQuantity);
+      const resultingStock = previousStock + delta;
+      if (resultingStock < 0) throw new AppError(400, `Insufficient stock for ${item.materialCode}`);
+
+      await prisma.$transaction([
+        prisma.inventoryItem.update({
+          where: { id: item.id },
+          data: { stockQuantity: resultingStock.toString() }
+        }),
+        prisma.inventoryStockMovement.create({
+          data: {
+            itemId: item.id,
+            movementType: "adjustment",
+            quantity: quantity.toString(),
+            unitCost: row.unitCost ? String(row.unitCost) : undefined,
+            previousStock: previousStock.toString(),
+            resultingStock: resultingStock.toString(),
+            referenceType: row.referenceType ? String(row.referenceType) : "import",
+            referenceId: row.referenceId ? String(row.referenceId) : undefined,
+            note: row.note ? String(row.note) : undefined,
+            metadata: { direction: String(row.direction) === "decrease" ? "decrease" : "increase" }
+          }
+        })
+      ]);
+    }
+  }
 }
 
 export async function previewOrConfirmImport(type: string, input: ImportPreviewInput, context: RequestContext) {

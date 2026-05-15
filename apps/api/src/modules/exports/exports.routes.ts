@@ -16,7 +16,7 @@ const contentType = (format: string) => {
 
 exportsRouter.use(requireAuth, requirePermission("exports.manage"));
 
-for (const type of ["employees", "attendance", "payroll", "projects", "project-progress", "project-costs", "project-issues", "project-materials", "project-performance"]) {
+for (const type of ["employees", "attendance", "payroll", "projects", "project-progress", "project-costs", "project-issues", "project-materials", "project-performance", "inventory-items", "inventory-movements"]) {
   exportsRouter.get(
     `/${type}`,
     asyncHandler(async (req, res) => {

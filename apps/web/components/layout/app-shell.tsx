@@ -7,6 +7,7 @@ import {
   Import,
   LayoutDashboard,
   Mail,
+  Package,
   Settings,
   ShieldCheck,
   Users
@@ -22,6 +23,7 @@ const navigation = [
   { label: "Cham cong", href: "/attendance", icon: CalendarDays },
   { label: "Bang luong", href: "/payroll", icon: BadgeDollarSign },
   { label: "Du an", href: "/projects", icon: FolderKanban },
+  { label: "Kho vat tu", href: "/inventory", icon: Package },
   { label: "Tai lieu", href: "/document-permissions", icon: FileText },
   { label: "Nhap xuat", href: "/import-export", icon: Import },
   { label: "Bao cao", href: "/reports", icon: ClipboardList },

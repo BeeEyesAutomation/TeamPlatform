@@ -5,8 +5,8 @@ import { getStoredAccessToken } from "../../lib/api-client";
 import type { ExportLog, ImportLog, ImportPreviewRow } from "../../types/import-export";
 import { exportUrl, fetchExportLogs, fetchImportLogs, importTemplateUrl, previewImport, uploadImportFile } from "./import-export-api";
 
-const importTypes = ["employees", "projects", "project-plans", "project-tasks", "project-issues", "project-materials", "project-costs", "allowances"];
-const exportTypes = ["employees", "attendance", "payroll", "projects", "project-progress", "project-costs", "project-issues", "project-materials"];
+const importTypes = ["employees", "projects", "project-plans", "project-tasks", "project-issues", "project-materials", "project-costs", "inventory-categories", "inventory-suppliers", "inventory-items", "inventory-stock-adjustments", "allowances"];
+const exportTypes = ["employees", "attendance", "payroll", "projects", "project-progress", "project-costs", "project-issues", "project-materials", "inventory-items", "inventory-movements"];
 
 export function ImportExportClient() {
   const [importLogs, setImportLogs] = useState<ImportLog[]>([]);

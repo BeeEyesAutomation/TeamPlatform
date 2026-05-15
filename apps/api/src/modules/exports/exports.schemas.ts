@@ -4,7 +4,9 @@ import { paginationQuerySchema } from "../hr/hr.schemas";
 export const exportQuerySchema = z.object({
   format: z.enum(["excel", "csv", "pdf"]).default("excel"),
   month: z.string().regex(/^\d{4}-\d{2}$/).optional(),
-  projectId: z.string().uuid().optional()
+  projectId: z.string().uuid().optional(),
+  categoryId: z.string().uuid().optional(),
+  supplierId: z.string().uuid().optional()
 });
 
 export const idParamSchema = z.object({

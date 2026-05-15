@@ -331,3 +331,21 @@ Inventory is complete when:
 - Permission checks and audit logs cover sensitive actions.
 - Targeted API and web typechecks pass.
 - Targeted inventory tests pass.
+
+## Implementation Status - 2026-05-15
+
+Implemented in this pass:
+
+- Prisma models and migration for inventory categories, suppliers, items, and stock movements.
+- Inventory item CRUD, category CRUD, supplier CRUD, stock movement, receipt, issue, adjustment, low-stock, movement, and summary APIs.
+- Material code and material name search.
+- Audit logs for item/category/supplier changes and stock movements.
+- Frontend inventory list, create/edit form, detail page, category/supplier pages, movement history, and reports page.
+- Inventory import templates and confirmed import mappings for categories, suppliers, items, and stock adjustments.
+- Inventory exports for item list and movement history.
+- Permission codes and seed role grants.
+
+Remaining extensions:
+
+- Separate reservation and purchase receipt tables can be added later if workflow detail beyond stock movements is required.
+- Manual browser smoke testing should be run after applying the migration to a local database.

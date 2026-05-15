@@ -1,0 +1,21 @@
+﻿Prisma schema loaded from apps\api\prisma\schema.prisma
+node.exe : Error: Prisma schema validation - (get-config wasm)
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Error: Prisma s...et-config wasm):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Error code: P1012
+error: Environment variable not found: DATABASE_URL.
+  -->  apps\api\prisma\schema.prisma:7
+   | 
+ 6 |   provider = "postgresql"
+ 7 |   url      = env("DATABASE_URL")
+   | 
+
+Validation Error Count: 1
+[Context: getConfig]
+
+Prisma CLI Version : 5.22.0
+
