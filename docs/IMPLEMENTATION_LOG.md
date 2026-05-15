@@ -1,5 +1,46 @@
 # Implementation Log
 
+## 2026-05-15 - Inventory A-Z Completion Plan
+
+### Current Phase
+
+Planning: complete Inventory / Materials module from master data to stock operations and reporting.
+
+### Scope
+
+- Create a complete Inventory plan covering database, backend API, frontend UI, import/export, permissions, audit logs, reports, project integration, and quality checks.
+- Keep this as planning documentation only.
+- Do not inspect or edit unrelated application modules.
+
+### Assumptions
+
+- Inventory should be a company-wide stock module separate from existing project material planning records.
+- Existing project materials can later reference inventory items instead of being merged into the same table.
+- Existing unrelated working tree changes remain out of scope.
+
+### Result
+
+- Added `docs/INVENTORY_PLAN.md` with the full A-Z inventory completion scope.
+- The plan includes required inventory item fields, stock movement rules, API paths, UI pages, import/export templates, permissions, audit logs, reports, project integration, and completion criteria.
+
+### Changed Files Summary
+
+- `docs/INVENTORY_PLAN.md`
+- `docs/IMPLEMENTATION_LOG.md`
+
+### Commands Run
+
+- `Get-Content -Raw AGENTS.md`
+- `Get-Content docs\IMPLEMENTATION_LOG.md -TotalCount 120`
+- `if (Test-Path docs\INVENTORY_PLAN.md) { Get-Content -Raw docs\INVENTORY_PLAN.md } else { 'NO_INVENTORY_PLAN' }`
+
+### Failures and Logs
+
+- No command failures.
+
+### Remaining TODOs
+
+- Implement the Inventory plan as one scoped feature pass when requested.
 ## 2026-05-15 - Multipart Excel Import Upload and Row Preview
 
 ### Current Phase
