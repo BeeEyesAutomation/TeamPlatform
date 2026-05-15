@@ -1,5 +1,49 @@
 # Implementation Log
 
+## 2026-05-15 - Inventory Material Form Layout Polish
+
+### Current Phase
+
+Inventory Material form layout polish.
+
+### Scope
+
+- Refine only the Inventory Material form layout and form-specific classes in the Materials page and standalone item form.
+- Keep backend APIs, database schema, Stock In/Out logic, and unrelated modules out of scope.
+
+### Result
+
+- Material fields now use a consistent top-label structure with full-width controls.
+- Desktop layout uses a balanced 4-column grid, tablet uses 2 columns, and mobile falls back naturally.
+- Material Group, Material Code, Material Name, and Supplier align in the first row.
+- Purchase Price, Markup %, Selling Price, and Unit align in the second row.
+- Stock Quantity, Minimum Stock, and Status align consistently below.
+- Image upload and Description are grouped in a balanced section, with a fixed image preview size.
+- Add/Save actions are moved into a clear footer area.
+- Read-only Material Code and Selling Price keep the same height as normal fields with gray muted styling.
+
+### Changed Files Summary
+
+- `apps/web/features/inventory/inventory-client.tsx`
+- `apps/web/features/inventory/inventory-item-form.tsx`
+- `docs/IMPLEMENTATION_LOG.md`
+
+### Commands Run
+
+- `npm.cmd run typecheck --workspace apps/web`
+
+### Errors Found
+
+- None.
+
+### Fixes Applied
+
+- No retry was needed.
+
+### Known TODOs
+
+- Manual browser review the Materials page at desktop, tablet, and mobile widths.
+
 ## 2026-05-15 - Inventory UI and Basic Stock In / Stock Out
 
 ### Current Phase

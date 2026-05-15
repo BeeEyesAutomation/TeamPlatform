@@ -135,33 +135,33 @@ export function InventoryItemForm({ id }: { id?: string }) {
   }
 
   return (
-    <form className="max-w-4xl space-y-4 rounded-md border border-border bg-white p-5" noValidate onSubmit={(event) => void submit(event)}>
+    <form className="max-w-6xl rounded-md border border-border bg-white p-5" noValidate onSubmit={(event) => void submit(event)}>
       <ErrorBanner message={error} />
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Material Code" readOnly placeholder="Auto-generated after selecting Material Group" value={form.materialCode} onChange={() => undefined} />
-        <Field error={fieldErrors.materialName} label="Material Name" value={form.materialName} onChange={(value) => setField("materialName", value)} />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <label className="block text-sm font-medium">
           Material Group
-          <select className={`${fieldClassName(fieldErrors.categoryId ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : "")} mt-1 w-full`} value={form.categoryId} onChange={(event) => void handleCategoryChange(event.target.value)}>
+          <select className={`${fieldClassName(fieldErrors.categoryId ? "w-full border-red-500 focus:border-red-500 focus:ring-red-500/20" : "w-full")} mt-1`} value={form.categoryId} onChange={(event) => void handleCategoryChange(event.target.value)}>
             <option value="">Select Material Group</option>
             {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
           </select>
           <FieldError message={fieldErrors.categoryId} />
         </label>
+        <Field label="Material Code" readOnly placeholder="Auto-generated after selecting Material Group" value={form.materialCode} onChange={() => undefined} />
+        <Field error={fieldErrors.materialName} label="Material Name" value={form.materialName} onChange={(value) => setField("materialName", value)} />
         <label className="block text-sm font-medium">
           Supplier
-          <select className={`${fieldClassName(fieldErrors.supplierId ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : "")} mt-1 w-full`} value={form.supplierId} onChange={(event) => setField("supplierId", event.target.value)}>
+          <select className={`${fieldClassName(fieldErrors.supplierId ? "w-full border-red-500 focus:border-red-500 focus:ring-red-500/20" : "w-full")} mt-1`} value={form.supplierId} onChange={(event) => setField("supplierId", event.target.value)}>
             <option value="">Select Supplier</option>
             {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
           </select>
           <FieldError message={fieldErrors.supplierId} />
         </label>
         <Field error={fieldErrors.purchasePrice} inputMode="numeric" label="Purchase Price" placeholder="Purchase Price" value={form.purchasePrice} onChange={(value) => setNumericField("purchasePrice", value)} />
-        <Field inputMode="numeric" label="Selling Price" placeholder="Selling Price" readOnly value={form.sellingPrice} onChange={() => undefined} />
         <Field error={fieldErrors.markupPercentage} inputMode="numeric" label="Markup %" placeholder="Markup %" value={form.markupPercentage} onChange={(value) => setNumericField("markupPercentage", value)} />
+        <Field inputMode="numeric" label="Selling Price" placeholder="Selling Price" readOnly value={form.sellingPrice} onChange={() => undefined} />
+        <Field error={fieldErrors.unit} label="Unit" placeholder="Unit" value={form.unit} onChange={(value) => setField("unit", value)} />
         <Field inputMode="numeric" label="Stock Quantity" placeholder="Stock Quantity" value={form.stockQuantity} onChange={(value) => setNumericField("stockQuantity", value)} />
         <Field inputMode="numeric" label="Minimum Stock" placeholder="Minimum Stock" value={form.minimumStockQuantity} onChange={(value) => setNumericField("minimumStockQuantity", value)} />
-        <Field error={fieldErrors.unit} label="Unit" placeholder="Unit" value={form.unit} onChange={(value) => setField("unit", value)} />
         <label className="block text-sm font-medium">
           Status
           <select className={`${fieldClassName()} mt-1 w-full`} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>
@@ -169,13 +169,17 @@ export function InventoryItemForm({ id }: { id?: string }) {
             <option value="inactive">Inactive</option>
             <option value="discontinued">Discontinued</option>
           </select>
+          <FieldError />
+        </label>
+        <label className="block text-sm font-medium sm:col-span-2 xl:col-span-4">
+        Description
+          <textarea className="mt-1 min-h-28 w-full rounded-md border border-border px-3 py-2 text-sm outline-none placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/15" placeholder="Description" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
+          <FieldError />
         </label>
       </div>
-      <label className="block text-sm font-medium">
-        Description
-        <textarea className="mt-1 min-h-24 w-full rounded-md border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
-      </label>
-      <button className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white" type="submit">Save</button>
+      <div className="mt-5 flex justify-end border-t border-border pt-4">
+        <button className="h-10 rounded-md bg-primary px-4 text-sm font-semibold text-white" type="submit">Save</button>
+      </div>
     </form>
   );
 }
@@ -217,5 +221,5 @@ function Field({
 }
 
 function FieldError({ message }: { message?: string }) {
-  return message ? <p className="mt-1 text-xs font-medium text-red-600">{message}</p> : null;
+  return <p className={`mt-1 min-h-4 text-xs font-medium ${message ? "text-red-600" : "text-transparent"}`}>{message ?? "."}</p>;
 }

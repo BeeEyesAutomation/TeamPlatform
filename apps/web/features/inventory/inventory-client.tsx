@@ -74,7 +74,7 @@ const numberOrUndefined = (value: string) => parseFormattedNumber(value);
 const imageSrc = (path?: string | null) => path ? (path.startsWith("http") ? path : `${apiBaseUrl}${path}`) : "";
 type MaterialFormField = keyof typeof emptyMaterialForm;
 type MaterialErrors = Partial<Record<MaterialFormField, string>>;
-const autoFieldClass = fieldClassName("border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed placeholder:text-gray-400");
+const autoFieldClass = fieldClassName("w-full border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed placeholder:text-gray-400");
 
 export function InventoryClient() {
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -210,7 +210,7 @@ export function InventoryClient() {
 
   function materialInputClass(field: MaterialFormField, extra = "") {
     const errorClass = materialErrors[field] ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : "";
-    return fieldClassName(`${errorClass} ${extra}`.trim());
+    return fieldClassName(`w-full ${errorClass} ${extra}`.trim());
   }
 
   function validateMaterialForm() {
@@ -428,8 +428,8 @@ export function InventoryClient() {
       ) : null}
 
       {canManage ? (
-        <form className="space-y-4 rounded-md border border-border bg-white p-4" noValidate onSubmit={(event) => void submit(event)}>
-          <div className="grid gap-3 md:grid-cols-2">
+        <form className="rounded-md border border-border bg-white p-5" noValidate onSubmit={(event) => void submit(event)}>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <FormField label="Material Group" error={materialErrors.categoryId}>
               <select className={materialInputClass("categoryId")} value={form.categoryId} onChange={(event) => void handleMaterialGroupChange(event.target.value)}>
                 <option value="">Select Material Group</option>
@@ -439,9 +439,6 @@ export function InventoryClient() {
             <FormField label="Material Code">
               <input className={autoFieldClass} readOnly placeholder="Auto-generated after selecting Material Group" title="Material Code is auto-generated from the selected Material Group" value={form.materialCode} />
             </FormField>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
             <FormField label="Material Name" error={materialErrors.materialName}>
               <input className={materialInputClass("materialName")} placeholder="Material Name" value={form.materialName} onChange={(event) => updateMaterialField("materialName", event.target.value)} />
             </FormField>
@@ -451,9 +448,7 @@ export function InventoryClient() {
                 {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
               </select>
             </FormField>
-          </div>
 
-          <div className="grid gap-3 md:grid-cols-3">
             <FormField label="Purchase Price" error={materialErrors.purchasePrice}>
               <input className={materialInputClass("purchasePrice")} inputMode="numeric" min="0" step="1" type="text" placeholder="Purchase Price" value={form.purchasePrice} onChange={(event) => updateMaterialNumber("purchasePrice", event.target.value)} />
             </FormField>
@@ -463,42 +458,38 @@ export function InventoryClient() {
             <FormField label="Selling Price">
               <input className={autoFieldClass} inputMode="numeric" min="0" readOnly step="1" type="text" placeholder="Selling Price" value={form.sellingPrice} />
             </FormField>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-4">
             <FormField label="Unit" error={materialErrors.unit}>
               <input className={materialInputClass("unit")} placeholder="Unit" value={form.unit} onChange={(event) => updateMaterialField("unit", event.target.value)} />
             </FormField>
+
             <FormField label="Stock Quantity">
-              <input className={fieldClassName()} inputMode="numeric" min="0" step="1" type="text" placeholder="Stock Quantity" value={form.stockQuantity} onChange={(event) => updateMaterialNumber("stockQuantity", event.target.value)} />
+              <input className={fieldClassName("w-full")} inputMode="numeric" min="0" step="1" type="text" placeholder="Stock Quantity" value={form.stockQuantity} onChange={(event) => updateMaterialNumber("stockQuantity", event.target.value)} />
             </FormField>
             <FormField label="Minimum Stock">
-              <input className={fieldClassName()} inputMode="numeric" min="0" step="1" type="text" placeholder="Minimum Stock" value={form.minimumStockQuantity} onChange={(event) => updateMaterialNumber("minimumStockQuantity", event.target.value)} />
+              <input className={fieldClassName("w-full")} inputMode="numeric" min="0" step="1" type="text" placeholder="Minimum Stock" value={form.minimumStockQuantity} onChange={(event) => updateMaterialNumber("minimumStockQuantity", event.target.value)} />
             </FormField>
             <FormField label="Status">
-              <select className={fieldClassName()} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>
+              <select className={fieldClassName("w-full")} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
                 <option value="discontinued">Discontinued</option>
               </select>
             </FormField>
-          </div>
 
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-            <FormField label="Image">
-              <label className="flex h-10 items-center rounded-md border border-border bg-white px-3 text-sm text-muted">
+            <FormField label="Image" className="xl:col-span-1">
+              <label className="flex h-10 w-full items-center rounded-md border border-border bg-white px-3 text-sm text-muted">
                 <input accept="image/jpeg,image/png,image/webp" className="w-full text-sm" type="file" onChange={handleImageChange} />
               </label>
               <div className="mt-2">
-                {imagePreview || form.imageUrl ? <img alt="" className="h-14 w-14 rounded-md border border-border object-cover" src={imagePreview || imageSrc(form.imageUrl)} /> : <div className="flex h-14 w-14 items-center justify-center rounded-md border border-dashed border-border text-xs text-muted">No image</div>}
+                {imagePreview || form.imageUrl ? <img alt="" className="h-16 w-16 rounded-md border border-border object-cover" src={imagePreview || imageSrc(form.imageUrl)} /> : <div className="flex h-16 w-16 items-center justify-center rounded-md border border-dashed border-border text-xs text-muted">No image</div>}
               </div>
             </FormField>
-            <FormField label="Description">
-              <textarea className="min-h-24 w-full rounded-md border border-border p-3 text-sm placeholder:text-gray-400" placeholder="Description" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
+            <FormField label="Description" className="sm:col-span-2 xl:col-span-3">
+              <textarea className="min-h-28 w-full rounded-md border border-border p-3 text-sm outline-none placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/15" placeholder="Description" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
             </FormField>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-border pt-4">
             <ToolbarButton variant="primary" type="submit">{form.id ? "Save" : "Add"}</ToolbarButton>
             {form.id ? <ToolbarButton onClick={resetMaterialForm}>Cancel</ToolbarButton> : null}
           </div>
@@ -620,12 +611,12 @@ function EnglishStatusBadge({ value }: { value: string }) {
 }
 
 function FieldError({ message }: { message?: string }) {
-  return message ? <p className="mt-1 text-xs font-medium text-red-600">{message}</p> : null;
+  return <p className={`min-h-4 text-xs font-medium ${message ? "text-red-600" : "text-transparent"}`}>{message ?? "."}</p>;
 }
 
-function FormField({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
+function FormField({ label, error, children, className = "" }: { label: string; error?: string; children: ReactNode; className?: string }) {
   return (
-    <label className="block space-y-1.5 text-sm font-medium text-ink">
+    <label className={`block space-y-1.5 text-sm font-medium text-ink ${className}`}>
       <span>{label}</span>
       {children}
       <FieldError message={error} />
