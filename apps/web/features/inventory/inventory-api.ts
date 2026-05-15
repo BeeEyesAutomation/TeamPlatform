@@ -60,7 +60,7 @@ export const createInventoryMovement = (itemId: string, body: Record<string, unk
 export const stockInInventoryItem = (itemId: string, body: Record<string, unknown>) =>
   apiJson<{ item: InventoryItem; transaction: InventoryStockMovement }>(`/api/inventory/materials/${itemId}/stock-in`, "POST", body);
 
-export const stockOutInventoryItem = (itemId: string, body: Record<string, unknown>) =>
-  apiJson<{ item: InventoryItem; transaction: InventoryStockMovement }>(`/api/inventory/materials/${itemId}/stock-out`, "POST", body);
+export const batchStockInInventoryItems = (body: Record<string, unknown>) =>
+  apiJson<{ items: InventoryItem[]; transactions: InventoryStockMovement[] }>("/api/inventory/stock-in", "POST", body);
 
 export const fetchInventorySummary = () => apiGet<InventorySummary>("/api/inventory/reports/summary");

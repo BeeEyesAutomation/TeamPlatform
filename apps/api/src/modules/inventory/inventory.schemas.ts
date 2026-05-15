@@ -18,6 +18,15 @@ const requiredNonNegativeDecimalSchema = (label: string) =>
       })
       .min(0, `${label} must be non-negative`)
   );
+const positiveQuantitySchema = z.preprocess(
+  emptyToUndefined,
+  z.coerce
+    .number({
+      required_error: "Quantity is required.",
+      invalid_type_error: "Quantity is required."
+    })
+    .positive("Quantity must be greater than 0.")
+);
 
 export const idParamSchema = z.object({
   id: z.string().uuid()
@@ -103,15 +112,7 @@ export const stockMovementQuerySchema = paginationQuerySchema.extend({
 
 export const stockMovementCreateSchema = z.object({
   movementType: movementTypeSchema,
-  quantity: z.preprocess(
-    emptyToUndefined,
-    z.coerce
-      .number({
-        required_error: "Quantity is required.",
-        invalid_type_error: "Quantity is required."
-      })
-      .positive("Quantity must be greater than 0.")
-  ),
+  quantity: positiveQuantitySchema,
   direction: z.enum(["increase", "decrease"]).optional(),
   unitCost: z.preprocess(emptyToUndefined, nonNegativeDecimalSchema.optional()),
   referenceType: z.preprocess(emptyToUndefined, z.string().trim().max(100).optional()),
@@ -129,6 +130,29 @@ export const issueSchema = stockMovementCreateSchema.omit({ movementType: true, 
 });
 
 export const stockInOutSchema = stockMovementCreateSchema.pick({ quantity: true, note: true });
+
+export const batchStockInSchema = z.object({
+  items: z
+    .array(z.object({
+      materialId: z.string().uuid("Material is required."),
+      quantity: positiveQuantitySchema,
+      note: optionalTextSchema
+    }))
+    .min(1, "At least one material is required.")
+    .superRefine((items, ctx) => {
+      const seen = new Set<string>();
+      for (const [index, item] of items.entries()) {
+        if (seen.has(item.materialId)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Duplicate material selected.",
+            path: [index, "materialId"]
+          });
+        }
+        seen.add(item.materialId);
+      }
+    })
+});
 
 export const adjustmentSchema = stockMovementCreateSchema.omit({ movementType: true }).extend({
   movementType: z.literal("adjustment").default("adjustment"),

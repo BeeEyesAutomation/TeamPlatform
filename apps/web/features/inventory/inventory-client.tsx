@@ -9,6 +9,7 @@ import { apiBaseUrl } from "../../lib/api-client";
 import { getStoredUser, hasPermission } from "../../lib/auth";
 import type { InventoryCategory, InventoryItem, InventoryStockMovement, InventorySummary, InventorySupplier } from "../../types/inventory";
 import {
+  batchStockInInventoryItems,
   bulkDeactivateInventoryItems,
   deleteInventoryCategory,
   deleteInventoryItem,
@@ -22,8 +23,6 @@ import {
   saveInventoryCategory,
   saveInventoryItem,
   saveInventorySupplier,
-  stockInInventoryItem,
-  stockOutInventoryItem,
   uploadInventoryItemImage
 } from "./inventory-api";
 import { calculateSellingPriceInput, formatInputNumber, formatNumber, formatVnd, parseFormattedNumber, statusLabel } from "./inventory-format";
@@ -67,8 +66,8 @@ const emptySupplierForm = {
   status: "active"
 };
 
-type CatalogPanel = "categories" | "suppliers" | "";
-type StockAction = "stock_in" | "stock_out";
+type CatalogPanel = "categories" | "suppliers" | "stock-in" | "";
+type StockInDraft = { materialId: string; quantity: string; note: string; error?: string };
 
 const numberOrUndefined = (value: string) => parseFormattedNumber(value);
 const imageSrc = (path?: string | null) => path ? (path.startsWith("http") ? path : `${apiBaseUrl}${path}`) : "";
@@ -91,7 +90,7 @@ export function InventoryClient() {
   const [imagePreview, setImagePreview] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [materialErrors, setMaterialErrors] = useState<MaterialErrors>({});
-  const [stockDialog, setStockDialog] = useState<{ action: StockAction; item: InventoryItem; quantity: string; note: string; error: string } | null>(null);
+  const [stockInDrafts, setStockInDrafts] = useState<StockInDraft[]>([]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -101,9 +100,9 @@ export function InventoryClient() {
   const canManageSuppliers = hasPermission(user, "inventory.suppliers.manage");
   const canViewCost = hasPermission(user, "inventory.view_cost");
   const canStockIn = hasPermission(user, "inventory.stock_in");
-  const canStockOut = hasPermission(user, "inventory.stock_out");
   const canViewHistory = hasPermission(user, "inventory.history.view");
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const itemsById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
 
   async function load() {
     setLoading(true);
@@ -273,44 +272,67 @@ export function InventoryClient() {
     await load();
   }
 
-  function openStockDialog(action: StockAction, item: InventoryItem) {
-    setStockDialog({ action, item, quantity: "", note: "", error: "" });
-    setError("");
-    setMessage("");
+  function addStockInMaterial(materialId: string) {
+    if (!materialId || stockInDrafts.some((draft) => draft.materialId === materialId)) return;
+    setStockInDrafts((current) => [...current, { materialId, quantity: "", note: "" }]);
   }
 
-  function updateStockDialogQuantity(value: string) {
-    setStockDialog((current) => current ? { ...current, quantity: formatInputNumber(value), error: "" } : current);
+  function addSelectedMaterialsToStockIn() {
+    setStockInDrafts((current) => {
+      const existing = new Set(current.map((draft) => draft.materialId));
+      const additions = selectedIds
+        .filter((id) => !existing.has(id))
+        .map((id) => ({ materialId: id, quantity: "", note: "" }));
+      return [...current, ...additions];
+    });
+    setCatalogPanel("stock-in");
   }
 
-  async function submitStockDialog(event: FormEvent) {
+  function updateStockInDraft(materialId: string, patch: Partial<StockInDraft>) {
+    setStockInDrafts((current) => current.map((draft) => draft.materialId === materialId ? { ...draft, ...patch, error: undefined } : draft));
+  }
+
+  function removeStockInDraft(materialId: string) {
+    setStockInDrafts((current) => current.filter((draft) => draft.materialId !== materialId));
+  }
+
+  async function submitStockIn(event: FormEvent) {
     event.preventDefault();
-    if (!stockDialog) return;
-    const quantity = parseFormattedNumber(stockDialog.quantity);
-    if (quantity === undefined) {
-      setStockDialog({ ...stockDialog, error: "Quantity is required." });
+    if (stockInDrafts.length === 0) {
+      setError("Select at least one material.");
       return;
     }
-    if (quantity <= 0) {
-      setStockDialog({ ...stockDialog, error: "Quantity must be greater than 0." });
-      return;
-    }
+    let hasError = false;
+    const validated = stockInDrafts.map((draft) => {
+      const quantity = parseFormattedNumber(draft.quantity);
+      if (quantity === undefined) {
+        hasError = true;
+        return { ...draft, error: "Quantity is required." };
+      }
+      if (quantity <= 0) {
+        hasError = true;
+        return { ...draft, error: "Quantity must be greater than 0." };
+      }
+      return { ...draft, error: undefined };
+    });
+    setStockInDrafts(validated);
+    if (hasError) return;
 
     try {
       setError("");
-      const body = { quantity, note: stockDialog.note || undefined };
-      if (stockDialog.action === "stock_in") {
-        await stockInInventoryItem(stockDialog.item.id, body);
-        setMessage("Stock in completed successfully.");
-      } else {
-        await stockOutInventoryItem(stockDialog.item.id, body);
-        setMessage("Stock out completed successfully.");
-      }
-      setStockDialog(null);
+      await batchStockInInventoryItems({
+        items: validated.map((draft) => ({
+          materialId: draft.materialId,
+          quantity: parseFormattedNumber(draft.quantity),
+          note: draft.note || undefined
+        }))
+      });
+      setStockInDrafts([]);
+      setSelectedIds([]);
+      setMessage("Stock in completed successfully.");
       await load();
     } catch (err) {
-      const details = err instanceof Error ? err.message : "Cannot update stock.";
-      setError(details.includes("Insufficient stock") ? "Insufficient stock quantity." : details);
+      setError(err instanceof Error ? err.message : "Cannot save Stock In.");
     }
   }
 
@@ -390,6 +412,7 @@ export function InventoryClient() {
       <div className="flex flex-wrap gap-2">
         {canManageCategories ? <ToolbarButton variant={catalogPanel === "categories" ? "primary" : "secondary"} onClick={() => setCatalogPanel(catalogPanel === "categories" ? "" : "categories")}>Manage Material Groups</ToolbarButton> : null}
         {canManageSuppliers ? <ToolbarButton variant={catalogPanel === "suppliers" ? "primary" : "secondary"} onClick={() => setCatalogPanel(catalogPanel === "suppliers" ? "" : "suppliers")}>Manage Suppliers</ToolbarButton> : null}
+        {canStockIn ? <ToolbarButton variant={catalogPanel === "stock-in" ? "primary" : "secondary"} onClick={() => setCatalogPanel(catalogPanel === "stock-in" ? "" : "stock-in")}>Stock In</ToolbarButton> : null}
         {canManage && selectedIds.length ? <ToolbarButton variant="danger" onClick={() => void handleBulkDelete()}>Deactivate {selectedIds.length} Materials</ToolbarButton> : null}
       </div>
 
@@ -425,6 +448,20 @@ export function InventoryClient() {
           <CatalogActions isEditing={Boolean(supplierForm.id)} onCancel={() => setSupplierForm(emptySupplierForm)} />
           <CompactList items={suppliers} onEdit={(supplier) => setSupplierForm({ id: supplier.id, code: supplier.code, name: supplier.name, contactName: supplier.contactName ?? "", phone: supplier.phone ?? "", email: supplier.email ?? "", address: supplier.address ?? "", taxCode: supplier.taxCode ?? "", description: supplier.description ?? "", status: supplier.status })} onDelete={deactivateSupplier} />
         </CatalogPanel>
+      ) : null}
+
+      {canStockIn && catalogPanel === "stock-in" ? (
+        <StockInPanel
+          drafts={stockInDrafts}
+          items={items}
+          itemsById={itemsById}
+          selectedCount={selectedIds.length}
+          onAddMaterial={addStockInMaterial}
+          onAddSelected={addSelectedMaterialsToStockIn}
+          onRemove={removeStockInDraft}
+          onSubmit={submitStockIn}
+          onUpdate={updateStockInDraft}
+        />
       ) : null}
 
       {canManage ? (
@@ -550,12 +587,10 @@ export function InventoryClient() {
             key: "actions",
             header: "Actions",
             className: "whitespace-nowrap text-right",
-            render: (item) => canManage || canStockIn || canStockOut ? (
+            render: (item) => canManage ? (
               <div className="flex flex-nowrap justify-end gap-3">
-                {canStockIn ? <button className="font-medium text-emerald-700" type="button" onClick={() => openStockDialog("stock_in", item)}>Stock In</button> : null}
-                {canStockOut ? <button className="font-medium text-amber-700" type="button" onClick={() => openStockDialog("stock_out", item)}>Stock Out</button> : null}
-                {canManage ? <button className="font-medium text-primary" type="button" onClick={() => edit(item)}>Edit</button> : null}
-                {canManage ? <button className="font-medium text-red-700" type="button" onClick={() => void handleDelete(item.id)}>Delete</button> : null}
+                <button className="font-medium text-primary" type="button" onClick={() => edit(item)}>Edit</button>
+                <button className="font-medium text-red-700" type="button" onClick={() => void handleDelete(item.id)}>Delete</button>
               </div>
             ) : null
           }
@@ -566,7 +601,7 @@ export function InventoryClient() {
         <div className="space-y-3">
           <div>
             <h2 className="text-base font-semibold text-ink">Inventory History</h2>
-            <p className="text-sm text-muted">Recent Stock In and Stock Out transactions.</p>
+            <p className="text-sm text-muted">Recent inventory transactions. Stock In is the current supported stock action in this workspace.</p>
           </div>
           <DataTable
             items={history}
@@ -588,15 +623,6 @@ export function InventoryClient() {
         </div>
       ) : null}
 
-      {stockDialog ? (
-        <StockDialog
-          dialog={stockDialog}
-          onCancel={() => setStockDialog(null)}
-          onQuantityChange={updateStockDialogQuantity}
-          onNoteChange={(note) => setStockDialog((current) => current ? { ...current, note } : current)}
-          onSubmit={submitStockDialog}
-        />
-      ) : null}
     </section>
   );
 }
@@ -624,51 +650,100 @@ function FormField({ label, error, children, className = "" }: { label: string; 
   );
 }
 
-function StockDialog({
-  dialog,
-  onCancel,
-  onQuantityChange,
-  onNoteChange,
-  onSubmit
+function StockInPanel({
+  drafts,
+  items,
+  itemsById,
+  selectedCount,
+  onAddMaterial,
+  onAddSelected,
+  onRemove,
+  onSubmit,
+  onUpdate
 }: {
-  dialog: { action: StockAction; item: InventoryItem; quantity: string; note: string; error: string };
-  onCancel: () => void;
-  onQuantityChange: (value: string) => void;
-  onNoteChange: (value: string) => void;
+  drafts: StockInDraft[];
+  items: InventoryItem[];
+  itemsById: Map<string, InventoryItem>;
+  selectedCount: number;
+  onAddMaterial: (materialId: string) => void;
+  onAddSelected: () => void;
+  onRemove: (materialId: string) => void;
   onSubmit: (event: FormEvent) => void;
+  onUpdate: (materialId: string, patch: Partial<StockInDraft>) => void;
 }) {
-  const title = dialog.action === "stock_in" ? "Stock In" : "Stock Out";
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-      <form className="w-full max-w-md space-y-4 rounded-md bg-white p-5 shadow-xl" noValidate onSubmit={(event) => void onSubmit(event)}>
+    <form className="space-y-4 rounded-md border border-border bg-white p-4" noValidate onSubmit={(event) => void onSubmit(event)}>
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-ink">{title}</h2>
-          <p className="text-sm text-muted">{dialog.item.materialCode} - {dialog.item.materialName}</p>
+          <h2 className="text-base font-semibold text-ink">Stock In</h2>
+          <p className="text-sm text-muted">Select multiple materials, enter quantity for each, then save once.</p>
         </div>
-        <div className="rounded-md border border-border bg-surface p-3 text-sm">
-          Current Stock Quantity: <span className="font-semibold">{formatNumber(dialog.item.stockQuantity)} {dialog.item.unit}</span>
+        <div className="flex flex-wrap gap-2">
+          <select className={fieldClassName("min-w-64")} defaultValue="" onChange={(event) => {
+            onAddMaterial(event.target.value);
+            event.currentTarget.value = "";
+          }}>
+            <option value="">Add material</option>
+            {items.map((item) => <option key={item.id} value={item.id}>{item.materialCode} - {item.materialName}</option>)}
+          </select>
+          <ToolbarButton disabled={selectedCount === 0} onClick={onAddSelected}>Add Selected Materials</ToolbarButton>
         </div>
-        <FormField label="Quantity" error={dialog.error}>
-          <input
-            className={fieldClassName(dialog.error ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : "")}
-            inputMode="numeric"
-            min="1"
-            placeholder="Quantity"
-            step="1"
-            type="text"
-            value={dialog.quantity}
-            onChange={(event) => onQuantityChange(event.target.value)}
-          />
-        </FormField>
-        <FormField label="Note">
-          <textarea className="min-h-24 w-full rounded-md border border-border p-3 text-sm placeholder:text-gray-400" placeholder="Note" value={dialog.note} onChange={(event) => onNoteChange(event.target.value)} />
-        </FormField>
-        <div className="flex justify-end gap-2">
-          <ToolbarButton onClick={onCancel}>Cancel</ToolbarButton>
-          <ToolbarButton variant="primary" type="submit">Save</ToolbarButton>
-        </div>
-      </form>
-    </div>
+      </div>
+
+      <div className="overflow-x-auto rounded-md border border-border">
+        <table className="min-w-[920px] w-full text-sm">
+          <thead className="bg-surface text-left text-xs uppercase tracking-wide text-muted">
+            <tr>
+              <th className="px-3 py-2">Material Code</th>
+              <th className="px-3 py-2">Material Name</th>
+              <th className="px-3 py-2 text-right">Current Stock</th>
+              <th className="px-3 py-2">Quantity to Add</th>
+              <th className="px-3 py-2">Note</th>
+              <th className="px-3 py-2 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {drafts.length === 0 ? (
+              <tr>
+                <td className="px-3 py-6 text-center text-muted" colSpan={6}>No materials selected for Stock In.</td>
+              </tr>
+            ) : drafts.map((draft) => {
+              const item = itemsById.get(draft.materialId);
+              return (
+                <tr className="border-t border-border" key={draft.materialId}>
+                  <td className="whitespace-nowrap px-3 py-3 font-semibold">{item?.materialCode ?? "-"}</td>
+                  <td className="px-3 py-3">{item?.materialName ?? "-"}</td>
+                  <td className="whitespace-nowrap px-3 py-3 text-right">{formatNumber(item?.stockQuantity)} {item?.unit ?? ""}</td>
+                  <td className="px-3 py-3">
+                    <input
+                      className={fieldClassName(`w-full ${draft.error ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`)}
+                      inputMode="numeric"
+                      min="1"
+                      placeholder="Quantity"
+                      step="1"
+                      type="text"
+                      value={draft.quantity}
+                      onChange={(event) => onUpdate(draft.materialId, { quantity: formatInputNumber(event.target.value) })}
+                    />
+                    <FieldError message={draft.error} />
+                  </td>
+                  <td className="px-3 py-3">
+                    <input className={fieldClassName("w-full")} placeholder="Note" value={draft.note} onChange={(event) => onUpdate(draft.materialId, { note: event.target.value })} />
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-right">
+                    <button className="font-medium text-red-700" type="button" onClick={() => onRemove(draft.materialId)}>Remove</button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex justify-end border-t border-border pt-4">
+        <ToolbarButton disabled={drafts.length === 0} variant="primary" type="submit">Save Stock In</ToolbarButton>
+      </div>
+    </form>
   );
 }
 

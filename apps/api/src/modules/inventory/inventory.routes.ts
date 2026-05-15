@@ -8,6 +8,7 @@ import { AppError } from "../../utils/app-error";
 import { asyncHandler } from "../../utils/async-handler";
 import {
   adjustmentSchema,
+  batchStockInSchema,
   bulkMaterialDeactivateSchema,
   idParamSchema,
   inventoryCategoryCreateSchema,
@@ -29,6 +30,7 @@ import {
 import {
   createInventoryItem,
   createInventoryMovement,
+  createInventoryBatchStockIn,
   createInventoryStockIn,
   createInventoryStockOut,
   bulkDeactivateInventoryItems,
@@ -260,6 +262,15 @@ inventoryRouter.post(
     const { id } = idParamSchema.parse(req.params);
     const body = stockInOutSchema.parse(req.body);
     res.status(201).json({ status: "ok", data: await createInventoryStockIn(id, body, contextFromRequest(req)) });
+  })
+);
+
+inventoryRouter.post(
+  "/stock-in",
+  requirePermission("inventory.stock_in"),
+  asyncHandler(async (req, res) => {
+    const body = batchStockInSchema.parse(req.body);
+    res.status(201).json({ status: "ok", data: await createInventoryBatchStockIn(body, contextFromRequest(req)) });
   })
 );
 

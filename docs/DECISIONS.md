@@ -65,3 +65,5 @@ Selling Price is calculated from Purchase Price and Markup % using `purchasePric
 ## 2026-05-15 - Inventory Stock Movements
 
 Stock In and Stock Out use immutable `InventoryStockMovement` history records. Stock Out cannot reduce material stock below zero. Future correction, edit, or delete workflows should use reversal movements instead of hard-deleting stock movement history.
+
+Stock Out remains supported in backend history for existing data but is not part of the current Inventory Materials UI workflow. Stock In is batch-based in the Materials page, and batch Stock In is all-or-nothing inside one database transaction.

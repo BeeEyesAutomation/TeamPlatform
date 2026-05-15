@@ -405,3 +405,12 @@ Implemented:
 - Basic Stock In and Stock Out actions are available from the Materials list when the user has permission.
 - Stock In and Stock Out update material stock immediately and write immutable stock movement history with timestamp and user ID.
 - The Materials page includes a recent Inventory History section with time, user, material, type, quantity before/after, and note.
+
+## Batch Stock In UI Scope - 2026-05-15
+
+Implemented:
+
+- Stock Out is removed from the current Inventory Materials UI scope while historical records can still appear in history.
+- Stock In is a major Materials page section alongside Material Groups and Suppliers.
+- Stock In supports selecting multiple materials, entering one quantity per material, and saving all selected materials in one batch.
+- Batch Stock In is all-or-nothing and creates one transaction history record per material with timestamp and user.

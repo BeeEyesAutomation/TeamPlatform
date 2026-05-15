@@ -342,6 +342,7 @@ POST   /api/inventory/items/:id/issues
 POST   /api/inventory/items/:id/adjustments
 POST   /api/inventory/materials/:id/stock-in
 POST   /api/inventory/materials/:id/stock-out
+POST   /api/inventory/stock-in
 GET    /api/inventory/movements
 GET    /api/inventory/transactions
 
@@ -359,6 +360,8 @@ Inventory item payload fields include `materialName`, `categoryId`, `supplierId`
 Bulk material deactivation accepts `{ "ids": ["uuid"] }` and returns per-item results with `deactivated` or `skipped` plus a reason. Delete endpoints use soft deactivate to preserve stock history and audit logs.
 
 `POST /api/inventory/materials/:id/stock-in` and `POST /api/inventory/materials/:id/stock-out` accept `{ "quantity": number, "note": "optional" }`. Quantity is required and must be greater than 0. Stock Out rejects requests that would make stock negative with `Insufficient stock quantity.` Both endpoints run inside a database transaction, update material stock quantity, create an immutable stock movement, store the timestamp in `createdAt`, and store the current user in `createdById`.
+
+`POST /api/inventory/stock-in` accepts `{ "items": [{ "materialId": "uuid", "quantity": 10, "note": "optional" }] }` for batch Stock In. The batch is all-or-nothing inside one database transaction. Each item updates material stock and creates one Stock In transaction with timestamp and current user. Duplicate materials in the same request are rejected with `Duplicate material selected.` Stock Out is not currently exposed in the Inventory Materials UI.
 
 `GET /api/inventory/transactions` returns inventory movement history with material code/name, movement type, quantity before/after, timestamp, note, and created-by user details when available. Supported simple filters include `itemId`, `movementType`, `dateFrom`, `dateTo`, and `createdById`.
 

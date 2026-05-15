@@ -1,5 +1,61 @@
 # Implementation Log
 
+## 2026-05-15 - Batch Stock In and Hidden Stock Out UI
+
+### Current Phase
+
+Inventory Materials Stock In workflow refinement.
+
+### Scope
+
+- Remove Stock Out from the user-facing Materials UI only.
+- Add batch Stock In to the Materials page using the existing inventory stock movement model.
+- Keep backend Stock Out routes and historical stock movement records in place.
+- Keep HR, payroll, projects, email, import/export, reports, and unrelated UI out of scope.
+
+### Assumptions
+
+- Existing `InventoryStockMovement` is the transaction/history model for stock activity.
+- Duplicate materials in one batch are rejected rather than merged.
+
+### Result
+
+- Stock Out row actions and modal workflow were removed from the Materials page.
+- Stock In is now a major Materials page section available next to Material Groups and Suppliers.
+- Users can add selected table materials or add materials from a selector, enter quantity and note per material, then save once.
+- Added `POST /api/inventory/stock-in` for all-or-nothing batch Stock In.
+- Each batch item updates material stock and creates one Stock In movement with timestamp and current user.
+- Inventory History remains visible and may still show historical Stock Out records.
+
+### Changed Files Summary
+
+- `apps/api/src/modules/inventory/inventory.routes.ts`
+- `apps/api/src/modules/inventory/inventory.schemas.ts`
+- `apps/api/src/modules/inventory/inventory.service.ts`
+- `apps/web/features/inventory/inventory-api.ts`
+- `apps/web/features/inventory/inventory-client.tsx`
+- `API.md`
+- `docs/DECISIONS.md`
+- `docs/INVENTORY_PLAN.md`
+- `docs/IMPLEMENTATION_LOG.md`
+
+### Commands Run
+
+- `npm.cmd run typecheck --workspace apps/api`
+- `npm.cmd run typecheck --workspace apps/web`
+
+### Errors Found
+
+- None.
+
+### Fixes Applied
+
+- No retry was needed.
+
+### Known TODOs
+
+- Manual browser smoke test batch Stock In with multiple selected materials and validation errors.
+
 ## 2026-05-15 - Inventory Material Form Layout Polish
 
 ### Current Phase

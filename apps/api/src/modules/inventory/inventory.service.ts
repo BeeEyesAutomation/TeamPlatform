@@ -19,6 +19,7 @@ import type {
   issueSchema,
   stockMovementCreateSchema,
   stockMovementQuerySchema,
+  batchStockInSchema,
   bulkMaterialDeactivateSchema
 } from "./inventory.schemas";
 
@@ -36,6 +37,7 @@ type MovementCreate = z.infer<typeof stockMovementCreateSchema>;
 type ReceiptInput = z.infer<typeof receiptSchema>;
 type IssueInput = z.infer<typeof issueSchema>;
 type AdjustmentInput = z.infer<typeof adjustmentSchema>;
+type BatchStockInInput = z.infer<typeof batchStockInSchema>;
 type BulkDeactivateInput = z.infer<typeof bulkMaterialDeactivateSchema>;
 type ItemCreateWithCode = ItemCreate & { materialCode: string };
 
@@ -597,6 +599,68 @@ export async function createInventoryStockIn(itemId: string, data: Pick<ReceiptI
 export async function createInventoryStockOut(itemId: string, data: Pick<IssueInput, "quantity" | "note">, context: RequestContext) {
   const result = await applyInventoryMovement(itemId, { ...data, movementType: "issue" }, context);
   return { item: result.item, transaction: result.movement };
+}
+
+export async function createInventoryBatchStockIn(data: BatchStockInInput, context: RequestContext) {
+  const result = await prisma.$transaction(async (tx) => {
+    const materialIds = data.items.map((item) => item.materialId);
+    const materials = await tx.inventoryItem.findMany({
+      where: { id: { in: materialIds }, deletedAt: null },
+      include: itemInclude
+    });
+    const materialsById = new Map(materials.map((item) => [item.id, item]));
+    if (materials.length !== materialIds.length) throw new AppError(404, "Material not found.");
+
+    const updatedItems = [];
+    const movements = [];
+
+    for (const input of data.items) {
+      const item = materialsById.get(input.materialId);
+      if (!item) throw new AppError(404, "Material not found.");
+      const previousStock = Number(item.stockQuantity);
+      const resultingStock = previousStock + input.quantity;
+      const updatedItem = await tx.inventoryItem.update({
+        where: { id: input.materialId },
+        data: { stockQuantity: resultingStock.toString(), updatedById: context.actorId },
+        include: itemInclude
+      });
+      const movement = await tx.inventoryStockMovement.create({
+        data: {
+          itemId: input.materialId,
+          movementType: "receipt",
+          quantity: input.quantity.toString(),
+          previousStock: previousStock.toString(),
+          resultingStock: resultingStock.toString(),
+          note: input.note,
+          createdById: context.actorId
+        },
+        include: movementInclude
+      });
+      updatedItems.push(updatedItem);
+      movements.push(movement);
+    }
+
+    return { items: updatedItems, transactions: movements };
+  });
+
+  await createAuditLog({
+    actorId: context.actorId,
+    action: "batch_stock_in",
+    module: "inventory",
+    targetType: "inventory_stock_movement",
+    targetId: result.transactions[0]?.id,
+    newValue: result,
+    metadata: {
+      materialCount: result.items.length,
+      totalQuantity: data.items.reduce((sum, item) => sum + item.quantity, 0),
+      createdById: context.actorId,
+      timestamp: new Date().toISOString()
+    },
+    ipAddress: context.ipAddress,
+    userAgent: context.userAgent
+  });
+
+  return result;
 }
 
 export async function getInventorySummary() {
