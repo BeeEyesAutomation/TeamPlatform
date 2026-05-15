@@ -1,5 +1,61 @@
 # Implementation Log
 
+## 2026-05-15 - Inventory Material Entry Internal Server Error Follow-up
+
+### Symptoms
+
+- Browser still showed `Internal server error` when adding a material.
+
+### Root Cause
+
+- The web app was running with `NEXT_PUBLIC_API_URL="https://api.teamrobotics.vn"` in local `apps/web/.env.local`, so the browser was calling the remote API instead of the fixed local API at `http://localhost:4000`.
+- The local API/database create flow works after the `inventory_items.model` column fix.
+
+### Scope
+
+- Local development configuration and verification only.
+- No backend API, Prisma schema, Stock In behavior, Material Code generation, or Selling Price calculation changes.
+
+### Result
+
+- Updated ignored local web env file to use `http://localhost:4000`.
+- Restarted local API and web dev servers so Next.js picks up the changed API URL.
+- Verified local material create and inventory material search through the API.
+- Soft-deactivated the temporary smoke/debug materials created during verification.
+
+### Changed Files Summary
+
+- `apps/web/.env.local` local ignored file
+- `docs/IMPLEMENTATION_LOG.md`
+
+### Commands Run
+
+- `Invoke-RestMethod POST http://localhost:4000/api/auth/login`
+- `Invoke-RestMethod POST http://localhost:4000/api/inventory/materials`
+- `Invoke-RestMethod GET http://localhost:4000/api/inventory/materials?search=...`
+- `Invoke-RestMethod DELETE http://localhost:4000/api/inventory/materials/:id`
+
+### Verification Steps
+
+- Local API returned `401` for unauthenticated inventory list, confirming the API is reachable.
+- Admin login succeeded locally.
+- Material create succeeded locally and returned generated code `VS00005`.
+- Search by the created material name returned one result.
+
+### Errors Found
+
+- None after pointing the web app to the local API.
+
+### Fixes Applied
+
+- Changed local web API URL from remote production API to local API.
+- Restarted local dev servers.
+
+### Known TODOs
+
+- Refresh the browser or reopen `http://localhost:3000` after the restart.
+- If testing the deployed website, the remote API/database must also have the `inventory_items.model` migration applied.
+
 ## 2026-05-15 - Inventory Create and Stock In Search Bugfix
 
 ### Symptoms
