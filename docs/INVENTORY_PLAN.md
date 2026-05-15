@@ -364,3 +364,13 @@ Implemented:
 - Category `department` field.
 - Inline material add/edit/deactivate and bulk deactivate on the material list page.
 - Category and supplier list pages now support edit and deactivate in place.
+
+## Materials Workspace Refinement - 2026-05-15
+
+Implemented:
+
+- Category/group and supplier management are embedded inside the Materials page as inline panels.
+- Material image upload stores local files under API local storage and saves only `imageUrl` on the material record.
+- Material tables show image thumbnails when `imageUrl` is available.
+- Empty numeric create inputs stay empty and submit as omitted values instead of converting empty strings to `0`.
+- Inputs use gray placeholder examples such as `Unit`, `Purchase price`, `Minimum stock`, and `Material name`.

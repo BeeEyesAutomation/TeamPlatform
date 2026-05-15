@@ -2,18 +2,24 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { errorHandler } from "./middleware/error-handler";
 import { notFoundHandler } from "./middleware/not-found-handler";
 import { apiRouter } from "./routes";
 
+const appDir = path.dirname(fileURLToPath(import.meta.url));
+const uploadsDir = path.resolve(appDir, "../uploads");
+
 export const createApp = () => {
   const app = express();
 
-  app.use(helmet());
+  app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
   app.use(cors());
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: true }));
   app.use(morgan("dev"));
+  app.use("/uploads", express.static(uploadsDir));
 
   app.get("/health", (_req, res) => {
     res.json({ status: "ok" });

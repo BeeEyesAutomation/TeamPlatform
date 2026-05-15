@@ -1,0 +1,7 @@
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Error:
+EPERM: operation not permitted, rename 'C:\TeamPlatform\node_modules\.prisma\client\query_engine-windows.dll.node.tmp15740' -> 'C:\TeamPlatform\node_modules\.prisma\client\query_engine-windows.dll.node'
+
+Classification: unknown
+Fix: stop local Node processes that may hold the Prisma engine DLL, then retry once.

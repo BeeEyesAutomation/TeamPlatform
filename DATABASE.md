@@ -722,6 +722,7 @@ stock_quantity
 minimum_stock_quantity
 unit
 status
+image_url
 description
 metadata
 created_by_id

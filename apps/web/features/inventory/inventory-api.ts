@@ -1,4 +1,4 @@
-import { apiGet, apiJson } from "../../lib/api-client";
+import { apiForm, apiGet, apiJson } from "../../lib/api-client";
 import type { InventoryCategory, InventoryItem, InventoryStockMovement, InventorySupplier, InventorySummary, ListResponse } from "../../types/inventory";
 
 const buildQuery = (params: Record<string, string | number | boolean | undefined> = {}) => {
@@ -22,6 +22,12 @@ export const deleteInventoryItem = (id: string) => apiJson<InventoryItem>(`/api/
 
 export const bulkDeactivateInventoryItems = (ids: string[]) =>
   apiJson<{ results: Array<{ id: string; status: string; reason: string }> }>("/api/inventory/materials/bulk-deactivate", "POST", { ids });
+
+export const uploadInventoryItemImage = (id: string, file: File) => {
+  const body = new FormData();
+  body.append("image", file);
+  return apiForm<InventoryItem>(`/api/inventory/materials/${id}/image`, "POST", body);
+};
 
 export const fetchInventoryCategories = (params: Record<string, string | number | boolean | undefined> = {}) =>
   apiGet<ListResponse<InventoryCategory>>(`/api/inventory/categories${buildQuery(params)}`);

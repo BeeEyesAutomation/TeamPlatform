@@ -1,0 +1,8 @@
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "team_platform", schema "public" at "localhost:5432"
+
+Error: Prisma Migrate has detected that the environment is non-interactive, which is not supported.
+
+Classification: migration_error
+Fix: retry once after format/validate/generate, then apply existing migration SQL directly and mark it applied if retry fails.

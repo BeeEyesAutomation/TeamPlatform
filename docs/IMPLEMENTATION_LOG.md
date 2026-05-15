@@ -1,5 +1,80 @@
 # Implementation Log
 
+## 2026-05-15 - Refine Inventory Materials Page UX and Images
+
+### Current Phase
+
+Inventory Materials workspace refinement.
+
+### Scope
+
+- Embed category/group and supplier management inside the Materials page.
+- Add local material image upload and thumbnail display.
+- Keep empty numeric inputs empty until the user enters a value.
+- Add gray placeholder examples for material form inputs.
+- Keep stock in/out, reports, dashboards, and unrelated modules out of scope.
+
+### Assumptions
+
+- Local API storage is acceptable for material images in development.
+- Existing non-null numeric database defaults remain in place; omitted create values use database defaults and empty update values are omitted.
+
+### Result
+
+- Materials page now manages materials, categories, and suppliers from one workspace.
+- Material images upload through `POST /api/inventory/materials/:id/image`, store under local `/uploads/materials/`, and return `imageUrl`.
+- Express serves local uploads from `/uploads`.
+- Material list shows image thumbnails and keeps existing bulk deactivate behavior.
+- Category and supplier panels refresh dropdown data immediately after save/deactivate.
+
+### Changed Files Summary
+
+- `apps/api/package.json`
+- `package-lock.json`
+- `apps/api/prisma/schema.prisma`
+- `apps/api/prisma/migrations/20260515113000_inventory_material_images/migration.sql`
+- `apps/api/src/app.ts`
+- `apps/api/src/modules/inventory/inventory.routes.ts`
+- `apps/api/src/modules/inventory/inventory.schemas.ts`
+- `apps/api/src/modules/inventory/inventory.service.ts`
+- `apps/web/lib/api-client.ts`
+- `apps/web/components/ui/controls.tsx`
+- `apps/web/features/inventory/inventory-api.ts`
+- `apps/web/features/inventory/inventory-client.tsx`
+- `apps/web/types/inventory.ts`
+- `API.md`
+- `DATABASE.md`
+- `docs/INVENTORY_PLAN.md`
+- `docs/IMPLEMENTATION_LOG.md`
+- `docs/logs/2026-05-15_inventory-materials-page-refine_*.log`
+
+### Commands Run
+
+- `npm install multer --workspace apps/api`
+- `npm install -D @types/multer --workspace apps/api`
+- `npx prisma format`
+- `npx prisma validate`
+- `npx prisma generate`
+- `npx prisma migrate dev --name inventory_material_images`
+- `npx prisma db execute --file prisma/migrations/20260515113000_inventory_material_images/migration.sql --schema prisma/schema.prisma`
+- `npx prisma migrate resolve --applied 20260515113000_inventory_material_images --schema prisma/schema.prisma`
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+- `Invoke-WebRequest -Uri http://localhost:4000/health`
+- Targeted API smoke checks for materials, categories, suppliers, and upload endpoint validation
+
+### Failures and Logs
+
+- `docs/logs/2026-05-15_inventory-materials-page-refine_npm-install.log` - `config_error`; PowerShell command syntax issues were fixed by rerunning the affected commands with PowerShell-safe syntax.
+- `docs/logs/2026-05-15_inventory-materials-page-refine_prisma-generate.log` - `unknown`; Prisma engine DLL was locked by running Node processes. Stopped the API Node processes and retried once successfully.
+- `docs/logs/2026-05-15_inventory-materials-page-refine_prisma-migrate-dev.log` - `migration_error`; `migrate dev` is blocked by the non-interactive shell. Applied the migration SQL directly and marked it applied.
+
+### Remaining TODOs
+
+- Restart the API server after this change so `/uploads` static serving and the upload endpoint are active.
+- Browser smoke test image file selection/preview and category/supplier inline panels.
+
+
 ## 2026-05-15 - Refine Inventory List, Categories, and Suppliers
 
 ### Current Phase

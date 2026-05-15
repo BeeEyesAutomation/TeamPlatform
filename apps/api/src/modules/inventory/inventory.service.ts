@@ -68,6 +68,7 @@ const itemCreateData = (data: ItemCreate, actorId?: string): Prisma.InventoryIte
   supplierId: data.supplierId,
   unit: data.unit,
   status: data.status,
+  imageUrl: data.imageUrl,
   description: data.description,
   createdById: actorId,
   updatedById: actorId,
@@ -81,6 +82,7 @@ const itemUpdateData = (data: ItemUpdate, actorId?: string): Prisma.InventoryIte
   ...(data.supplierId !== undefined ? { supplierId: data.supplierId } : {}),
   ...(data.unit !== undefined ? { unit: data.unit } : {}),
   ...(data.status !== undefined ? { status: data.status } : {}),
+  ...(data.imageUrl !== undefined ? { imageUrl: data.imageUrl } : {}),
   ...(data.description !== undefined ? { description: data.description } : {}),
   updatedById: actorId,
   ...decimalData(data)
@@ -183,6 +185,27 @@ export async function deactivateInventoryItem(id: string, context: RequestContex
   await createAuditLog({
     actorId: context.actorId,
     action: "deactivate",
+    module: "inventory",
+    targetType: "inventory_item",
+    targetId: id,
+    oldValue: existing,
+    newValue: item,
+    ipAddress: context.ipAddress,
+    userAgent: context.userAgent
+  });
+  return item;
+}
+
+export async function updateInventoryItemImage(id: string, imageUrl: string, context: RequestContext) {
+  const existing = await getInventoryItem(id);
+  const item = await prisma.inventoryItem.update({
+    where: { id },
+    data: { imageUrl, updatedById: context.actorId },
+    include: itemInclude
+  });
+  await createAuditLog({
+    actorId: context.actorId,
+    action: "update_image",
     module: "inventory",
     targetType: "inventory_item",
     targetId: id,

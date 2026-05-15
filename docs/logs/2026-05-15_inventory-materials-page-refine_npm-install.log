@@ -1,0 +1,16 @@
+At line:2 char:41
++ npm install multer --workspace apps/api && npm install -D @types/mult ...
++                                         ~~
+The token '&&' is not a valid statement separator in this version.
+
+Classification: config_error
+Fix: run npm install commands separately in PowerShell.
+At line:3 char:279
+Unexpected token around @map("image_url") while building a synthetic staged schema file.
+
+Classification: config_error
+Fix: rerun the synthetic staging script using PowerShell here-strings for replacement text.
+A cached diff inspection command failed because a PowerShell string was quoted incorrectly.
+
+Classification: config_error
+Fix: skipped the optional inspection command; `git diff --cached --check` passed.

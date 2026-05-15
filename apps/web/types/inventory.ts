@@ -41,6 +41,7 @@ export interface InventoryItem {
   minimumStockQuantity: string | number;
   unit: string;
   status: InventoryItemStatus;
+  imageUrl?: string | null;
   description?: string | null;
   category?: Pick<InventoryCategory, "id" | "code" | "name"> | null;
   supplier?: Pick<InventorySupplier, "id" | "code" | "name"> | null;

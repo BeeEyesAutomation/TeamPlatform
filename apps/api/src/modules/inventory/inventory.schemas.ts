@@ -7,6 +7,7 @@ const optionalUuidSchema = z.preprocess(emptyToUndefined, z.string().uuid().opti
 const optionalTextSchema = z.preprocess(emptyToUndefined, z.string().trim().max(5000).optional());
 const optionalShortTextSchema = z.preprocess(emptyToUndefined, z.string().trim().max(255).optional());
 const nonNegativeDecimalSchema = z.coerce.number().min(0);
+const optionalNonNegativeDecimalSchema = z.preprocess(emptyToUndefined, nonNegativeDecimalSchema.optional());
 const positiveDecimalSchema = z.coerce.number().positive();
 
 export const idParamSchema = z.object({
@@ -30,13 +31,14 @@ export const inventoryItemCreateSchema = z.object({
   materialName: z.string().trim().min(1).max(255),
   categoryId: z.string().uuid(),
   supplierId: z.string().uuid(),
-  purchasePrice: nonNegativeDecimalSchema.default(0),
-  sellingPrice: nonNegativeDecimalSchema.default(0),
-  markupPercentage: nonNegativeDecimalSchema.default(0),
-  stockQuantity: nonNegativeDecimalSchema.default(0),
-  minimumStockQuantity: nonNegativeDecimalSchema.default(0),
+  purchasePrice: optionalNonNegativeDecimalSchema,
+  sellingPrice: optionalNonNegativeDecimalSchema,
+  markupPercentage: optionalNonNegativeDecimalSchema,
+  stockQuantity: optionalNonNegativeDecimalSchema,
+  minimumStockQuantity: optionalNonNegativeDecimalSchema,
   unit: z.string().trim().min(1).max(50),
   status: inventoryStatusSchema.default("active"),
+  imageUrl: z.preprocess(emptyToUndefined, z.string().trim().max(1000).optional()),
   description: optionalTextSchema
 });
 

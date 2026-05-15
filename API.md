@@ -320,6 +320,7 @@ POST   /api/inventory/materials
 GET    /api/inventory/materials/:id
 PUT    /api/inventory/materials/:id
 DELETE /api/inventory/materials/:id
+POST   /api/inventory/materials/:id/image
 POST   /api/inventory/materials/bulk-deactivate
 POST   /api/inventory/materials/bulk-delete
 
@@ -345,7 +346,9 @@ GET    /api/inventory/reports/low-stock
 GET    /api/inventory/reports/movements
 ```
 
-Inventory item payload fields include `materialCode`, `materialName`, `categoryId`, `supplierId`, `purchasePrice`, `sellingPrice`, `markupPercentage`, `stockQuantity`, `minimumStockQuantity`, `unit`, `status`, and `description`. `categoryId` and `supplierId` are required. List requests support `search` by material code or material name plus category, supplier, status, and stock-status filters.
+Inventory item payload fields include `materialCode`, `materialName`, `categoryId`, `supplierId`, `imageUrl`, `purchasePrice`, `sellingPrice`, `markupPercentage`, `stockQuantity`, `minimumStockQuantity`, `unit`, `status`, and `description`. `categoryId` and `supplierId` are required. List requests support `search` by material code or material name plus category, supplier, status, and stock-status filters.
+
+`POST /api/inventory/materials/:id/image` accepts multipart form field `image` with jpg, jpeg, png, or webp up to 5MB. Files are stored in local API storage under `/uploads/materials/`, and the material record stores only the returned `imageUrl` path.
 
 Bulk material deactivation accepts `{ "ids": ["uuid"] }` and returns per-item results with `deactivated` or `skipped` plus a reason. Delete endpoints use soft deactivate to preserve stock history and audit logs.
 

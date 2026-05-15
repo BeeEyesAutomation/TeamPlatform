@@ -1,5 +1,10 @@
 import { Router, type Request } from "express";
+import multer from "multer";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { requireAuth, requirePermission } from "../../middleware/rbac";
+import { AppError } from "../../utils/app-error";
 import { asyncHandler } from "../../utils/async-handler";
 import {
   adjustmentSchema,
@@ -34,10 +39,35 @@ import {
   listInventorySuppliers,
   saveInventoryCategory,
   saveInventorySupplier,
-  updateInventoryItem
+  updateInventoryItem,
+  updateInventoryItemImage
 } from "./inventory.service";
 
 export const inventoryRouter = Router();
+
+const routeDir = path.dirname(fileURLToPath(import.meta.url));
+const materialUploadDir = path.resolve(routeDir, "../../../uploads/materials");
+fs.mkdirSync(materialUploadDir, { recursive: true });
+
+const allowedImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const imageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, materialUploadDir),
+    filename: (req, file, cb) => {
+      const { id } = idParamSchema.parse(req.params);
+      const extension = path.extname(file.originalname).toLowerCase() || ".jpg";
+      cb(null, `${id}-${Date.now()}${extension}`);
+    }
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (!allowedImageTypes.has(file.mimetype)) {
+      cb(new AppError(400, "Only jpg, jpeg, png, and webp images are supported"));
+      return;
+    }
+    cb(null, true);
+  }
+});
 
 const contextFromRequest = (req: Request) => ({
   actorId: req.user?.id,
@@ -154,6 +184,18 @@ inventoryRouter.delete(
   asyncHandler(async (req, res) => {
     const { id } = idParamSchema.parse(req.params);
     res.json({ status: "ok", data: await deactivateInventoryItem(id, contextFromRequest(req)) });
+  })
+);
+
+inventoryRouter.post(
+  "/materials/:id/image",
+  requirePermission("inventory.manage"),
+  imageUpload.single("image"),
+  asyncHandler(async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    if (!req.file) throw new AppError(400, "Image file is required");
+    const imageUrl = `/uploads/materials/${req.file.filename}`;
+    res.json({ status: "ok", data: await updateInventoryItemImage(id, imageUrl, contextFromRequest(req)) });
   })
 );
 

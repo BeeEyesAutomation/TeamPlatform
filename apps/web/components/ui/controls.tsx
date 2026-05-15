@@ -20,5 +20,5 @@ export function ToolbarButton({ children, variant = "secondary", className = "",
 }
 
 export function fieldClassName(extra = "") {
-  return `h-10 rounded-md border border-border bg-white px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:bg-slate-100 ${extra}`;
+  return `h-10 rounded-md border border-border bg-white px-3 text-sm outline-none placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:bg-slate-100 ${extra}`;
 }
