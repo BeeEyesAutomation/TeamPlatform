@@ -50,7 +50,8 @@ export const fetchIssues = (projectId: string) => apiGet<ProjectIssue[]>(`/api/p
 export const createIssue = (projectId: string, body: Record<string, unknown>) => apiJson<ProjectIssue>(`/api/projects/${projectId}/issues`, "POST", body);
 export const closeIssue = (id: string) => apiJson<ProjectIssue>(`/api/project-issues/${id}/close`, "POST");
 
-export const fetchMaterials = (projectId: string) => apiGet<ProjectMaterial[]>(`/api/projects/${projectId}/materials`);
+export const fetchMaterials = (projectId: string, params: Record<string, string | number | undefined> = {}) =>
+  apiGet<ProjectMaterial[]>(`/api/projects/${projectId}/materials${buildQuery(params)}`);
 export const createMaterial = (projectId: string, body: Record<string, unknown>) => apiJson<ProjectMaterial>(`/api/projects/${projectId}/materials`, "POST", body);
 
 export const fetchCosts = (projectId: string) => apiGet<ProjectCost[]>(`/api/projects/${projectId}/costs`);

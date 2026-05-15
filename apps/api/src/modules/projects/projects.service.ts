@@ -11,6 +11,7 @@ import type {
   issueCreateSchema,
   issueUpdateSchema,
   materialCreateSchema,
+  materialQuerySchema,
   materialUpdateSchema,
   memberCreateSchema,
   memberUpdateSchema,
@@ -37,6 +38,7 @@ type TaskProgress = z.infer<typeof taskProgressSchema>;
 type IssueCreate = z.infer<typeof issueCreateSchema>;
 type IssueUpdate = z.infer<typeof issueUpdateSchema>;
 type MaterialCreate = z.infer<typeof materialCreateSchema>;
+type MaterialQuery = z.infer<typeof materialQuerySchema>;
 type MaterialUpdate = z.infer<typeof materialUpdateSchema>;
 type CostCreate = z.infer<typeof costCreateSchema>;
 type CostUpdate = z.infer<typeof costUpdateSchema>;
@@ -581,8 +583,21 @@ export async function reopenIssue(id: string, context: RequestContext) {
   return issue;
 }
 
-export function listMaterials(projectId: string) {
-  return prisma.projectMaterial.findMany({ where: { projectId }, orderBy: [{ status: "asc" }, { materialName: "asc" }] });
+export function listMaterials(projectId: string, query: MaterialQuery = {}) {
+  return prisma.projectMaterial.findMany({
+    where: {
+      projectId,
+      ...(query.search
+        ? {
+            OR: [
+              { materialCode: { contains: query.search, mode: "insensitive" as const } },
+              { materialName: { contains: query.search, mode: "insensitive" as const } }
+            ]
+          }
+        : {})
+    },
+    orderBy: [{ status: "asc" }, { materialName: "asc" }]
+  });
 }
 
 export async function createMaterial(projectId: string, data: MaterialCreate, context: RequestContext) {

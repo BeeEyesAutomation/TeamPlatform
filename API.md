@@ -211,6 +211,8 @@ PUT    /api/project-materials/:id
 DELETE /api/project-materials/:id
 ```
 
+Material payload fields include `materialCode`, `materialName`, `unit`, `plannedQuantity`, `usedQuantity`, `remainingQuantity`, `estimatedUnitPrice`, `actualUnitPrice`, `supplierName`, `neededDate`, `status`, and `note`. List requests support `search` by material code or material name.
+
 ## Purchase Requests
 
 ```txt

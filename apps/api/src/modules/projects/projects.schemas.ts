@@ -108,6 +108,9 @@ export const materialCreateSchema = z.object({
 });
 
 export const materialUpdateSchema = materialCreateSchema.partial();
+export const materialQuerySchema = z.object({
+  search: z.preprocess(emptyToUndefined, z.string().trim().max(255).optional())
+});
 
 export const costCreateSchema = z.object({
   costType: z.string().trim().min(1).max(100),

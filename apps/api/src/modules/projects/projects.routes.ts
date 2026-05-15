@@ -52,6 +52,7 @@ import {
   issueCreateSchema,
   issueUpdateSchema,
   materialCreateSchema,
+  materialQuerySchema,
   materialUpdateSchema,
   memberCreateSchema,
   memberUpdateSchema,
@@ -181,7 +182,8 @@ projectsRouter.post("/:projectId/issues", requirePermission("projects.manage"), 
 
 projectsRouter.get("/:projectId/materials", requirePermission("projects.view"), asyncHandler(async (req, res) => {
   const { projectId } = projectIdParamSchema.parse(req.params);
-  res.json({ status: "ok", data: await listMaterials(projectId) });
+  const query = materialQuerySchema.parse(req.query);
+  res.json({ status: "ok", data: await listMaterials(projectId, query) });
 }));
 
 projectsRouter.post("/:projectId/materials", requirePermission("projects.manage"), asyncHandler(async (req, res) => {

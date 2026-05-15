@@ -1,5 +1,75 @@
 # Implementation Log
 
+## 2026-05-15 - Add Material Name Search to Materials
+
+### Current Phase
+
+Inventory/materials update: ensure material name is consistently available and searchable.
+
+### Scope
+
+- Verify the existing project materials model and API already include required `materialName`.
+- Add material code/material name search to the materials list API.
+- Add a material search input to the existing project materials frontend list.
+- Document the project material API fields.
+- Do not implement stock in/out, inventory dashboards, or unrelated module changes.
+
+### Assumptions
+
+- The existing materials implementation is the project materials module; no separate inventory-item module exists in the tracked source.
+- `ProjectMaterial.materialName` is already required in Prisma and validation, so no schema migration is needed.
+- Existing unrelated working tree changes are out of scope and remain untouched.
+
+### Result
+
+- Confirmed `materialName` exists in Prisma, backend validation, list/create/update responses, frontend list/form, and import/export helpers.
+- Added `search` query support for project materials by `materialCode` or `materialName`.
+- Added a frontend search input on the project materials tab.
+- Updated `API.md` to list project material payload fields and search behavior.
+
+### Changed Files Summary
+
+- `API.md`
+- `apps/api/src/modules/projects/projects.routes.ts`
+- `apps/api/src/modules/projects/projects.schemas.ts`
+- `apps/api/src/modules/projects/projects.service.ts`
+- `apps/web/features/projects/project-detail-client.tsx`
+- `apps/web/features/projects/projects-api.ts`
+- `docs/IMPLEMENTATION_LOG.md`
+
+### Commands Run
+
+- `Get-Content -Raw AGENTS.md`
+- `Get-Content -Raw docs\IMPLEMENTATION_LOG.md`
+- `if (Test-Path docs\INVENTORY_PLAN.md) { Get-Content -Raw docs\INVENTORY_PLAN.md }`
+- `Select-String -Path DATABASE.md -Pattern 'inventory|material|materials|stock' -Context 3,8`
+- `Select-String -Path API.md -Pattern 'inventory|material|materials|stock' -Context 3,8`
+- `rg --files apps\api\src apps\web | rg "(inventory|material|materials)"`
+- `Select-String -Path apps\api\prisma\schema.prisma -Pattern 'model .*Material|Inventory|materialName|materialCode|stockQuantity' -Context 0,30`
+- `rg -n "projectMaterials|ProjectMaterial|materialName|materialCode|materials" apps\api\src\modules\projects apps\web\features\projects apps\web\types apps\web\app\projects`
+- `rg -n "project-materials|project materials|materialName|materialCode" apps\api\src docs API.md DATABASE.md`
+- `rg -n "stockQuantity|minimumStock|minimumStockQuantity|purchasePrice|sellingPrice|markupPercentage|InventoryItem|inventoryItem|materialName" apps\api apps\web docs DATABASE.md API.md`
+- `Get-Content -Raw apps\api\src\modules\projects\projects.schemas.ts`
+- `Get-Content -Raw apps\api\src\modules\projects\projects.service.ts`
+- `Get-Content -Raw apps\api\src\modules\projects\projects.routes.ts`
+- `Get-Content -Raw apps\web\features\projects\project-detail-client.tsx`
+- `Get-Content -Raw apps\web\features\projects\projects-api.ts`
+- `Get-Content -Raw apps\web\types\projects.ts`
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/api *>&1 | Tee-Object -FilePath docs\logs\2026-05-15_material-name_api-typecheck.log`
+- `npm run typecheck --workspace apps/web`
+- `git diff --check -- API.md apps/api/src/modules/projects/projects.routes.ts apps/api/src/modules/projects/projects.schemas.ts apps/api/src/modules/projects/projects.service.ts apps/web/features/projects/project-detail-client.tsx apps/web/features/projects/projects-api.ts docs/IMPLEMENTATION_LOG.md docs/logs/2026-05-15_material-name_api-typecheck.log`
+
+### Failures and Logs
+
+- `docs/logs/2026-05-15_material-name_api-typecheck.log` - `type_error`; API typecheck failed because unrelated untracked duplicate files are included by TypeScript:
+  - `apps/api/src/middleware/authenticate (1).ts`
+  - `apps/api/src/modules/auth/auth (1).service.ts`
+- No fix was applied because those files are unrelated to this inventory/material task.
+
+### Remaining TODOs
+
+- Remove or reconcile the unrelated duplicate ` (1)` TypeScript files, then rerun `npm run typecheck --workspace apps/api`.
 ## 2026-05-15 - Documentation Token and Context Optimization Rules
 
 ### Current Phase

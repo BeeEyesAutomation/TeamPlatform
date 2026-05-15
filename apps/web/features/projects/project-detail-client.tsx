@@ -41,6 +41,7 @@ export function ProjectDetailClient({ id }: { id: string }) {
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [issues, setIssues] = useState<ProjectIssue[]>([]);
   const [materials, setMaterials] = useState<ProjectMaterial[]>([]);
+  const [materialSearch, setMaterialSearch] = useState("");
   const [costs, setCosts] = useState<ProjectCost[]>([]);
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [timeline, setTimeline] = useState<ProjectTimelineEntry[]>([]);
@@ -54,7 +55,7 @@ export function ProjectDetailClient({ id }: { id: string }) {
         fetchPlans(id),
         fetchTasks(id),
         fetchIssues(id),
-        fetchMaterials(id),
+        fetchMaterials(id, { search: materialSearch }),
         fetchCosts(id),
         fetchMembers(id),
         fetchProjectTimeline(id)
@@ -76,7 +77,7 @@ export function ProjectDetailClient({ id }: { id: string }) {
 
   useEffect(() => {
     void load();
-  }, [id]);
+  }, [id, materialSearch]);
 
   const visibleTasks = useMemo(() => tasks.slice(0, 8), [tasks]);
 
@@ -176,6 +177,7 @@ export function ProjectDetailClient({ id }: { id: string }) {
 
       {activeTab === "materials" ? (
         <Collection title="Vat tu" headers={["Ma", "Ten", "Ke hoach", "Da dung", "Trang thai"]} rows={materials.map((material) => [material.materialCode, material.materialName, `${material.plannedQuantity} ${material.unit}`, material.usedQuantity, material.status])}>
+          <input className="h-10 rounded-md border border-border px-3 text-sm" value={materialSearch} onChange={(event) => setMaterialSearch(event.target.value)} placeholder="Search material code or name" />
           <MiniForm enabled={canManage} fields={["materialCode", "materialName", "unit", "plannedQuantity"]} submitLabel="Them vat tu" onSubmit={(body) => createMaterial(id, body)} reload={load} />
         </Collection>
       ) : null}
