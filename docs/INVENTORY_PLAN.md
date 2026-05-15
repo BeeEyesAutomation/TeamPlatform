@@ -423,3 +423,12 @@ Implemented:
 - Autocomplete suggestions show Material Code, Material Name, Current Stock, and Unit.
 - Selecting a suggestion auto-loads Material Code, Material Name, Current Stock, Unit, and the internal Material ID.
 - Duplicate selected materials are blocked and highlighted in the Stock In list.
+
+## Add New Material Section Tab - 2026-05-15
+
+Implemented:
+
+- Add New Material is now a main Materials page section next to Stock In.
+- The material form is no longer shown by default.
+- Opening Add New Material hides Stock In, Material Groups, and Suppliers sections.
+- Editing a material opens the same section with edit-specific title and save button text.

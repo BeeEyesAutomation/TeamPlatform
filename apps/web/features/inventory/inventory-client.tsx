@@ -66,7 +66,7 @@ const emptySupplierForm = {
   status: "active"
 };
 
-type CatalogPanel = "categories" | "suppliers" | "stock-in" | "";
+type CatalogPanel = "material" | "categories" | "suppliers" | "stock-in" | "";
 type StockInDraft = { materialId: string; quantity: string; note: string; error?: string };
 
 const numberOrUndefined = (value: string) => parseFormattedNumber(value);
@@ -191,6 +191,20 @@ export function InventoryClient() {
     setImagePreview("");
   }
 
+  function openMaterialForm() {
+    if (catalogPanel === "material" && !form.id) {
+      setCatalogPanel("");
+      return;
+    }
+    resetMaterialForm();
+    setCatalogPanel("material");
+  }
+
+  function closeMaterialForm() {
+    resetMaterialForm();
+    setCatalogPanel("");
+  }
+
   function edit(item: InventoryItem) {
     setForm({
       id: item.id,
@@ -212,6 +226,7 @@ export function InventoryClient() {
     setImagePreview("");
     setMaterialErrors({});
     setMessage("");
+    setCatalogPanel("material");
   }
 
   function clearMaterialError(field: MaterialFormField) {
@@ -275,8 +290,10 @@ export function InventoryClient() {
       if (imageFile) {
         await uploadInventoryItemImage(response.data.id, imageFile);
       }
+      const wasEditing = Boolean(form.id);
       resetMaterialForm();
-      setMessage("Material saved.");
+      setCatalogPanel("");
+      setMessage(wasEditing ? "Material saved." : "Material added successfully.");
       await load();
     } catch (err) {
       const details = err instanceof Error ? err.message : "Cannot save material.";
@@ -468,9 +485,10 @@ export function InventoryClient() {
       </div>
 
       <div className="flex flex-wrap gap-2">
+        {canManage ? <ToolbarButton variant={catalogPanel === "material" ? "primary" : "secondary"} onClick={openMaterialForm}>Add New Material</ToolbarButton> : null}
+        {canStockIn ? <ToolbarButton variant={catalogPanel === "stock-in" ? "primary" : "secondary"} onClick={() => setCatalogPanel(catalogPanel === "stock-in" ? "" : "stock-in")}>Stock In</ToolbarButton> : null}
         {canManageCategories ? <ToolbarButton variant={catalogPanel === "categories" ? "primary" : "secondary"} onClick={() => setCatalogPanel(catalogPanel === "categories" ? "" : "categories")}>Manage Material Groups</ToolbarButton> : null}
         {canManageSuppliers ? <ToolbarButton variant={catalogPanel === "suppliers" ? "primary" : "secondary"} onClick={() => setCatalogPanel(catalogPanel === "suppliers" ? "" : "suppliers")}>Manage Suppliers</ToolbarButton> : null}
-        {canStockIn ? <ToolbarButton variant={catalogPanel === "stock-in" ? "primary" : "secondary"} onClick={() => setCatalogPanel(catalogPanel === "stock-in" ? "" : "stock-in")}>Stock In</ToolbarButton> : null}
         {canManage && selectedIds.length ? <ToolbarButton variant="danger" onClick={() => void handleBulkDelete()}>Deactivate {selectedIds.length} Materials</ToolbarButton> : null}
       </div>
 
@@ -528,8 +546,12 @@ export function InventoryClient() {
         />
       ) : null}
 
-      {canManage ? (
+      {canManage && catalogPanel === "material" ? (
         <form className="rounded-md border border-border bg-white p-5" noValidate onSubmit={(event) => void submit(event)}>
+          <div className="mb-4">
+            <h2 className="text-base font-semibold text-ink">{form.id ? "Edit Material" : "Add New Material"}</h2>
+            <p className="text-sm text-muted">{form.id ? "Update material details while keeping Material Code read-only." : "Create a new material after selecting a Material Group."}</p>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <FormField label="Material Group" error={materialErrors.categoryId}>
               <select className={materialInputClass("categoryId")} value={form.categoryId} onChange={(event) => void handleMaterialGroupChange(event.target.value)}>
@@ -591,8 +613,8 @@ export function InventoryClient() {
           </div>
 
           <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-border pt-4">
-            <ToolbarButton variant="primary" type="submit">{form.id ? "Save" : "Add"}</ToolbarButton>
-            {form.id ? <ToolbarButton onClick={resetMaterialForm}>Cancel</ToolbarButton> : null}
+            <ToolbarButton variant="primary" type="submit">{form.id ? "Save Changes" : "Add"}</ToolbarButton>
+            {form.id ? <ToolbarButton onClick={closeMaterialForm}>Cancel</ToolbarButton> : null}
           </div>
         </form>
       ) : null}

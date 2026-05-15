@@ -1,5 +1,47 @@
 # Implementation Log
 
+## 2026-05-15 - Add Material Section Tab Layout
+
+### Current Phase
+
+Inventory Materials page section layout refinement.
+
+### Scope
+
+- Refine only the Inventory Materials page active section behavior and material form visibility.
+- Keep backend APIs, Prisma schema, Stock In backend logic, pricing calculation, material code generation, and unrelated modules out of scope.
+
+### Result
+
+- Added `Add New Material` as a main section button next to `Stock In`.
+- Top section order is now `Add New Material`, `Stock In`, `Manage Material Groups`, and `Manage Suppliers`.
+- The material form no longer shows by default under the top buttons.
+- Clicking `Add New Material` opens the create form and hides Stock In, Material Groups, and Suppliers sections.
+- Editing a material opens the same section with `Edit Material` title and `Save Changes` button.
+- Successful new material creation refreshes the list, clears the form, closes the section, and shows `Material added successfully.`
+
+### Changed Files Summary
+
+- `apps/web/features/inventory/inventory-client.tsx`
+- `docs/IMPLEMENTATION_LOG.md`
+- `docs/INVENTORY_PLAN.md`
+
+### Commands Run
+
+- `npm.cmd run typecheck --workspace apps/web`
+
+### Errors Found
+
+- None.
+
+### Fixes Applied
+
+- No retry was needed.
+
+### Known TODOs
+
+- Manual browser check that each top section hides the others and keeps the Materials list accessible.
+
 ## 2026-05-15 - Stock In Material Search Autocomplete
 
 ### Current Phase
