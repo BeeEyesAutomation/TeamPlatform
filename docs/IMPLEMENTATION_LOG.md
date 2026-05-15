@@ -1,5 +1,53 @@
 # Implementation Log
 
+## 2026-05-15 - Cleanup Duplicate Auth Files Blocking API Typecheck
+
+### Current Phase
+
+Recommended cleanup after material-name task validation.
+
+### Scope
+
+- Inspect only the duplicate auth files reported by API typecheck.
+- Remove stale untracked duplicate files that TypeScript was compiling.
+- Rerun API typecheck.
+- Do not refactor auth or touch unrelated duplicate files.
+
+### Assumptions
+
+- Files with ` (1)` in the reported auth paths are local duplicate copies, not tracked source files.
+- The tracked auth files are the canonical implementation.
+- Existing unrelated working tree changes remain out of scope.
+
+### Result
+
+- Removed stale untracked duplicate files:
+  - `apps/api/src/middleware/authenticate (1).ts`
+  - `apps/api/src/modules/auth/auth (1).service.ts`
+- API typecheck now passes.
+
+### Changed Files Summary
+
+- `docs/IMPLEMENTATION_LOG.md`
+
+### Commands Run
+
+- `Get-Content -Raw AGENTS.md`
+- `Get-Content docs\IMPLEMENTATION_LOG.md -TotalCount 90`
+- `git status --short --branch`
+- `git diff --no-index -- apps\api\src\middleware\authenticate.ts "apps\api\src\middleware\authenticate (1).ts"`
+- `git diff --no-index -- apps\api\src\modules\auth\auth.service.ts "apps\api\src\modules\auth\auth (1).service.ts"`
+- `Get-Item "apps\api\src\middleware\authenticate (1).ts", "apps\api\src\modules\auth\auth (1).service.ts" | Select-Object FullName,Length,LastWriteTime`
+- `Remove-Item -LiteralPath "apps\api\src\middleware\authenticate (1).ts", "apps\api\src\modules\auth\auth (1).service.ts"`
+- `npm run typecheck --workspace apps/api`
+
+### Failures and Logs
+
+- No command failures.
+
+### Remaining TODOs
+
+- Other unrelated duplicate ` (1)` files still exist in the working tree but were not touched because they did not block this validation step.
 ## 2026-05-15 - Add Material Name Search to Materials
 
 ### Current Phase
