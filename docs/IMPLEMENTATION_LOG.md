@@ -1,5 +1,61 @@
 # Implementation Log
 
+## 2026-05-15 - Inventory Create and Stock In Search Bugfix
+
+### Symptoms
+
+- Add New Material could not create a material after the optional `Model` field was added.
+- Stock In search/autocomplete returned no material suggestions by Material Code or Material Name.
+
+### Root Cause
+
+- The backend Prisma schema and service were updated to read/write `inventory_items.model`, but the local database had not applied the new nullable `model` column because `prisma migrate dev` was blocked by the non-interactive shell.
+- Material create and Stock In autocomplete both use Inventory Material queries, so the missing database column broke both flows.
+
+### Scope
+
+- Keep this as a bug fix for the Inventory Materials database/API contract.
+- Do not change Stock In behavior, Stock Out, Material Code generation, Selling Price calculation, or unrelated modules.
+
+### Result
+
+- Applied the existing `inventory_items.model` migration locally with `prisma db execute`.
+- Made the migration SQL idempotent with `ADD COLUMN IF NOT EXISTS` so future migration runs do not fail if the column was already applied manually.
+- Confirmed the frontend and backend create/search code paths already use the correct routes, request body fields, and response shape.
+
+### Changed Files Summary
+
+- `apps/api/prisma/migrations/20260515123000_add_inventory_material_model/migration.sql`
+- `docs/IMPLEMENTATION_LOG.md`
+
+### Commands Run
+
+- `npx prisma db execute --stdin`
+- `npx prisma db execute --file prisma/migrations/20260515123000_add_inventory_material_model/migration.sql`
+- `npx prisma validate`
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+
+### Verification Steps
+
+- Verified inventory frontend uses `POST /api/inventory/materials` for create and `GET /api/inventory/materials?search=...&pageSize=10&status=active` for Stock In autocomplete.
+- Verified backend routes and response envelopes match those frontend calls.
+- Verified Prisma schema validation and both targeted workspace typechecks pass.
+
+### Errors Found
+
+- None during this bug-fix pass.
+
+### Fixes Applied
+
+- Applied the missing local database column.
+- Made the migration safe to run after a manual column application.
+
+### Known TODOs
+
+- Restart the API server if it was already running so it uses the corrected database state.
+- Browser smoke test Add New Material and Stock In autocomplete with real authenticated permissions.
+
 ## 2026-05-15 - Inventory Material Model Field
 
 ### Current Phase

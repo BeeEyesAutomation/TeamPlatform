@@ -1,1 +1,1 @@
-ALTER TABLE "inventory_items" ADD COLUMN "model" VARCHAR(255);
+ALTER TABLE "inventory_items" ADD COLUMN IF NOT EXISTS "model" VARCHAR(255);
