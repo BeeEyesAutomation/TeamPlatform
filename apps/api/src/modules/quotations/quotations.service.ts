@@ -6,6 +6,16 @@ import { prisma } from "../../prisma/client";
 import { AppError } from "../../utils/app-error";
 import { createAuditLog } from "../audit/audit.service";
 import { getPagination, getPaginationMeta, handlePrismaError } from "../hr/hr.utils";
+import {
+  toDecimal,
+  money,
+  quantity,
+  dateCode,
+  quotationCodePrefix,
+  deriveNextSequence,
+  formatQuotationCode,
+  calculateTotals
+} from "./quotations.calculator.js";
 import type { z } from "zod";
 import type {
   companySettingsSchema,
@@ -89,14 +99,6 @@ const defaultLayoutConfig = {
   ]
 };
 
-const toDecimal = (value: number | string | Prisma.Decimal) => new Prisma.Decimal(value);
-const money = (value: Prisma.Decimal) => value.toDecimalPlaces(2);
-const quantity = (value: Prisma.Decimal) => value.toDecimalPlaces(3);
-
-function dateCode(date: Date) {
-  return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
-}
-
 function toUploadUrl(fileName: string) {
   return `/uploads/quotations/${fileName}`;
 }
@@ -106,17 +108,13 @@ function diskPathFromUploadUrl(fileUrl: string) {
 }
 
 async function generateQuotationCode(quotationDate: Date) {
-  const prefix = `Q-${dateCode(quotationDate)}-`;
-  const existingCodes = await db.quotation.findMany({
+  const prefix = quotationCodePrefix(quotationDate);
+  const existing = await db.quotation.findMany({
     where: { quotationCode: { startsWith: prefix } },
     select: { quotationCode: true }
   });
-  const nextSequence = existingCodes.reduce((max: number, quotation: { quotationCode: string }) => {
-    const suffix = quotation.quotationCode.slice(prefix.length);
-    const sequence = /^\d{3}$/.test(suffix) ? Number(suffix) : 0;
-    return Math.max(max, sequence);
-  }, 0) + 1;
-  return `${prefix}${String(nextSequence).padStart(3, "0")}`;
+  const sequence = deriveNextSequence(prefix, existing.map((q: { quotationCode: string }) => q.quotationCode));
+  return formatQuotationCode(prefix, sequence);
 }
 
 export async function previewNextQuotationCode(date = new Date()) {
@@ -232,16 +230,6 @@ async function buildQuotationItems(items: QuotationItemInput[]) {
       amount
     };
   });
-}
-
-function calculateTotals(items: Array<{ amount: Prisma.Decimal }>, numberOfSetsInput: number, vatEnabled: boolean, vatRateInput: number) {
-  const numberOfSets = quantity(toDecimal(numberOfSetsInput));
-  const vatRate = toDecimal(vatRateInput).toDecimalPlaces(3);
-  const subtotalOneSet = money(items.reduce((sum, item) => sum.add(item.amount), new Prisma.Decimal(0)));
-  const totalBeforeVat = money(subtotalOneSet.mul(numberOfSets));
-  const vatAmount = vatEnabled ? money(totalBeforeVat.mul(vatRate).div(100)) : new Prisma.Decimal(0);
-  const grandTotal = money(totalBeforeVat.add(vatAmount));
-  return { numberOfSets, vatRate, subtotalOneSet, totalBeforeVat, vatAmount, grandTotal };
 }
 
 async function createVersion(tx: any, quotationId: string, versionNumber: number, data: QuotationCreate | QuotationUpdate, items: any[], totals: any, context: RequestContext) {
