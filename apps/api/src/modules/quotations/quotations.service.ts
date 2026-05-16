@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import ExcelJS from "exceljs";
 import { prisma } from "../../prisma/client";
 import { AppError } from "../../utils/app-error";
 import { createAuditLog } from "../audit/audit.service";
@@ -275,4 +276,187 @@ export async function deleteQuotation(id: string, context: RequestContext) {
   });
 
   return quotation;
+}
+
+export async function addQuotationImage(
+  id: string,
+  file: { originalname: string; filename: string; path: string; size: number; mimetype: string },
+  context: RequestContext
+) {
+  const quotation = await getQuotation(id);
+  const image = await prisma.quotationImage.create({
+    data: {
+      quotationId: id,
+      fileName: file.originalname,
+      fileUrl: `/uploads/quotations/${file.filename}`,
+      fileSize: file.size,
+      mimeType: file.mimetype,
+      uploadedById: context.actorId
+    }
+  });
+
+  await createAuditLog({
+    actorId: context.actorId,
+    action: "upload_image",
+    module: "quotations",
+    targetType: "quotation",
+    targetId: id,
+    newValue: image,
+    metadata: { quotationCode: quotation.quotationCode, fileName: image.fileName },
+    ipAddress: context.ipAddress,
+    userAgent: context.userAgent
+  });
+
+  return image;
+}
+
+export async function deleteQuotationImage(id: string, context: RequestContext) {
+  const image = await prisma.quotationImage.findUnique({ where: { id }, include: { quotation: true } });
+  if (!image) throw new AppError(404, "Quotation image not found.");
+  await prisma.quotationImage.delete({ where: { id } });
+
+  await createAuditLog({
+    actorId: context.actorId,
+    action: "delete_image",
+    module: "quotations",
+    targetType: "quotation_image",
+    targetId: id,
+    oldValue: image,
+    metadata: { quotationId: image.quotationId, quotationCode: image.quotation.quotationCode, fileName: image.fileName },
+    ipAddress: context.ipAddress,
+    userAgent: context.userAgent
+  });
+
+  return image;
+}
+
+export async function updateQuotationSignature(
+  id: string,
+  file: { originalname: string; filename: string; path: string; size: number; mimetype: string },
+  context: RequestContext
+) {
+  const existing = await getQuotation(id);
+  const signatureImageUrl = `/uploads/quotations/${file.filename}`;
+  const quotation = await prisma.quotation.update({
+    where: { id },
+    data: { signatureImageUrl, updatedById: context.actorId },
+    include: quotationInclude
+  });
+
+  await createAuditLog({
+    actorId: context.actorId,
+    action: "upload_signature",
+    module: "quotations",
+    targetType: "quotation",
+    targetId: id,
+    oldValue: { signatureImageUrl: existing.signatureImageUrl },
+    newValue: { signatureImageUrl },
+    metadata: { quotationCode: quotation.quotationCode, fileName: file.originalname },
+    ipAddress: context.ipAddress,
+    userAgent: context.userAgent
+  });
+
+  return quotation;
+}
+
+function setMoneyCell(cell: ExcelJS.Cell, value: Prisma.Decimal | number | string) {
+  cell.value = Number(value);
+  cell.numFmt = '#,##0';
+}
+
+export async function exportQuotationExcel(id: string, context: RequestContext) {
+  const quotation = await getQuotation(id);
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "TeamPlatform";
+  workbook.created = new Date();
+  const sheet = workbook.addWorksheet("Quotation");
+
+  sheet.columns = [
+    { key: "a", width: 20 },
+    { key: "b", width: 26 },
+    { key: "c", width: 18 },
+    { key: "d", width: 34 },
+    { key: "e", width: 14 },
+    { key: "f", width: 14 },
+    { key: "g", width: 18 },
+    { key: "h", width: 18 }
+  ];
+
+  sheet.mergeCells("A1:H1");
+  sheet.getCell("A1").value = "Quotation";
+  sheet.getCell("A1").font = { bold: true, size: 18 };
+  sheet.addRow([]);
+  sheet.addRow(["Quotation Code", quotation.quotationCode, "Quotation Date", quotation.quotationDate]);
+  sheet.addRow(["Project", quotation.project ? `${quotation.project.projectCode} - ${quotation.project.name}` : "-", "Customer", quotation.customerName]);
+  sheet.addRow(["Customer Request", quotation.customerRequest ?? "-"]);
+  sheet.addRow([]);
+
+  const headerRow = sheet.addRow(["#", "Material Code", "Material Name", "Quantity", "Unit", "Unit Price VND", "Amount VND"]);
+  headerRow.font = { bold: true };
+  headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
+
+  quotation.items.forEach((item) => {
+    const row = sheet.addRow([
+      item.lineIndex,
+      item.materialCodeSnapshot,
+      item.materialNameSnapshot,
+      Number(item.quantity),
+      item.unitSnapshot,
+      Number(item.unitPrice),
+      Number(item.amount)
+    ]);
+    row.getCell(4).numFmt = '#,##0.###';
+    row.getCell(6).numFmt = '#,##0';
+    row.getCell(7).numFmt = '#,##0';
+  });
+
+  sheet.addRow([]);
+  const totals = [
+    ["Subtotal for 1 Set", quotation.subtotalOneSet],
+    ["Number of Sets", quotation.numberOfSets],
+    ["Total Before VAT", quotation.totalBeforeVat],
+    ["VAT Enabled", quotation.vatEnabled ? "Yes" : "No"],
+    ["VAT Rate %", quotation.vatRate],
+    ["VAT Amount", quotation.vatAmount],
+    ["Grand Total", quotation.grandTotal]
+  ] as const;
+  for (const [label, value] of totals) {
+    const row = sheet.addRow([label, value]);
+    row.getCell(1).font = { bold: true };
+    if (value instanceof Prisma.Decimal) setMoneyCell(row.getCell(2), value);
+  }
+
+  if (quotation.images.length > 0 || quotation.signatureImageUrl) {
+    sheet.addRow([]);
+    sheet.addRow(["Images"]);
+    quotation.images.forEach((image) => sheet.addRow([image.fileName, image.fileUrl]));
+    if (quotation.signatureImageUrl) sheet.addRow(["Signature", quotation.signatureImageUrl]);
+  }
+
+  const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+  const fileName = `quotation-${quotation.quotationCode}.xlsx`;
+
+  await prisma.exportLog.create({
+    data: {
+      exportType: "quotation",
+      fileName,
+      format: "excel",
+      filtersJson: { quotationId: id } as Prisma.InputJsonValue,
+      exportedById: context.actorId,
+      metadata: { quotationCode: quotation.quotationCode, grandTotal: quotation.grandTotal.toString() }
+    }
+  });
+
+  await createAuditLog({
+    actorId: context.actorId,
+    action: "export",
+    module: "quotations",
+    targetType: "quotation",
+    targetId: id,
+    metadata: { quotationCode: quotation.quotationCode, fileName },
+    ipAddress: context.ipAddress,
+    userAgent: context.userAgent
+  });
+
+  return { fileName, buffer };
 }

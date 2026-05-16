@@ -145,7 +145,7 @@ Document Upload
 ```
 ## Quotation Module Map
 
-Planned backend:
+Implemented backend:
 
 ```txt
 /api/quotations                   Quotation list/create/detail/update/deactivate
@@ -155,7 +155,7 @@ Planned backend:
 apps/api/src/modules/quotations/  routes, schemas, service, Excel builder
 ```
 
-Planned frontend:
+Implemented frontend:
 
 ```txt
 /quotations                       Quotation list

@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Mail,
   Package,
+  ReceiptText,
   Settings,
   ShieldCheck,
   Users
@@ -24,6 +25,7 @@ const navigation = [
   { label: "Bang luong", href: "/payroll", icon: BadgeDollarSign },
   { label: "Du an", href: "/projects", icon: FolderKanban },
   { label: "Kho vat tu", href: "/inventory", icon: Package },
+  { label: "Quotations", href: "/quotations", icon: ReceiptText },
   { label: "Tai lieu", href: "/document-permissions", icon: FileText },
   { label: "Nhap xuat", href: "/import-export", icon: Import },
   { label: "Bao cao", href: "/reports", icon: ClipboardList },

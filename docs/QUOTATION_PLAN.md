@@ -350,12 +350,16 @@ Audit metadata should include quotation ID/code, project ID when linked, custome
 - VAT and number-of-sets controls.
 - Validation UX.
 
+Status: implemented in `apps/web/app/quotations` and `apps/web/features/quotations`.
+
 ### Quotation Phase 3: Images, Signature, and Audit Polish
 
 - Local image upload endpoints.
 - Signature image upload endpoint.
 - Image/signature UI sections.
 - Upload audit logs.
+
+Status: implemented with local `/uploads/quotations` storage and database URL/path metadata.
 
 ### Quotation Phase 4: Excel Export
 
@@ -364,6 +368,8 @@ Audit metadata should include quotation ID/code, project ID when linked, custome
 - Export log and audit log.
 - Download button on detail page.
 
+Status: implemented with `GET /api/quotations/:id/export/excel`.
+
 ### Quotation Phase 5: Hardening
 
 - Focused unit tests for code generation and calculations.
@@ -371,3 +377,5 @@ Audit metadata should include quotation ID/code, project ID when linked, custome
 - Frontend smoke checks.
 - Empty-state/error polish.
 - Permission visibility checks.
+
+Status: basic targeted API and web typechecks passed. Focused automated tests remain a future hardening task.

@@ -1,5 +1,62 @@
 # Implementation Log
 
+## 2026-05-16 - Quotation Full Module Frontend Upload Export
+
+### Current Phase
+
+Quotation Phases 2-5: frontend CRUD/calculations, image/signature uploads, Excel export, and targeted hardening.
+
+### Scope
+
+- Add Quotation list, create, edit, and detail pages.
+- Add project selection, inventory material selector, quotation item rows, VAT controls, live totals, validation UX, and permission-gated actions.
+- Add local quotation image and signature upload endpoints.
+- Add quotation Excel export endpoint and download action.
+- Reuse existing Inventory material search, Project list API, local upload storage, ExportLog, RBAC, and audit log patterns.
+- Do not implement PDF export, approval workflow, email sending, or unrelated modules.
+
+### Result
+
+- Quotation users can create, edit, view, deactivate, upload images/signature, and export Excel.
+- Backend stores quotation uploads under `/uploads/quotations` and persists only file paths/metadata.
+- Excel export includes quotation header, material list, calculated totals, image links, signature path, export log, and audit log.
+- Frontend recalculates item amounts and totals live while backend remains authoritative.
+
+### Changed Files Summary
+
+- `apps/api/src/modules/quotations/quotations.routes.ts`
+- `apps/api/src/modules/quotations/quotations.service.ts`
+- `apps/web/app/quotations/page.tsx`
+- `apps/web/app/quotations/new/page.tsx`
+- `apps/web/app/quotations/[id]/page.tsx`
+- `apps/web/app/quotations/[id]/edit/page.tsx`
+- `apps/web/features/quotations/quotations-api.ts`
+- `apps/web/features/quotations/quotation-form.tsx`
+- `apps/web/features/quotations/quotation-detail-client.tsx`
+- `apps/web/features/quotations/quotation-edit-client.tsx`
+- `apps/web/features/quotations/quotations-list-client.tsx`
+- `apps/web/features/quotations/quotation-format.ts`
+- `apps/web/types/quotations.ts`
+- `apps/web/components/layout/app-shell.tsx`
+- `apps/web/components/ui/data-table.tsx`
+- `API.md`
+- `MAP.md`
+- `docs/QUOTATION_PLAN.md`
+- `docs/IMPLEMENTATION_LOG.md`
+
+### Commands Run
+
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+
+### Errors Found
+
+- None during targeted API and web typechecks.
+
+### Known TODOs
+
+- Add focused automated tests for quotation code generation, calculations, create/update validation, and frontend form flows.
+- Re-authenticate GitHub connector before updating the PR through the connector.
 ## 2026-05-16 - Quotation Phase 1 Backend Foundation
 
 ### Current Phase

@@ -376,13 +376,13 @@ DELETE /api/quotations/:id
 GET    /api/quotations/next-code?date=YYYY-MM-DD
 
 POST   /api/quotations/:id/images
-DELETE /api/quotation-images/:id
+DELETE /api/quotations/images/:id
 POST   /api/quotations/:id/signature
 
 GET    /api/quotations/:id/export/excel
 ```
 
-Quotation create/update payloads should include project/customer header fields, `numberOfSets`, VAT settings, and an `items` array. The API generates `quotationCode` server-side using `Q-YYYYMMDD-XXX`, snapshots inventory material code/name/unit/unit price for each item, recalculates all totals, and ignores client-submitted totals for persistence. MVP material search should reuse `GET /api/inventory/materials?search=...&status=active&pageSize=10`. Excel export downloads `quotation-Q-YYYYMMDD-XXX.xlsx` and creates export/audit logs.
+Quotation create/update payloads include project/customer header fields, `numberOfSets`, VAT settings, and an `items` array. The API generates `quotationCode` server-side using `Q-YYYYMMDD-XXX`, snapshots inventory material code/name/unit/unit price for each item, recalculates all totals, and ignores client-submitted totals for persistence. MVP material search reuses `GET /api/inventory/materials?search=...&status=active&pageSize=10`. Image and signature uploads accept jpg, jpeg, png, and webp files up to 5MB. Excel export downloads `quotation-Q-YYYYMMDD-XXX.xlsx` and creates export/audit logs.
 
 ## Statistics
 

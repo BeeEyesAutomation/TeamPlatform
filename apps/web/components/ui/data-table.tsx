@@ -5,7 +5,7 @@ export interface DataTableColumn<T> {
   key: string;
   header: ReactNode;
   className?: string;
-  render: (item: T) => ReactNode;
+  render: (item: T, index: number) => ReactNode;
 }
 
 interface DataTableProps<T> {
@@ -48,7 +48,7 @@ export function DataTable<T>({ columns, items, getRowKey, minWidth = 760, loadin
             <tr key={getRowKey(item, index)} className="border-t border-border align-top hover:bg-surface/70">
               {columns.map((column) => (
                 <td key={column.key} className={`p-3 ${column.className ?? ""}`}>
-                  {column.render(item)}
+                  {column.render(item, index)}
                 </td>
               ))}
             </tr>
