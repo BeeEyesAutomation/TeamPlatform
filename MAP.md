@@ -148,33 +148,37 @@ Document Upload
 Implemented backend:
 
 ```txt
-/api/quotations                   Quotation list/create/detail/update/deactivate
-/api/quotations/:id/images        Quotation image upload
-/api/quotations/:id/signature     Signature image upload
-/api/quotations/:id/export/excel  Quotation Excel export
-apps/api/src/modules/quotations/  routes, schemas, service, Excel builder
+/api/quotations                                      Quotation CRUD, versions, preview, Excel export, approval, PO upload, stock out
+/api/quotation-templates                             Excel template upload, placeholder mapping, default template management
+/api/quotation-settings                              Company quotation settings for preview/export
+apps/api/src/modules/quotations/                     routes, schemas, service, calculations, Excel builder
 ```
 
 Implemented frontend:
 
 ```txt
-/quotations                       Quotation list
-/quotations/new                   Create quotation
-/quotations/:id                   Quotation detail and Excel export
-/quotations/:id/edit              Edit quotation
-apps/web/features/quotations/     API wrapper, list, form, detail, item selector, totals panel
-apps/web/types/quotations.ts      Quotation frontend types
+/quotations                                          Quotation list
+/quotations/new                                      Create quotation
+/quotations/:id                                      Detail, versions, preview, approval actions, PO upload, stock out, export
+/quotations/:id/edit                                 Edit quotation and create a new latest version
+/quotations/templates                                Excel template manager
+/quotations/settings                                 Company quotation settings
+apps/web/features/quotations/                        API wrapper, list, form, detail, template/settings clients
+apps/web/types/quotations.ts                         Quotation frontend types
 ```
 
-Planned data flow:
+Phase 1 data flow:
 
 ```txt
 Quotation
--> Select project or enter customer directly
+-> Choose Commercial or Project type
+-> Project quotation requires project
 -> Search Inventory materials
--> Snapshot material code, name, unit, and selling price
--> Calculate one-set subtotal, total before VAT, VAT amount, and grand total
--> Upload quotation images and signature image
--> Export quotation Excel file
--> Write audit and export logs
+-> Snapshot material code, name, model, picture, unit, and selling price
+-> Calculate version totals
+-> Preview selected immutable version
+-> Export Excel from uploaded template or built-in default
+-> Approve version
+-> Upload customer PO
+-> Create one all-or-nothing stock out for approved version
 ```

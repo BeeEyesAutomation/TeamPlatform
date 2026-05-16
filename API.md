@@ -379,10 +379,35 @@ POST   /api/quotations/:id/images
 DELETE /api/quotations/images/:id
 POST   /api/quotations/:id/signature
 
+GET    /api/quotations/:id/versions
+GET    /api/quotations/:id/versions/:versionId
+POST   /api/quotations/:id/versions/:versionId/create-update
+
+GET    /api/quotations/:id/preview
+GET    /api/quotations/:id/versions/:versionId/preview
 GET    /api/quotations/:id/export/excel
+GET    /api/quotations/:id/versions/:versionId/export/excel
+
+POST   /api/quotations/:id/versions/:versionId/customer-po
+POST   /api/quotations/:id/versions/:versionId/approve
+POST   /api/quotations/:id/versions/:versionId/reject
+POST   /api/quotations/:id/versions/:versionId/cancel
+POST   /api/quotations/:id/versions/:versionId/stock-out
+POST   /api/quotations/:id/versions/:versionId/sync-project-materials
+
+GET    /api/quotation-settings/company
+PUT    /api/quotation-settings/company
+
+GET    /api/quotation-templates
+POST   /api/quotation-templates/upload
+GET    /api/quotation-templates/:id
+PUT    /api/quotation-templates/:id
+PUT    /api/quotation-templates/:id/mapping
+POST   /api/quotation-templates/:id/set-default
+DELETE /api/quotation-templates/:id
 ```
 
-Quotation create/update payloads include project/customer header fields, `numberOfSets`, VAT settings, and an `items` array. The API generates `quotationCode` server-side using `Q-YYYYMMDD-XXX`, snapshots inventory material code/name/unit/unit price for each item, recalculates all totals, and ignores client-submitted totals for persistence. MVP material search reuses `GET /api/inventory/materials?search=...&status=active&pageSize=10`. Image and signature uploads accept jpg, jpeg, png, and webp files up to 5MB. Excel export downloads `quotation-Q-YYYYMMDD-XXX.xlsx` and creates export/audit logs.
+Quotation create/update payloads include `quotationType`, optional `projectId`, customer fields, content, `numberOfSets`, VAT settings, and an `items` array. Commercial quotations do not require a project; Project quotations require one. The API generates `quotationCode` server-side using `Q-YYYYMMDD-XXX`, snapshots inventory material code/name/model/picture/unit/unit price for each item, recalculates all totals, and ignores client-submitted totals for persistence. Creating a quotation creates immutable version v1; every update creates a new immutable latest version. MVP material search reuses `GET /api/inventory/materials?search=...&status=active&pageSize=10`. Image and signature uploads accept jpg, jpeg, png, and webp files up to 5MB. Template upload accepts `.xlsx`; placeholder mappings are stored as JSON. Excel export downloads `quotation-Q-YYYYMMDD-XXX.xlsx` from the selected version and creates export/audit logs. Approved versions can create one all-or-nothing inventory stock-out linked to the quotation/version.
 
 ## Statistics
 

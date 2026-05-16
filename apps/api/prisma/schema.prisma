@@ -175,9 +175,14 @@ enum InventoryMovementType {
 enum QuotationStatus {
   draft
   sent
-  accepted
+  approved
   rejected
   cancelled
+}
+
+enum QuotationType {
+  commercial
+  project
 }
 
 model User {
@@ -660,6 +665,8 @@ model ProjectIssue {
 model ProjectMaterial {
   id                 String            @id @default(uuid())
   projectId          String            @map("project_id")
+  quotationId        String?           @map("quotation_id")
+  quotationVersionId String?           @map("quotation_version_id")
   materialCode       String            @map("material_code") @db.VarChar(100)
   materialName       String            @map("material_name") @db.VarChar(255)
   unit               String            @db.VarChar(50)
@@ -680,6 +687,8 @@ model ProjectMaterial {
 
   @@unique([projectId, materialCode])
   @@index([projectId])
+  @@index([quotationId])
+  @@index([quotationVersionId])
   @@index([materialCode])
   @@index([status])
   @@index([createdAt])
@@ -727,31 +736,32 @@ model InventorySupplier {
 }
 
 model InventoryItem {
-  id                   String                   @id @default(uuid())
-  materialCode         String                   @unique @map("material_code") @db.VarChar(100)
-  materialName         String                   @map("material_name") @db.VarChar(255)
-  model                String?                  @db.VarChar(255)
-  categoryId           String?                  @map("category_id")
-  supplierId           String?                  @map("supplier_id")
-  purchasePrice        Decimal                  @default(0) @map("purchase_price") @db.Decimal(18, 2)
-  sellingPrice         Decimal                  @default(0) @map("selling_price") @db.Decimal(18, 2)
-  markupPercentage     Decimal                  @default(0) @map("markup_percentage") @db.Decimal(9, 3)
-  stockQuantity        Decimal                  @default(0) @map("stock_quantity") @db.Decimal(18, 3)
-  minimumStockQuantity Decimal                  @default(0) @map("minimum_stock_quantity") @db.Decimal(18, 3)
-  unit                 String                   @db.VarChar(50)
-  status               InventoryItemStatus      @default(active)
-  imageUrl             String?                  @map("image_url") @db.Text
-  description          String?                  @db.Text
-  metadata             Json?
-  category             InventoryCategory?       @relation(fields: [categoryId], references: [id])
-  supplier             InventorySupplier?       @relation(fields: [supplierId], references: [id])
-  movements            InventoryStockMovement[]
-  quotationItems       QuotationItem[]
-  createdById          String?                  @map("created_by_id")
-  updatedById          String?                  @map("updated_by_id")
-  createdAt            DateTime                 @default(now()) @map("created_at")
-  updatedAt            DateTime                 @updatedAt @map("updated_at")
-  deletedAt            DateTime?                @map("deleted_at")
+  id                    String                   @id @default(uuid())
+  materialCode          String                   @unique @map("material_code") @db.VarChar(100)
+  materialName          String                   @map("material_name") @db.VarChar(255)
+  model                 String?                  @db.VarChar(255)
+  categoryId            String?                  @map("category_id")
+  supplierId            String?                  @map("supplier_id")
+  purchasePrice         Decimal                  @default(0) @map("purchase_price") @db.Decimal(18, 2)
+  sellingPrice          Decimal                  @default(0) @map("selling_price") @db.Decimal(18, 2)
+  markupPercentage      Decimal                  @default(0) @map("markup_percentage") @db.Decimal(9, 3)
+  stockQuantity         Decimal                  @default(0) @map("stock_quantity") @db.Decimal(18, 3)
+  minimumStockQuantity  Decimal                  @default(0) @map("minimum_stock_quantity") @db.Decimal(18, 3)
+  unit                  String                   @db.VarChar(50)
+  status                InventoryItemStatus      @default(active)
+  imageUrl              String?                  @map("image_url") @db.Text
+  description           String?                  @db.Text
+  metadata              Json?
+  category              InventoryCategory?       @relation(fields: [categoryId], references: [id])
+  supplier              InventorySupplier?       @relation(fields: [supplierId], references: [id])
+  movements             InventoryStockMovement[]
+  quotationItems        QuotationItem[]
+  quotationVersionItems QuotationVersionItem[]
+  createdById           String?                  @map("created_by_id")
+  updatedById           String?                  @map("updated_by_id")
+  createdAt             DateTime                 @default(now()) @map("created_at")
+  updatedAt             DateTime                 @updatedAt @map("updated_at")
+  deletedAt             DateTime?                @map("deleted_at")
 
   @@index([materialCode])
   @@index([materialName])
@@ -787,38 +797,111 @@ model InventoryStockMovement {
   @@map("inventory_stock_movements")
 }
 model Quotation {
-  id                String          @id @default(uuid())
-  quotationCode     String          @unique @map("quotation_code") @db.VarChar(100)
-  projectId         String?         @map("project_id")
-  customerName      String          @map("customer_name") @db.VarChar(255)
-  customerRequest   String?         @map("customer_request") @db.Text
-  quotationDate     DateTime        @map("quotation_date")
-  numberOfSets      Decimal         @default(1) @map("number_of_sets") @db.Decimal(18, 3)
-  vatEnabled        Boolean         @default(false) @map("vat_enabled")
-  vatRate           Decimal         @default(10) @map("vat_rate") @db.Decimal(9, 3)
-  subtotalOneSet    Decimal         @default(0) @map("subtotal_one_set") @db.Decimal(18, 2)
-  totalBeforeVat    Decimal         @default(0) @map("total_before_vat") @db.Decimal(18, 2)
-  vatAmount         Decimal         @default(0) @map("vat_amount") @db.Decimal(18, 2)
-  grandTotal        Decimal         @default(0) @map("grand_total") @db.Decimal(18, 2)
-  signatureImageUrl String?         @map("signature_image_url") @db.Text
-  status            QuotationStatus @default(draft)
+  id                String              @id @default(uuid())
+  quotationCode     String              @unique @map("quotation_code") @db.VarChar(100)
+  quotationType     QuotationType       @default(commercial) @map("quotation_type")
+  projectId         String?             @map("project_id")
+  currentVersionId  String?             @unique @map("current_version_id")
+  customerName      String              @map("customer_name") @db.VarChar(255)
+  customerRequest   String?             @map("customer_request") @db.Text
+  content           String?             @db.Text
+  quotationDate     DateTime            @map("quotation_date")
+  numberOfSets      Decimal             @default(1) @map("number_of_sets") @db.Decimal(18, 3)
+  vatEnabled        Boolean             @default(false) @map("vat_enabled")
+  vatRate           Decimal             @default(10) @map("vat_rate") @db.Decimal(9, 3)
+  subtotalOneSet    Decimal             @default(0) @map("subtotal_one_set") @db.Decimal(18, 2)
+  totalBeforeVat    Decimal             @default(0) @map("total_before_vat") @db.Decimal(18, 2)
+  vatAmount         Decimal             @default(0) @map("vat_amount") @db.Decimal(18, 2)
+  grandTotal        Decimal             @default(0) @map("grand_total") @db.Decimal(18, 2)
+  signatureImageUrl String?             @map("signature_image_url") @db.Text
+  status            QuotationStatus     @default(draft)
   metadata          Json?
-  createdById       String?         @map("created_by_id")
-  updatedById       String?         @map("updated_by_id")
-  project           Project?        @relation(fields: [projectId], references: [id])
+  createdById       String?             @map("created_by_id")
+  updatedById       String?             @map("updated_by_id")
+  project           Project?            @relation(fields: [projectId], references: [id])
+  currentVersion    QuotationVersion?   @relation("QuotationCurrentVersion", fields: [currentVersionId], references: [id])
+  versions          QuotationVersion[]  @relation("QuotationVersions")
   items             QuotationItem[]
   images            QuotationImage[]
-  createdAt         DateTime        @default(now()) @map("created_at")
-  updatedAt         DateTime        @updatedAt @map("updated_at")
-  deletedAt         DateTime?       @map("deleted_at")
+  templates         QuotationTemplate[]
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  deletedAt         DateTime?           @map("deleted_at")
 
   @@index([quotationCode])
+  @@index([quotationType])
   @@index([projectId])
+  @@index([currentVersionId])
   @@index([customerName])
   @@index([quotationDate])
   @@index([status])
   @@index([createdAt])
   @@map("quotations")
+}
+
+model QuotationVersion {
+  id                  String                 @id @default(uuid())
+  quotationId         String                 @map("quotation_id")
+  versionNumber       Int                    @map("version_number")
+  quotationType       QuotationType          @default(commercial) @map("quotation_type")
+  projectId           String?                @map("project_id")
+  customerName        String                 @map("customer_name") @db.VarChar(255)
+  customerRequest     String?                @map("customer_request") @db.Text
+  content             String?                @db.Text
+  quotationDate       DateTime               @map("quotation_date")
+  numberOfSets        Decimal                @default(1) @map("number_of_sets") @db.Decimal(18, 3)
+  vatEnabled          Boolean                @default(false) @map("vat_enabled")
+  vatRate             Decimal                @default(10) @map("vat_rate") @db.Decimal(9, 3)
+  subtotalOneSet      Decimal                @default(0) @map("subtotal_one_set") @db.Decimal(18, 2)
+  totalBeforeVat      Decimal                @default(0) @map("total_before_vat") @db.Decimal(18, 2)
+  vatAmount           Decimal                @default(0) @map("vat_amount") @db.Decimal(18, 2)
+  grandTotal          Decimal                @default(0) @map("grand_total") @db.Decimal(18, 2)
+  status              QuotationStatus        @default(draft)
+  customerPoFileName  String?                @map("customer_po_file_name") @db.VarChar(255)
+  customerPoFileUrl   String?                @map("customer_po_file_url") @db.Text
+  approvedAt          DateTime?              @map("approved_at")
+  approvedById        String?                @map("approved_by_id")
+  stockOutCreatedAt   DateTime?              @map("stock_out_created_at")
+  stockOutCreatedById String?                @map("stock_out_created_by_id")
+  projectSyncedAt     DateTime?              @map("project_synced_at")
+  projectSyncedById   String?                @map("project_synced_by_id")
+  metadata            Json?
+  createdById         String?                @map("created_by_id")
+  quotation           Quotation              @relation("QuotationVersions", fields: [quotationId], references: [id], onDelete: Cascade)
+  currentForQuotation Quotation?             @relation("QuotationCurrentVersion")
+  items               QuotationVersionItem[]
+  createdAt           DateTime               @default(now()) @map("created_at")
+
+  @@unique([quotationId, versionNumber])
+  @@index([quotationId])
+  @@index([versionNumber])
+  @@index([status])
+  @@index([projectId])
+  @@index([createdAt])
+  @@map("quotation_versions")
+}
+
+model QuotationVersionItem {
+  id                   String           @id @default(uuid())
+  quotationVersionId   String           @map("quotation_version_id")
+  lineIndex            Int              @map("line_index")
+  materialId           String?          @map("material_id")
+  materialCodeSnapshot String           @map("material_code_snapshot") @db.VarChar(100)
+  materialNameSnapshot String           @map("material_name_snapshot") @db.VarChar(255)
+  modelSnapshot        String?          @map("model_snapshot") @db.VarChar(255)
+  pictureUrlSnapshot   String?          @map("picture_url_snapshot") @db.Text
+  unitSnapshot         String           @map("unit_snapshot") @db.VarChar(50)
+  quantity             Decimal          @db.Decimal(18, 3)
+  unitPrice            Decimal          @map("unit_price") @db.Decimal(18, 2)
+  amount               Decimal          @db.Decimal(18, 2)
+  version              QuotationVersion @relation(fields: [quotationVersionId], references: [id], onDelete: Cascade)
+  material             InventoryItem?   @relation(fields: [materialId], references: [id])
+  createdAt            DateTime         @default(now()) @map("created_at")
+
+  @@index([quotationVersionId])
+  @@index([materialId])
+  @@index([lineIndex])
+  @@map("quotation_version_items")
 }
 
 model QuotationItem {
@@ -858,6 +941,49 @@ model QuotationImage {
   @@index([uploadedById])
   @@index([createdAt])
   @@map("quotation_images")
+}
+
+model QuotationTemplate {
+  id                   String       @id @default(uuid())
+  quotationId          String?      @map("quotation_id")
+  name                 String       @db.VarChar(255)
+  fileName             String       @map("file_name") @db.VarChar(255)
+  fileUrl              String       @map("file_url") @db.Text
+  fileSize             Int?         @map("file_size")
+  mimeType             String?      @map("mime_type") @db.VarChar(100)
+  placeholderConfig    Json?        @map("placeholder_config")
+  detectedPlaceholders Json?        @map("detected_placeholders")
+  isDefault            Boolean      @default(false) @map("is_default")
+  status               RecordStatus @default(active)
+  uploadedById         String?      @map("uploaded_by_id")
+  quotation            Quotation?   @relation(fields: [quotationId], references: [id])
+  createdAt            DateTime     @default(now()) @map("created_at")
+  updatedAt            DateTime     @updatedAt @map("updated_at")
+  deletedAt            DateTime?    @map("deleted_at")
+
+  @@index([quotationId])
+  @@index([isDefault])
+  @@index([status])
+  @@index([createdAt])
+  @@map("quotation_templates")
+}
+
+model QuotationCompanySettings {
+  id                String   @id @default(uuid())
+  companyName       String?  @map("company_name") @db.VarChar(255)
+  taxCode           String?  @map("tax_code") @db.VarChar(100)
+  address           String?  @db.Text
+  phone             String?  @db.VarChar(50)
+  email             String?  @db.VarChar(255)
+  bankAccountNumber String?  @map("bank_account_number") @db.VarChar(100)
+  bankName          String?  @map("bank_name") @db.VarChar(255)
+  bankBranch        String?  @map("bank_branch") @db.VarChar(255)
+  metadata          Json?
+  updatedById       String?  @map("updated_by_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("quotation_company_settings")
 }
 
 model ProjectCost {

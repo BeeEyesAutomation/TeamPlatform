@@ -81,3 +81,15 @@ VAT is optional per quotation. The backend recalculates `subtotalOneSet`, `total
 Signature is implemented as an uploaded image for MVP. Canvas/drawn signature capture is deferred.
 
 Excel export is required for MVP. PDF export, approval workflow, and email sending are future phases.
+
+## Quotation Phase 1 Decisions
+
+- Advanced canvas quotation layout editing is Phase 2. Phase 1 uses a built-in web preview and placeholder-based Excel export.
+- Quotation codes are generated server-side as `Q-YYYYMMDD-XXX` and are not manually editable.
+- Commercial quotations do not require `projectId`. Project quotations require `projectId`.
+- Quotation versions are immutable. Editing any quotation creates a new latest version.
+- Quotation items store inventory material snapshots so old versions do not change when inventory data changes later.
+- Unit price defaults to the inventory material selling price at the time the item is added and is persisted as a snapshot.
+- Excel templates are uploaded as local files, while placeholder mappings are stored as JSON.
+- Stock out from quotation is allowed once per approved quotation version and runs all-or-nothing in a database transaction.
+- Commercial quotations do not sync items to project materials.

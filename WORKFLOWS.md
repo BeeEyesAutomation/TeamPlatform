@@ -417,7 +417,8 @@ Create quotation:
 ```txt
 User opens Quotation Management
 -> Create quotation
--> Select project if applicable
+-> Select quotation type: Commercial or Project
+-> Select project if quotation type is Project
 -> Project code, project name, and customer data auto-load when available
 -> Enter or confirm customer name
 -> Enter customer request
@@ -433,6 +434,7 @@ User opens Quotation Management
 -> Upload optional signature image
 -> Save
 -> Backend generates quotation code
+-> Backend creates quotation master and immutable version v1
 -> Backend snapshots material fields and recalculates totals
 -> Create audit log
 ```
@@ -444,16 +446,52 @@ User opens quotation detail
 -> Edit quotation
 -> Update header, items, images, signature, VAT, or number of sets
 -> Save
+-> Backend creates a new immutable latest version
 -> Backend recalculates totals
 -> Create audit log with old/new values
+```
+
+Preview and version history:
+
+```txt
+User opens quotation detail
+-> Select current or older version
+-> Built-in web preview renders company header, quotation info, material table, totals, VAT, and version number
+-> Export and approval actions use the selected version
 ```
 
 Export quotation:
 
 ```txt
 User opens quotation detail
+-> Select version if needed
 -> Export Excel
+-> Backend uses the default uploaded Excel template when available or built-in layout otherwise
+-> Backend replaces single-value placeholders and item placeholders
 -> Backend generates quotation-Q-YYYYMMDD-XXX.xlsx
--> Excel includes header, material list, calculations, image/signature links where practical
 -> Create export log and audit log
+```
+
+Approve quotation and create stock out:
+
+```txt
+User opens an approved quotation version
+-> Upload customer PO if available
+-> Create Stock Out
+-> Backend validates available stock for every item using quantity * numberOfSets
+-> Backend updates inventory and creates stock movement history in one transaction
+-> Backend blocks duplicate stock out for the same approved quotation version
+```
+
+Template and settings management:
+
+```txt
+User opens Quotation Templates
+-> Upload .xlsx template
+-> Edit placeholder mapping JSON
+-> Set default template
+
+User opens Company Quotation Settings
+-> Maintain company header, tax code, contact, and bank details
+-> Preview and Excel export use these settings
 ```

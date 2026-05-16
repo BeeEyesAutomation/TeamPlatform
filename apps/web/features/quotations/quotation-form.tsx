@@ -9,7 +9,7 @@ import { fetchInventoryItems } from "../inventory/inventory-api";
 import { fetchProjects } from "../projects/projects-api";
 import type { InventoryItem } from "../../types/inventory";
 import type { Project } from "../../types/projects";
-import type { Quotation, QuotationFormItem } from "../../types/quotations";
+import type { Quotation, QuotationFormItem, QuotationType } from "../../types/quotations";
 import { fetchNextQuotationCode, saveQuotation, uploadQuotationImage, uploadQuotationSignature } from "./quotations-api";
 import { formatMoney, formatNumberInput, parseNumber, toDateInput } from "./quotation-format";
 
@@ -17,12 +17,13 @@ const emptyItem: QuotationFormItem = {
   materialId: "",
   materialCode: "",
   materialName: "",
+  model: "",
   unit: "",
   quantity: "",
   unitPrice: ""
 };
 
-const statuses = ["draft", "sent", "accepted", "rejected", "cancelled"];
+const statuses = ["draft", "sent", "approved", "rejected", "cancelled"];
 
 function normalizeNumberInput(value: string) {
   const cleaned = value.replace(/[^\d.,]/g, "").replace(/,/g, "");
@@ -37,10 +38,12 @@ export function QuotationForm({ quotation, onSaved }: { quotation?: Quotation; o
   const [materialSuggestions, setMaterialSuggestions] = useState<InventoryItem[]>([]);
   const [searchingMaterials, setSearchingMaterials] = useState(false);
   const [form, setForm] = useState({
+    quotationType: quotation?.quotationType ?? "commercial",
     projectId: quotation?.projectId ?? "",
     quotationCode: quotation?.quotationCode ?? "",
     customerName: quotation?.customerName ?? "",
     customerRequest: quotation?.customerRequest ?? "",
+    content: quotation?.content ?? "",
     quotationDate: toDateInput(quotation?.quotationDate),
     numberOfSets: formatNumberInput(quotation?.numberOfSets ?? 1),
     vatEnabled: quotation?.vatEnabled ?? false,
@@ -52,6 +55,7 @@ export function QuotationForm({ quotation, onSaved }: { quotation?: Quotation; o
       materialId: item.materialId ?? "",
       materialCode: item.materialCodeSnapshot,
       materialName: item.materialNameSnapshot,
+      model: item.modelSnapshot ?? "",
       unit: item.unitSnapshot,
       quantity: formatNumberInput(item.quantity),
       unitPrice: formatNumberInput(item.unitPrice)
@@ -137,6 +141,7 @@ export function QuotationForm({ quotation, onSaved }: { quotation?: Quotation; o
         materialId: material.id,
         materialCode: material.materialCode,
         materialName: material.materialName,
+        model: material.model ?? "",
         unit: material.unit,
         unitPrice: formatNumberInput(material.sellingPrice)
       }
@@ -153,6 +158,7 @@ export function QuotationForm({ quotation, onSaved }: { quotation?: Quotation; o
 
   function validate() {
     const nextErrors: Record<string, string> = {};
+    if (form.quotationType === "project" && !form.projectId) nextErrors.projectId = "Project is required for Project Quotations.";
     if (!form.customerName.trim()) nextErrors.customerName = "Customer Name is required.";
     if (!form.quotationDate) nextErrors.quotationDate = "Quotation Date is required.";
     if ((parseNumber(form.numberOfSets) ?? 0) <= 0) nextErrors.numberOfSets = "Number of Sets must be greater than 0.";
@@ -177,9 +183,11 @@ export function QuotationForm({ quotation, onSaved }: { quotation?: Quotation; o
     setSaving(true);
     try {
       const payload = {
+        quotationType: form.quotationType,
         projectId: form.projectId || undefined,
         customerName: form.customerName.trim(),
         customerRequest: form.customerRequest.trim() || undefined,
+        content: form.content.trim() || undefined,
         quotationDate: form.quotationDate,
         numberOfSets: parseNumber(form.numberOfSets),
         vatEnabled: form.vatEnabled,
@@ -221,11 +229,27 @@ export function QuotationForm({ quotation, onSaved }: { quotation?: Quotation; o
 
       <div className="grid gap-4 rounded-md border border-border bg-white p-4 lg:grid-cols-4">
         <label className="text-sm font-medium">
+          Quotation Type
+          <select
+            className={`mt-1 w-full ${fieldClassName()}`}
+            value={form.quotationType}
+            onChange={(event) => {
+              const quotationType = event.target.value as QuotationType;
+              setForm((current) => ({ ...current, quotationType, projectId: quotationType === "commercial" ? "" : current.projectId }));
+              setErrors((current) => ({ ...current, projectId: "" }));
+            }}
+          >
+            <option value="commercial">Commercial Quotation</option>
+            <option value="project">Project Quotation</option>
+          </select>
+        </label>
+        <label className="text-sm font-medium">
           Project
-          <select className={`mt-1 w-full ${fieldClassName()}`} value={form.projectId} onChange={(event) => handleProjectChange(event.target.value)}>
+          <select className={`mt-1 w-full ${fieldClassName(errorClass("projectId"))}`} value={form.projectId} onChange={(event) => handleProjectChange(event.target.value)} disabled={form.quotationType === "commercial"}>
             <option value="">Customer-only quotation</option>
             {projects.map((project) => <option key={project.id} value={project.id}>{project.projectCode} - {project.name}</option>)}
           </select>
+          {errors.projectId ? <div className="mt-1 text-xs text-red-600">{errors.projectId}</div> : null}
         </label>
         <label className="text-sm font-medium">
           Quotation Code
@@ -256,6 +280,10 @@ export function QuotationForm({ quotation, onSaved }: { quotation?: Quotation; o
         <label className="text-sm font-medium lg:col-span-4">
           Customer Request
           <textarea className="mt-1 min-h-24 w-full rounded-md border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/15" value={form.customerRequest} onChange={(event) => updateField("customerRequest", event.target.value)} placeholder="Customer Request" />
+        </label>
+        <label className="text-sm font-medium lg:col-span-4">
+          Content
+          <textarea className="mt-1 min-h-20 w-full rounded-md border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/15" value={form.content} onChange={(event) => updateField("content", event.target.value)} placeholder="Quotation content" />
         </label>
       </div>
 
@@ -292,6 +320,7 @@ export function QuotationForm({ quotation, onSaved }: { quotation?: Quotation; o
             { key: "index", header: "#", render: (_item, index) => index + 1 },
             { key: "code", header: "Material Code", render: (item) => <span className="whitespace-nowrap font-medium">{item.materialCode}</span> },
             { key: "name", header: "Material Name", render: (item) => item.materialName },
+            { key: "model", header: "Model", render: (item) => item.model || "-" },
             { key: "quantity", header: "Quantity", render: (item, index) => <LineInput value={item.quantity} error={errors[`item-${index}-quantity`]} onChange={(value) => updateItem(index, "quantity", normalizeNumberInput(value))} /> },
             { key: "unit", header: "Unit", render: (item) => <span className="whitespace-nowrap">{item.unit}</span> },
             { key: "unitPrice", header: "Unit Price", render: (item, index) => <LineInput value={item.unitPrice} error={errors[`item-${index}-unitPrice`]} onChange={(value) => updateItem(index, "unitPrice", normalizeNumberInput(value))} /> },

@@ -379,3 +379,20 @@ Status: implemented with `GET /api/quotations/:id/export/excel`.
 - Permission visibility checks.
 
 Status: basic targeted API and web typechecks passed. Focused automated tests remain a future hardening task.
+
+## Phase 1 Implementation Update
+
+Phase 1 implements the working foundation:
+
+- Commercial and Project quotation types.
+- Server-side quotation code generation.
+- Immutable quotation versions with item snapshots.
+- Built-in preview for current and selected versions.
+- Excel template upload with placeholder mapping.
+- Default Excel export when no uploaded template exists.
+- Company quotation settings.
+- Customer PO upload for approved versions.
+- One all-or-nothing inventory stock out per approved quotation version.
+- Project quotation item sync to project materials.
+
+Phase 1 does not include the advanced drag/drop canvas editor. That remains Phase 2.

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
-import { Download, Eye, FilePlus, Pencil, Trash2 } from "lucide-react";
+import { Download, Eye, FilePlus, Pencil, Settings, Trash2, Upload } from "lucide-react";
 import { FilterBar, ToolbarButton, fieldClassName } from "../../components/ui/controls";
 import { DataTable } from "../../components/ui/data-table";
 import { ErrorBanner, InfoBanner } from "../../components/ui/feedback";
@@ -76,7 +76,13 @@ export function QuotationsListClient() {
       <PageHeader
         title="Quotations"
         description="Create customer quotations from inventory materials, calculate VAT totals, and export Excel files."
-        actions={canManage ? <Link href="/quotations/new"><ToolbarButton variant="primary"><FilePlus size={16} />Create Quotation</ToolbarButton></Link> : null}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            {canManage ? <Link href="/quotations/new"><ToolbarButton variant="primary"><FilePlus size={16} />Create Quotation</ToolbarButton></Link> : null}
+            {canManage ? <Link href="/quotations/templates"><ToolbarButton><Upload size={16} />Templates</ToolbarButton></Link> : null}
+            {canManage ? <Link href="/quotations/settings"><ToolbarButton><Settings size={16} />Company Settings</ToolbarButton></Link> : null}
+          </div>
+        }
       />
       <ErrorBanner message={error} />
       <InfoBanner message={message} />
@@ -90,7 +96,7 @@ export function QuotationsListClient() {
             Status
             <select className={`mt-1 w-full ${fieldClassName()}`} value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}>
               <option value="">All statuses</option>
-              {["draft", "sent", "accepted", "rejected", "cancelled"].map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}
+              {["draft", "sent", "approved", "rejected", "cancelled"].map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}
             </select>
           </label>
           <label className="text-sm font-medium">
@@ -115,6 +121,7 @@ export function QuotationsListClient() {
         columns={[
           { key: "code", header: "Quotation Code", className: "whitespace-nowrap", render: (item) => <span className="font-semibold">{item.quotationCode}</span> },
           { key: "date", header: "Date", className: "whitespace-nowrap", render: (item) => toDateInput(item.quotationDate) },
+          { key: "type", header: "Type", className: "whitespace-nowrap", render: (item) => item.quotationType === "project" ? "Project" : "Commercial" },
           { key: "project", header: "Project", render: (item) => item.project ? `${item.project.projectCode} - ${item.project.name}` : "-" },
           { key: "customer", header: "Customer", render: (item) => item.customerName },
           { key: "sets", header: "Sets", className: "text-right whitespace-nowrap", render: (item) => item.numberOfSets },

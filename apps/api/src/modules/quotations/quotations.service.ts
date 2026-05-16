@@ -1,16 +1,32 @@
 import { Prisma } from "@prisma/client";
 import ExcelJS from "exceljs";
+import fs from "node:fs";
+import path from "node:path";
 import { prisma } from "../../prisma/client";
 import { AppError } from "../../utils/app-error";
 import { createAuditLog } from "../audit/audit.service";
 import { getPagination, getPaginationMeta, handlePrismaError } from "../hr/hr.utils";
 import type { z } from "zod";
-import type { quotationCreateSchema, quotationQuerySchema, quotationUpdateSchema } from "./quotations.schemas";
+import type {
+  companySettingsSchema,
+  quotationCreateSchema,
+  quotationQuerySchema,
+  quotationUpdateSchema,
+  templateMappingSchema,
+  templateQuerySchema,
+  templateUpdateSchema
+} from "./quotations.schemas";
+
+const db = prisma as any;
 
 type QuotationQuery = z.infer<typeof quotationQuerySchema>;
+type TemplateQuery = z.infer<typeof templateQuerySchema>;
 type QuotationCreate = z.infer<typeof quotationCreateSchema>;
 type QuotationUpdate = z.infer<typeof quotationUpdateSchema>;
 type QuotationItemInput = QuotationCreate["items"][number];
+type CompanySettingsInput = z.infer<typeof companySettingsSchema>;
+type TemplateUpdateInput = z.infer<typeof templateUpdateSchema>;
+type TemplateMappingInput = z.infer<typeof templateMappingSchema>;
 
 interface RequestContext {
   actorId?: string;
@@ -18,30 +34,44 @@ interface RequestContext {
   userAgent?: string;
 }
 
-const quotationInclude = {
-  project: { select: { id: true, projectCode: true, name: true, customerName: true } },
-  items: { orderBy: { lineIndex: "asc" as const } },
-  images: { orderBy: { createdAt: "asc" as const } }
-} satisfies Prisma.QuotationInclude;
+const defaultPlaceholderConfig = {
+  "#yyyyMMdd": "quotationDate",
+  "Q-#yyyyMMdd+ID": "quotationCode",
+  "#Project": "projectName",
+  "#Customer": "customerName",
+  "#Spect": "customerRequest",
+  "#Content": "content",
+  "#Name": "item.materialNameSnapshot",
+  "#Model": "item.modelSnapshot",
+  "#Qty": "item.quantity",
+  "#Unit": "item.unitSnapshot",
+  "#Price": "item.unitPrice",
+  "#PriceTotal": "item.amount"
+};
 
 const toDecimal = (value: number | string | Prisma.Decimal) => new Prisma.Decimal(value);
 const money = (value: Prisma.Decimal) => value.toDecimalPlaces(2);
 const quantity = (value: Prisma.Decimal) => value.toDecimalPlaces(3);
 
 function dateCode(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}${month}${day}`;
+  return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function toUploadUrl(fileName: string) {
+  return `/uploads/quotations/${fileName}`;
+}
+
+function diskPathFromUploadUrl(fileUrl: string) {
+  return path.resolve(process.cwd(), "uploads", fileUrl.replace(/^\/uploads\//, ""));
 }
 
 async function generateQuotationCode(quotationDate: Date) {
   const prefix = `Q-${dateCode(quotationDate)}-`;
-  const existingCodes = await prisma.quotation.findMany({
+  const existingCodes = await db.quotation.findMany({
     where: { quotationCode: { startsWith: prefix } },
     select: { quotationCode: true }
   });
-  const nextSequence = existingCodes.reduce((max, quotation) => {
+  const nextSequence = existingCodes.reduce((max: number, quotation: { quotationCode: string }) => {
     const suffix = quotation.quotationCode.slice(prefix.length);
     const sequence = /^\d{3}$/.test(suffix) ? Number(suffix) : 0;
     return Math.max(max, sequence);
@@ -53,10 +83,11 @@ export async function previewNextQuotationCode(date = new Date()) {
   return { quotationCode: await generateQuotationCode(date) };
 }
 
-function quotationWhere(query: QuotationQuery): Prisma.QuotationWhereInput {
+function quotationWhere(query: QuotationQuery) {
   return {
     deletedAt: null,
     ...(query.projectId ? { projectId: query.projectId } : {}),
+    ...(query.quotationType ? { quotationType: query.quotationType } : {}),
     ...(query.status ? { status: query.status } : {}),
     ...(query.search
       ? {
@@ -69,13 +100,22 @@ function quotationWhere(query: QuotationQuery): Prisma.QuotationWhereInput {
         }
       : {}),
     ...(query.dateFrom || query.dateTo
-      ? {
-          quotationDate: {
-            ...(query.dateFrom ? { gte: query.dateFrom } : {}),
-            ...(query.dateTo ? { lte: query.dateTo } : {})
-          }
-        }
+      ? { quotationDate: { ...(query.dateFrom ? { gte: query.dateFrom } : {}), ...(query.dateTo ? { lte: query.dateTo } : {}) } }
       : {})
+  };
+}
+
+const quotationInclude = {
+  project: { select: { id: true, projectCode: true, name: true, customerName: true } },
+  currentVersion: { include: { items: { orderBy: { lineIndex: "asc" } } } },
+  images: { orderBy: { createdAt: "asc" } }
+};
+
+function normalizeQuotation(quotation: any) {
+  return {
+    ...quotation,
+    items: quotation.currentVersion?.items ?? quotation.items ?? [],
+    versions: quotation.versions
   };
 }
 
@@ -83,10 +123,10 @@ export async function listQuotations(query: QuotationQuery) {
   const where = quotationWhere(query);
   const pagination = getPagination(query);
   const [total, items] = await Promise.all([
-    prisma.quotation.count({ where }),
-    prisma.quotation.findMany({
+    db.quotation.count({ where }),
+    db.quotation.findMany({
       where,
-      include: { project: quotationInclude.project },
+      include: { project: quotationInclude.project, currentVersion: { select: { id: true, versionNumber: true, status: true } } },
       orderBy: [{ quotationDate: "desc" }, { createdAt: "desc" }],
       ...pagination
     })
@@ -95,30 +135,46 @@ export async function listQuotations(query: QuotationQuery) {
 }
 
 export async function getQuotation(id: string) {
-  const quotation = await prisma.quotation.findFirst({
-    where: { id, deletedAt: null },
-    include: quotationInclude
-  });
+  const quotation = await db.quotation.findFirst({ where: { id, deletedAt: null }, include: quotationInclude });
   if (!quotation) throw new AppError(404, "Quotation not found.");
-  return quotation;
+  return normalizeQuotation(quotation);
 }
 
-async function ensureProject(projectId?: string) {
-  if (!projectId) return;
-  const project = await prisma.project.findFirst({ where: { id: projectId, deletedAt: null }, select: { id: true } });
+export async function listQuotationVersions(id: string) {
+  await getQuotation(id);
+  return db.quotationVersion.findMany({
+    where: { quotationId: id },
+    include: { items: { orderBy: { lineIndex: "asc" } } },
+    orderBy: { versionNumber: "desc" }
+  });
+}
+
+export async function getQuotationVersion(id: string, versionId: string) {
+  const version = await db.quotationVersion.findFirst({
+    where: { id: versionId, quotationId: id },
+    include: { items: { orderBy: { lineIndex: "asc" } }, quotation: { include: { project: quotationInclude.project } } }
+  });
+  if (!version) throw new AppError(404, "Quotation version not found.");
+  return version;
+}
+
+async function ensureProject(data: { quotationType?: string; projectId?: string }) {
+  if (data.quotationType === "project" && !data.projectId) throw new AppError(400, "Project is required for Project Quotation.");
+  if (!data.projectId) return;
+  const project = await db.project.findFirst({ where: { id: data.projectId, deletedAt: null }, select: { id: true } });
   if (!project) throw new AppError(400, "Project does not exist.");
 }
 
 async function buildQuotationItems(items: QuotationItemInput[]) {
   const materialIds = Array.from(new Set(items.map((item) => item.materialId)));
-  const materials = await prisma.inventoryItem.findMany({
+  const materials = await db.inventoryItem.findMany({
     where: { id: { in: materialIds }, deletedAt: null },
-    select: { id: true, materialCode: true, materialName: true, unit: true, sellingPrice: true }
+    select: { id: true, materialCode: true, materialName: true, model: true, imageUrl: true, unit: true, sellingPrice: true }
   });
-  const materialById = new Map(materials.map((material) => [material.id, material]));
+  const materialById = new Map(materials.map((material: any) => [material.id, material]));
 
   return items.map((item, index) => {
-    const material = materialById.get(item.materialId);
+    const material = materialById.get(item.materialId) as any;
     if (!material) throw new AppError(400, "Material does not exist.");
     const itemQuantity = quantity(toDecimal(item.quantity));
     const unitPrice = money(toDecimal(item.unitPrice ?? material.sellingPrice));
@@ -128,6 +184,8 @@ async function buildQuotationItems(items: QuotationItemInput[]) {
       materialId: material.id,
       materialCodeSnapshot: material.materialCode,
       materialNameSnapshot: material.materialName,
+      modelSnapshot: material.model,
+      pictureUrlSnapshot: material.imageUrl,
       unitSnapshot: material.unit,
       quantity: itemQuantity,
       unitPrice,
@@ -146,19 +204,42 @@ function calculateTotals(items: Array<{ amount: Prisma.Decimal }>, numberOfSetsI
   return { numberOfSets, vatRate, subtotalOneSet, totalBeforeVat, vatAmount, grandTotal };
 }
 
+async function createVersion(tx: any, quotationId: string, versionNumber: number, data: QuotationCreate | QuotationUpdate, items: any[], totals: any, context: RequestContext) {
+  return tx.quotationVersion.create({
+    data: {
+      quotationId,
+      versionNumber,
+      quotationType: data.quotationType ?? "commercial",
+      projectId: data.projectId,
+      customerName: data.customerName,
+      customerRequest: data.customerRequest,
+      content: data.content,
+      quotationDate: data.quotationDate,
+      vatEnabled: data.vatEnabled ?? false,
+      status: data.status ?? "draft",
+      createdById: context.actorId,
+      ...totals,
+      items: { create: items }
+    },
+    include: { items: { orderBy: { lineIndex: "asc" } } }
+  });
+}
+
 async function createWithCode(data: QuotationCreate, context: RequestContext) {
-  await ensureProject(data.projectId);
+  await ensureProject(data);
   const quotationCode = await generateQuotationCode(data.quotationDate);
   const items = await buildQuotationItems(data.items);
   const totals = calculateTotals(items, data.numberOfSets, data.vatEnabled, data.vatRate);
 
-  const quotation = await prisma.$transaction(async (tx) =>
-    tx.quotation.create({
+  const quotation = await db.$transaction(async (tx: any) => {
+    const master = await tx.quotation.create({
       data: {
         quotationCode,
+        quotationType: data.quotationType,
         projectId: data.projectId,
         customerName: data.customerName,
         customerRequest: data.customerRequest,
+        content: data.content,
         quotationDate: data.quotationDate,
         vatEnabled: data.vatEnabled,
         status: data.status,
@@ -166,11 +247,18 @@ async function createWithCode(data: QuotationCreate, context: RequestContext) {
         createdById: context.actorId,
         updatedById: context.actorId,
         ...totals,
-        items: { create: items }
-      },
+        items: {
+          create: items.map(({ modelSnapshot: _model, pictureUrlSnapshot: _picture, ...item }) => item)
+        }
+      }
+    });
+    const version = await createVersion(tx, master.id, 1, data, items, totals, context);
+    return tx.quotation.update({
+      where: { id: master.id },
+      data: { currentVersionId: version.id },
       include: quotationInclude
-    })
-  );
+    });
+  });
 
   await createAuditLog({
     actorId: context.actorId,
@@ -179,12 +267,12 @@ async function createWithCode(data: QuotationCreate, context: RequestContext) {
     targetType: "quotation",
     targetId: quotation.id,
     newValue: quotation,
-    metadata: { quotationCode, itemCount: quotation.items.length, grandTotal: quotation.grandTotal },
+    metadata: { quotationCode, versionNumber: 1, itemCount: quotation.currentVersion?.items.length, grandTotal: quotation.grandTotal },
     ipAddress: context.ipAddress,
     userAgent: context.userAgent
   });
 
-  return quotation;
+  return normalizeQuotation(quotation);
 }
 
 export async function createQuotation(data: QuotationCreate, context: RequestContext) {
@@ -205,34 +293,51 @@ export async function createQuotation(data: QuotationCreate, context: RequestCon
   }
 }
 
+function dataFromExisting(existing: any, data: QuotationUpdate): QuotationCreate {
+  const base = existing.currentVersion ?? existing;
+  return {
+    quotationType: data.quotationType ?? base.quotationType,
+    projectId: data.projectId !== undefined ? data.projectId : base.projectId,
+    customerName: data.customerName ?? base.customerName,
+    customerRequest: data.customerRequest !== undefined ? data.customerRequest : base.customerRequest,
+    content: data.content !== undefined ? data.content : base.content,
+    quotationDate: data.quotationDate ?? base.quotationDate,
+    numberOfSets: data.numberOfSets ?? Number(base.numberOfSets),
+    vatEnabled: data.vatEnabled ?? base.vatEnabled,
+    vatRate: data.vatRate ?? Number(base.vatRate),
+    status: data.status ?? "draft",
+    signatureImageUrl: data.signatureImageUrl ?? existing.signatureImageUrl,
+    items: data.items ?? base.items.map((item: any) => ({ materialId: item.materialId, quantity: Number(item.quantity), unitPrice: Number(item.unitPrice) }))
+  };
+}
+
 export async function updateQuotation(id: string, data: QuotationUpdate, context: RequestContext) {
   const existing = await getQuotation(id);
-  await ensureProject(data.projectId);
-  const nextItems = data.items ? await buildQuotationItems(data.items) : existing.items;
-  const totals = calculateTotals(
-    nextItems.map((item) => ({ amount: toDecimal(item.amount) })),
-    data.numberOfSets ?? Number(existing.numberOfSets),
-    data.vatEnabled ?? existing.vatEnabled,
-    data.vatRate ?? Number(existing.vatRate)
-  );
+  const nextData = dataFromExisting(existing, data);
+  await ensureProject(nextData);
+  const items = await buildQuotationItems(nextData.items);
+  const totals = calculateTotals(items, nextData.numberOfSets, nextData.vatEnabled, nextData.vatRate);
+  const nextVersionNumber = (existing.currentVersion?.versionNumber ?? 0) + 1;
 
-  const quotation = await prisma.$transaction(async (tx) => {
-    if (data.items) {
-      await tx.quotationItem.deleteMany({ where: { quotationId: id } });
-    }
+  const quotation = await db.$transaction(async (tx: any) => {
+    await tx.quotationItem.deleteMany({ where: { quotationId: id } });
+    const version = await createVersion(tx, id, nextVersionNumber, nextData, items, totals, context);
     return tx.quotation.update({
       where: { id },
       data: {
-        ...(data.projectId !== undefined ? { projectId: data.projectId } : {}),
-        ...(data.customerName !== undefined ? { customerName: data.customerName } : {}),
-        ...(data.customerRequest !== undefined ? { customerRequest: data.customerRequest } : {}),
-        ...(data.quotationDate !== undefined ? { quotationDate: data.quotationDate } : {}),
-        ...(data.vatEnabled !== undefined ? { vatEnabled: data.vatEnabled } : {}),
-        ...(data.status !== undefined ? { status: data.status } : {}),
-        ...(data.signatureImageUrl !== undefined ? { signatureImageUrl: data.signatureImageUrl } : {}),
+        quotationType: nextData.quotationType,
+        projectId: nextData.projectId,
+        customerName: nextData.customerName,
+        customerRequest: nextData.customerRequest,
+        content: nextData.content,
+        quotationDate: nextData.quotationDate,
+        vatEnabled: nextData.vatEnabled,
+        status: nextData.status,
+        signatureImageUrl: nextData.signatureImageUrl,
         updatedById: context.actorId,
+        currentVersionId: version.id,
         ...totals,
-        ...(data.items ? { items: { create: nextItems } } : {})
+        items: { create: items.map(({ modelSnapshot: _model, pictureUrlSnapshot: _picture, ...item }) => item) }
       },
       include: quotationInclude
     });
@@ -240,23 +345,41 @@ export async function updateQuotation(id: string, data: QuotationUpdate, context
 
   await createAuditLog({
     actorId: context.actorId,
-    action: "update",
+    action: "create_version",
     module: "quotations",
     targetType: "quotation",
     targetId: id,
     oldValue: existing,
     newValue: quotation,
-    metadata: { quotationCode: quotation.quotationCode, itemCount: quotation.items.length, grandTotal: quotation.grandTotal },
+    metadata: { quotationCode: quotation.quotationCode, versionNumber: nextVersionNumber, grandTotal: quotation.grandTotal },
     ipAddress: context.ipAddress,
     userAgent: context.userAgent
   });
 
-  return quotation;
+  return normalizeQuotation(quotation);
+}
+
+export async function createUpdateFromVersion(id: string, versionId: string, data: QuotationUpdate, context: RequestContext) {
+  const version = await getQuotationVersion(id, versionId);
+  const payload = {
+    quotationType: data.quotationType ?? version.quotationType,
+    projectId: data.projectId !== undefined ? data.projectId : version.projectId,
+    customerName: data.customerName ?? version.customerName,
+    customerRequest: data.customerRequest !== undefined ? data.customerRequest : version.customerRequest,
+    content: data.content !== undefined ? data.content : version.content,
+    quotationDate: data.quotationDate ?? version.quotationDate,
+    numberOfSets: data.numberOfSets ?? Number(version.numberOfSets),
+    vatEnabled: data.vatEnabled ?? version.vatEnabled,
+    vatRate: data.vatRate ?? Number(version.vatRate),
+    status: data.status ?? "draft",
+    items: data.items ?? version.items.map((item: any) => ({ materialId: item.materialId, quantity: Number(item.quantity), unitPrice: Number(item.unitPrice) }))
+  };
+  return updateQuotation(id, payload, context);
 }
 
 export async function deleteQuotation(id: string, context: RequestContext) {
   const existing = await getQuotation(id);
-  const quotation = await prisma.quotation.update({
+  const quotation = await db.quotation.update({
     where: { id },
     data: { status: "cancelled", deletedAt: new Date(), updatedById: context.actorId },
     include: quotationInclude
@@ -275,188 +398,349 @@ export async function deleteQuotation(id: string, context: RequestContext) {
     userAgent: context.userAgent
   });
 
-  return quotation;
+  return normalizeQuotation(quotation);
 }
 
-export async function addQuotationImage(
-  id: string,
-  file: { originalname: string; filename: string; path: string; size: number; mimetype: string },
-  context: RequestContext
-) {
+export async function addQuotationImage(id: string, file: { originalname: string; filename: string; size: number; mimetype: string }, context: RequestContext) {
   const quotation = await getQuotation(id);
-  const image = await prisma.quotationImage.create({
-    data: {
-      quotationId: id,
-      fileName: file.originalname,
-      fileUrl: `/uploads/quotations/${file.filename}`,
-      fileSize: file.size,
-      mimeType: file.mimetype,
-      uploadedById: context.actorId
-    }
+  const image = await db.quotationImage.create({
+    data: { quotationId: id, fileName: file.originalname, fileUrl: toUploadUrl(file.filename), fileSize: file.size, mimeType: file.mimetype, uploadedById: context.actorId }
   });
-
-  await createAuditLog({
-    actorId: context.actorId,
-    action: "upload_image",
-    module: "quotations",
-    targetType: "quotation",
-    targetId: id,
-    newValue: image,
-    metadata: { quotationCode: quotation.quotationCode, fileName: image.fileName },
-    ipAddress: context.ipAddress,
-    userAgent: context.userAgent
-  });
-
+  await createAuditLog({ actorId: context.actorId, action: "upload_image", module: "quotations", targetType: "quotation", targetId: id, newValue: image, metadata: { quotationCode: quotation.quotationCode }, ipAddress: context.ipAddress, userAgent: context.userAgent });
   return image;
 }
 
 export async function deleteQuotationImage(id: string, context: RequestContext) {
-  const image = await prisma.quotationImage.findUnique({ where: { id }, include: { quotation: true } });
+  const image = await db.quotationImage.findUnique({ where: { id }, include: { quotation: true } });
   if (!image) throw new AppError(404, "Quotation image not found.");
-  await prisma.quotationImage.delete({ where: { id } });
-
-  await createAuditLog({
-    actorId: context.actorId,
-    action: "delete_image",
-    module: "quotations",
-    targetType: "quotation_image",
-    targetId: id,
-    oldValue: image,
-    metadata: { quotationId: image.quotationId, quotationCode: image.quotation.quotationCode, fileName: image.fileName },
-    ipAddress: context.ipAddress,
-    userAgent: context.userAgent
-  });
-
+  await db.quotationImage.delete({ where: { id } });
+  await createAuditLog({ actorId: context.actorId, action: "delete_image", module: "quotations", targetType: "quotation_image", targetId: id, oldValue: image, metadata: { quotationId: image.quotationId, quotationCode: image.quotation.quotationCode }, ipAddress: context.ipAddress, userAgent: context.userAgent });
   return image;
 }
 
-export async function updateQuotationSignature(
-  id: string,
-  file: { originalname: string; filename: string; path: string; size: number; mimetype: string },
-  context: RequestContext
-) {
+export async function updateQuotationSignature(id: string, file: { originalname: string; filename: string; size: number; mimetype: string }, context: RequestContext) {
   const existing = await getQuotation(id);
-  const signatureImageUrl = `/uploads/quotations/${file.filename}`;
-  const quotation = await prisma.quotation.update({
-    where: { id },
-    data: { signatureImageUrl, updatedById: context.actorId },
-    include: quotationInclude
-  });
-
-  await createAuditLog({
-    actorId: context.actorId,
-    action: "upload_signature",
-    module: "quotations",
-    targetType: "quotation",
-    targetId: id,
-    oldValue: { signatureImageUrl: existing.signatureImageUrl },
-    newValue: { signatureImageUrl },
-    metadata: { quotationCode: quotation.quotationCode, fileName: file.originalname },
-    ipAddress: context.ipAddress,
-    userAgent: context.userAgent
-  });
-
-  return quotation;
+  const signatureImageUrl = toUploadUrl(file.filename);
+  const quotation = await db.quotation.update({ where: { id }, data: { signatureImageUrl, updatedById: context.actorId }, include: quotationInclude });
+  await createAuditLog({ actorId: context.actorId, action: "upload_signature", module: "quotations", targetType: "quotation", targetId: id, oldValue: { signatureImageUrl: existing.signatureImageUrl }, newValue: { signatureImageUrl }, metadata: { quotationCode: quotation.quotationCode }, ipAddress: context.ipAddress, userAgent: context.userAgent });
+  return normalizeQuotation(quotation);
 }
 
-function setMoneyCell(cell: ExcelJS.Cell, value: Prisma.Decimal | number | string) {
-  cell.value = Number(value);
-  cell.numFmt = '#,##0';
+export async function uploadCustomerPo(id: string, versionId: string, file: { originalname: string; filename: string; size: number; mimetype: string }, context: RequestContext) {
+  const version = await getQuotationVersion(id, versionId);
+  const updated = await db.quotationVersion.update({
+    where: { id: versionId },
+    data: { customerPoFileName: file.originalname, customerPoFileUrl: toUploadUrl(file.filename) },
+    include: { items: { orderBy: { lineIndex: "asc" } } }
+  });
+  await createAuditLog({ actorId: context.actorId, action: "upload_customer_po", module: "quotations", targetType: "quotation_version", targetId: versionId, oldValue: version, newValue: updated, metadata: { quotationId: id }, ipAddress: context.ipAddress, userAgent: context.userAgent });
+  return updated;
 }
 
-export async function exportQuotationExcel(id: string, context: RequestContext) {
-  const quotation = await getQuotation(id);
+async function updateVersionStatus(id: string, versionId: string, status: string, context: RequestContext) {
+  await getQuotationVersion(id, versionId);
+  const version = await db.quotationVersion.update({
+    where: { id: versionId },
+    data: { status, ...(status === "approved" ? { approvedAt: new Date(), approvedById: context.actorId } : {}) },
+    include: { items: { orderBy: { lineIndex: "asc" } } }
+  });
+  const quotation = await db.quotation.findUnique({ where: { id }, select: { currentVersionId: true } });
+  if (quotation?.currentVersionId === versionId) await db.quotation.update({ where: { id }, data: { status } });
+  await createAuditLog({ actorId: context.actorId, action: status, module: "quotations", targetType: "quotation_version", targetId: versionId, newValue: version, metadata: { quotationId: id, versionNumber: version.versionNumber }, ipAddress: context.ipAddress, userAgent: context.userAgent });
+  return version;
+}
+
+export const approveQuotationVersion = (id: string, versionId: string, context: RequestContext) => updateVersionStatus(id, versionId, "approved", context);
+export const rejectQuotationVersion = (id: string, versionId: string, context: RequestContext) => updateVersionStatus(id, versionId, "rejected", context);
+export const cancelQuotationVersion = (id: string, versionId: string, context: RequestContext) => updateVersionStatus(id, versionId, "cancelled", context);
+
+export async function createStockOutFromVersion(id: string, versionId: string, context: RequestContext) {
+  const version = await getQuotationVersion(id, versionId);
+  if (version.status !== "approved") throw new AppError(400, "Only approved quotation versions can create Stock Out.");
+  if (version.stockOutCreatedAt) throw new AppError(400, "Stock Out was already created for this quotation version.");
+
+  const transactions = await db.$transaction(async (tx: any) => {
+    const created = [];
+    for (const item of version.items) {
+      if (!item.materialId) throw new AppError(400, `Material is missing for ${item.materialNameSnapshot}.`);
+      const requiredQuantity = quantity(toDecimal(item.quantity).mul(version.numberOfSets));
+      const inventoryItem = await tx.inventoryItem.findUnique({ where: { id: item.materialId } });
+      if (!inventoryItem) throw new AppError(404, "Material not found.");
+      const currentStock = toDecimal(inventoryItem.stockQuantity);
+      if (currentStock.lt(requiredQuantity)) throw new AppError(400, "Insufficient stock quantity.");
+      const resultingStock = quantity(currentStock.sub(requiredQuantity));
+      await tx.inventoryItem.update({ where: { id: item.materialId }, data: { stockQuantity: resultingStock, updatedById: context.actorId } });
+      created.push(await tx.inventoryStockMovement.create({
+        data: {
+          itemId: item.materialId,
+          movementType: "issue",
+          quantity: requiredQuantity,
+          previousStock: currentStock,
+          resultingStock,
+          referenceType: "quotation",
+          referenceId: versionId,
+          projectId: version.projectId,
+          note: `Stock Out from quotation ${version.quotation.quotationCode} v${version.versionNumber}`,
+          metadata: { quotationId: id, quotationVersionId: versionId, customerPoFileUrl: version.customerPoFileUrl },
+          createdById: context.actorId
+        }
+      }));
+    }
+    await tx.quotationVersion.update({ where: { id: versionId }, data: { stockOutCreatedAt: new Date(), stockOutCreatedById: context.actorId } });
+    return created;
+  });
+
+  await createAuditLog({ actorId: context.actorId, action: "stock_out", module: "quotations", targetType: "quotation_version", targetId: versionId, metadata: { quotationId: id, movementCount: transactions.length }, ipAddress: context.ipAddress, userAgent: context.userAgent });
+  return { transactions };
+}
+
+export async function syncProjectMaterials(id: string, versionId: string, context: RequestContext) {
+  const version = await getQuotationVersion(id, versionId);
+  if (version.quotationType !== "project" || !version.projectId) throw new AppError(400, "Only Project Quotations can sync to Project Materials.");
+  const results = await db.$transaction(async (tx: any) => {
+    const synced = [];
+    for (const item of version.items) {
+      const plannedQuantity = quantity(toDecimal(item.quantity).mul(version.numberOfSets));
+      const existing = await tx.projectMaterial.findUnique({
+        where: { projectId_materialCode: { projectId: version.projectId, materialCode: item.materialCodeSnapshot } }
+      });
+      if (existing) {
+        synced.push(await tx.projectMaterial.update({
+          where: { id: existing.id },
+          data: { quotationId: id, quotationVersionId: versionId, plannedQuantity, remainingQuantity: plannedQuantity, estimatedUnitPrice: item.unitPrice }
+        }));
+      } else {
+        synced.push(await tx.projectMaterial.create({
+          data: {
+            projectId: version.projectId,
+            quotationId: id,
+            quotationVersionId: versionId,
+            materialCode: item.materialCodeSnapshot,
+            materialName: item.materialNameSnapshot,
+            unit: item.unitSnapshot,
+            plannedQuantity,
+            remainingQuantity: plannedQuantity,
+            estimatedUnitPrice: item.unitPrice,
+            status: "not_ordered"
+          }
+        }));
+      }
+    }
+    await tx.quotationVersion.update({ where: { id: versionId }, data: { projectSyncedAt: new Date(), projectSyncedById: context.actorId } });
+    return synced;
+  });
+  await createAuditLog({ actorId: context.actorId, action: "sync_project_materials", module: "quotations", targetType: "quotation_version", targetId: versionId, metadata: { quotationId: id, itemCount: results.length }, ipAddress: context.ipAddress, userAgent: context.userAgent });
+  return { items: results };
+}
+
+export async function getCompanySettings() {
+  const existing = await db.quotationCompanySettings.findFirst({ orderBy: { createdAt: "asc" } });
+  return existing ?? db.quotationCompanySettings.create({ data: {} });
+}
+
+export async function updateCompanySettings(data: CompanySettingsInput, context: RequestContext) {
+  const existing = await getCompanySettings();
+  const updated = await db.quotationCompanySettings.update({ where: { id: existing.id }, data: { ...data, updatedById: context.actorId } });
+  await createAuditLog({ actorId: context.actorId, action: "update", module: "quotation_settings", targetType: "quotation_company_settings", targetId: updated.id, oldValue: existing, newValue: updated, ipAddress: context.ipAddress, userAgent: context.userAgent });
+  return updated;
+}
+
+export async function listQuotationTemplates(query: TemplateQuery) {
+  const pagination = getPagination(query);
+  const where = { deletedAt: null, ...(query.quotationId ? { quotationId: query.quotationId } : {}) };
+  const [total, items] = await Promise.all([
+    db.quotationTemplate.count({ where }),
+    db.quotationTemplate.findMany({ where, orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }], ...pagination })
+  ]);
+  return { items, meta: getPaginationMeta(query, total) };
+}
+
+export async function getQuotationTemplate(id: string) {
+  const template = await db.quotationTemplate.findFirst({ where: { id, deletedAt: null } });
+  if (!template) throw new AppError(404, "Quotation template not found.");
+  return template;
+}
+
+async function detectPlaceholders(filePath: string) {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "TeamPlatform";
-  workbook.created = new Date();
-  const sheet = workbook.addWorksheet("Quotation");
-
-  sheet.columns = [
-    { key: "a", width: 20 },
-    { key: "b", width: 26 },
-    { key: "c", width: 18 },
-    { key: "d", width: 34 },
-    { key: "e", width: 14 },
-    { key: "f", width: 14 },
-    { key: "g", width: 18 },
-    { key: "h", width: 18 }
-  ];
-
-  sheet.mergeCells("A1:H1");
-  sheet.getCell("A1").value = "Quotation";
-  sheet.getCell("A1").font = { bold: true, size: 18 };
-  sheet.addRow([]);
-  sheet.addRow(["Quotation Code", quotation.quotationCode, "Quotation Date", quotation.quotationDate]);
-  sheet.addRow(["Project", quotation.project ? `${quotation.project.projectCode} - ${quotation.project.name}` : "-", "Customer", quotation.customerName]);
-  sheet.addRow(["Customer Request", quotation.customerRequest ?? "-"]);
-  sheet.addRow([]);
-
-  const headerRow = sheet.addRow(["#", "Material Code", "Material Name", "Quantity", "Unit", "Unit Price VND", "Amount VND"]);
-  headerRow.font = { bold: true };
-  headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
-
-  quotation.items.forEach((item) => {
-    const row = sheet.addRow([
-      item.lineIndex,
-      item.materialCodeSnapshot,
-      item.materialNameSnapshot,
-      Number(item.quantity),
-      item.unitSnapshot,
-      Number(item.unitPrice),
-      Number(item.amount)
-    ]);
-    row.getCell(4).numFmt = '#,##0.###';
-    row.getCell(6).numFmt = '#,##0';
-    row.getCell(7).numFmt = '#,##0';
+  await workbook.xlsx.readFile(filePath);
+  const placeholders = new Set<string>();
+  workbook.eachSheet((sheet) => {
+    sheet.eachRow((row) => {
+      row.eachCell((cell) => {
+        const text = String(cell.value ?? "");
+        const matches = text.match(/Q-#yyyyMMdd\+ID|#[A-Za-z0-9_]+/g);
+        matches?.forEach((placeholder) => placeholders.add(placeholder));
+      });
+    });
   });
+  return Array.from(placeholders);
+}
 
+export async function uploadQuotationTemplate(file: { originalname: string; filename: string; path: string; size: number; mimetype: string }, context: RequestContext) {
+  const placeholders = await detectPlaceholders(file.path).catch(() => []);
+  const template = await db.quotationTemplate.create({
+    data: {
+      name: path.parse(file.originalname).name,
+      fileName: file.originalname,
+      fileUrl: toUploadUrl(file.filename),
+      fileSize: file.size,
+      mimeType: file.mimetype,
+      placeholderConfig: defaultPlaceholderConfig,
+      detectedPlaceholders: placeholders,
+      uploadedById: context.actorId
+    }
+  });
+  await createAuditLog({ actorId: context.actorId, action: "upload", module: "quotation_templates", targetType: "quotation_template", targetId: template.id, newValue: template, ipAddress: context.ipAddress, userAgent: context.userAgent });
+  return template;
+}
+
+export async function updateQuotationTemplate(id: string, data: TemplateUpdateInput, context: RequestContext) {
+  const existing = await getQuotationTemplate(id);
+  const updated = await db.quotationTemplate.update({ where: { id }, data });
+  await createAuditLog({ actorId: context.actorId, action: "update", module: "quotation_templates", targetType: "quotation_template", targetId: id, oldValue: existing, newValue: updated, ipAddress: context.ipAddress, userAgent: context.userAgent });
+  return updated;
+}
+
+export async function updateQuotationTemplateMapping(id: string, data: TemplateMappingInput, context: RequestContext) {
+  return updateQuotationTemplate(id, { placeholderConfig: data.placeholderConfig } as any, context);
+}
+
+export async function setDefaultQuotationTemplate(id: string, context: RequestContext) {
+  await getQuotationTemplate(id);
+  await db.$transaction([db.quotationTemplate.updateMany({ where: { deletedAt: null }, data: { isDefault: false } }), db.quotationTemplate.update({ where: { id }, data: { isDefault: true } })]);
+  await createAuditLog({ actorId: context.actorId, action: "set_default", module: "quotation_templates", targetType: "quotation_template", targetId: id, ipAddress: context.ipAddress, userAgent: context.userAgent });
+  return getQuotationTemplate(id);
+}
+
+export async function deleteQuotationTemplate(id: string, context: RequestContext) {
+  const existing = await getQuotationTemplate(id);
+  const deleted = await db.quotationTemplate.update({ where: { id }, data: { status: "inactive", deletedAt: new Date(), isDefault: false } });
+  await createAuditLog({ actorId: context.actorId, action: "delete", module: "quotation_templates", targetType: "quotation_template", targetId: id, oldValue: existing, newValue: deleted, ipAddress: context.ipAddress, userAgent: context.userAgent });
+  return deleted;
+}
+
+function valueForPlaceholder(placeholder: string, quotation: any, version: any, item?: any) {
+  const projectName = version.quotationType === "project" ? version.quotation.project?.name ?? quotation.project?.name ?? "-" : "Commercial";
+  const map: Record<string, unknown> = {
+    "#yyyyMMdd": dateCode(version.quotationDate),
+    "Q-#yyyyMMdd+ID": quotation.quotationCode,
+    "#Project": projectName,
+    "#Customer": version.customerName,
+    "#Spect": version.customerRequest ?? "",
+    "#Content": version.content ?? "",
+    "#Name": item?.materialNameSnapshot ?? "",
+    "#Model": item?.modelSnapshot ?? "",
+    "#Qty": item?.quantity?.toString?.() ?? "",
+    "#Unit": item?.unitSnapshot ?? "",
+    "#Price": item?.unitPrice?.toString?.() ?? "",
+    "#PriceTotal": item?.amount?.toString?.() ?? ""
+  };
+  return map[placeholder] ?? "";
+}
+
+function replacePlaceholders(text: string, quotation: any, version: any, item?: any) {
+  return text.replace(/Q-#yyyyMMdd\+ID|#[A-Za-z0-9_]+/g, (placeholder) => String(valueForPlaceholder(placeholder, quotation, version, item)));
+}
+
+export async function buildQuotationPreview(id: string, versionId?: string) {
+  const quotation = await getQuotation(id);
+  const version = versionId ? await getQuotationVersion(id, versionId) : quotation.currentVersion;
+  const settings = await getCompanySettings();
+  if (!version) throw new AppError(404, "Quotation version not found.");
+  return {
+    company: settings,
+    quotation,
+    version,
+    projectName: version.quotationType === "project" ? quotation.project?.name ?? "-" : "Commercial",
+    totals: {
+      subtotalOneSet: version.subtotalOneSet,
+      totalBeforeVat: version.totalBeforeVat,
+      vatAmount: version.vatAmount,
+      grandTotal: version.grandTotal
+    }
+  };
+}
+
+function styleWorksheet(sheet: ExcelJS.Worksheet) {
+  sheet.columns = [
+    { width: 8 },
+    { width: 18 },
+    { width: 34 },
+    { width: 18 },
+    { width: 12 },
+    { width: 12 },
+    { width: 18 },
+    { width: 18 }
+  ];
+}
+
+async function buildDefaultWorkbook(quotation: any, version: any) {
+  const settings = await getCompanySettings();
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Quotation");
+  styleWorksheet(sheet);
+  sheet.mergeCells("A1:H1");
+  sheet.getCell("A1").value = settings.companyName ?? "TeamPlatform";
+  sheet.getCell("A1").font = { bold: true, size: 16 };
+  sheet.addRow(["Tax Code", settings.taxCode ?? "", "Phone", settings.phone ?? "", "Email", settings.email ?? ""]);
+  sheet.addRow(["Address", settings.address ?? ""]);
   sheet.addRow([]);
-  const totals = [
-    ["Subtotal for 1 Set", quotation.subtotalOneSet],
-    ["Number of Sets", quotation.numberOfSets],
-    ["Total Before VAT", quotation.totalBeforeVat],
-    ["VAT Enabled", quotation.vatEnabled ? "Yes" : "No"],
-    ["VAT Rate %", quotation.vatRate],
-    ["VAT Amount", quotation.vatAmount],
-    ["Grand Total", quotation.grandTotal]
-  ] as const;
-  for (const [label, value] of totals) {
-    const row = sheet.addRow([label, value]);
-    row.getCell(1).font = { bold: true };
-    if (value instanceof Prisma.Decimal) setMoneyCell(row.getCell(2), value);
-  }
+  sheet.addRow(["Quotation Code", quotation.quotationCode, "Date", version.quotationDate]);
+  sheet.addRow(["Project", version.quotationType === "project" ? quotation.project?.name ?? "-" : "Commercial", "Customer", version.customerName]);
+  sheet.addRow(["Specifications", version.customerRequest ?? ""]);
+  sheet.addRow(["Content", version.content ?? ""]);
+  sheet.addRow([]);
+  const header = sheet.addRow(["#", "Code", "Name", "Model", "Qty", "Unit", "Price", "Amount"]);
+  header.font = { bold: true };
+  version.items.forEach((item: any) => sheet.addRow([item.lineIndex, item.materialCodeSnapshot, item.materialNameSnapshot, item.modelSnapshot ?? "", Number(item.quantity), item.unitSnapshot, Number(item.unitPrice), Number(item.amount)]));
+  sheet.addRow([]);
+  sheet.addRow(["Subtotal for 1 Set", Number(version.subtotalOneSet)]);
+  sheet.addRow(["Number of Sets", Number(version.numberOfSets)]);
+  sheet.addRow(["Total Before VAT", Number(version.totalBeforeVat)]);
+  sheet.addRow(["VAT", version.vatEnabled ? `${version.vatRate}%` : "No VAT"]);
+  sheet.addRow(["VAT Amount", Number(version.vatAmount)]);
+  sheet.addRow(["Grand Total", Number(version.grandTotal)]);
+  return workbook;
+}
 
-  if (quotation.images.length > 0 || quotation.signatureImageUrl) {
-    sheet.addRow([]);
-    sheet.addRow(["Images"]);
-    quotation.images.forEach((image) => sheet.addRow([image.fileName, image.fileUrl]));
-    if (quotation.signatureImageUrl) sheet.addRow(["Signature", quotation.signatureImageUrl]);
-  }
+async function buildTemplateWorkbook(quotation: any, version: any, template: any) {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(diskPathFromUploadUrl(template.fileUrl));
+  workbook.eachSheet((sheet) => {
+    let itemTemplateRowNumber = 0;
+    sheet.eachRow((row, rowNumber) => {
+      const rowText = row.values?.toString?.() ?? "";
+      if (!itemTemplateRowNumber && /#Name|#Model|#Qty|#Unit|#Price|#PriceTotal/.test(rowText)) itemTemplateRowNumber = rowNumber;
+      row.eachCell((cell) => {
+        if (typeof cell.value === "string") cell.value = replacePlaceholders(cell.value, quotation, version);
+      });
+    });
+    if (itemTemplateRowNumber) {
+      const templateRow = sheet.getRow(itemTemplateRowNumber);
+      version.items.forEach((item: any, index: number) => {
+        const row = index === 0 ? templateRow : sheet.insertRow(itemTemplateRowNumber + index, []);
+        templateRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          const target = row.getCell(colNumber);
+          target.style = { ...cell.style };
+          target.value = typeof cell.value === "string" ? replacePlaceholders(cell.value, quotation, version, item) : cell.value;
+        });
+      });
+    }
+  });
+  return workbook;
+}
 
+export async function exportQuotationExcel(id: string, context: RequestContext, versionId?: string) {
+  const quotation = await getQuotation(id);
+  const version = versionId ? await getQuotationVersion(id, versionId) : quotation.currentVersion;
+  if (!version) throw new AppError(404, "Quotation version not found.");
+  const template = await db.quotationTemplate.findFirst({ where: { deletedAt: null, isDefault: true }, orderBy: { createdAt: "desc" } });
+  const workbook = template ? await buildTemplateWorkbook(quotation, version, template).catch(() => buildDefaultWorkbook(quotation, version)) : await buildDefaultWorkbook(quotation, version);
   const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
   const fileName = `quotation-${quotation.quotationCode}.xlsx`;
 
-  await prisma.exportLog.create({
-    data: {
-      exportType: "quotation",
-      fileName,
-      format: "excel",
-      filtersJson: { quotationId: id } as Prisma.InputJsonValue,
-      exportedById: context.actorId,
-      metadata: { quotationCode: quotation.quotationCode, grandTotal: quotation.grandTotal.toString() }
-    }
-  });
-
-  await createAuditLog({
-    actorId: context.actorId,
-    action: "export",
-    module: "quotations",
-    targetType: "quotation",
-    targetId: id,
-    metadata: { quotationCode: quotation.quotationCode, fileName },
-    ipAddress: context.ipAddress,
-    userAgent: context.userAgent
-  });
-
+  await db.exportLog.create({ data: { exportType: "quotation", fileName, format: "excel", filtersJson: { quotationId: id, quotationVersionId: version.id }, exportedById: context.actorId, metadata: { quotationCode: quotation.quotationCode, versionNumber: version.versionNumber } } });
+  await createAuditLog({ actorId: context.actorId, action: "export", module: "quotations", targetType: "quotation_version", targetId: version.id, metadata: { quotationId: id, quotationCode: quotation.quotationCode, fileName }, ipAddress: context.ipAddress, userAgent: context.userAgent });
   return { fileName, buffer };
 }

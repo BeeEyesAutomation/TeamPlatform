@@ -757,9 +757,12 @@ created_at
 ```txt
 id
 quotation_code unique
+quotation_type commercial|project
 project_id nullable
+current_version_id nullable unique
 customer_name
 customer_request nullable
+content nullable
 quotation_date
 number_of_sets
 vat_enabled
@@ -778,7 +781,57 @@ updated_at
 deleted_at
 ```
 
-Money, quantity, and percentage fields must use Decimal. `quotation_code` is generated server-side using `Q-YYYYMMDD-XXX` with a sequence scoped per day.
+Money, quantity, and percentage fields must use Decimal. `quotation_code` is generated server-side using `Q-YYYYMMDD-XXX` with a sequence scoped per quotation date. Commercial quotations do not require `project_id`; Project quotations require it.
+
+## quotation_versions
+
+```txt
+id
+quotation_id
+version_number
+project_id nullable
+customer_name
+customer_request nullable
+content nullable
+quotation_date
+number_of_sets
+vat_enabled
+vat_rate
+subtotal_one_set
+total_before_vat
+vat_amount
+grand_total
+signature_image_url nullable
+customer_po_file_url nullable
+customer_po_file_name nullable
+status
+stock_out_created_at nullable
+created_by_id
+updated_by_id
+created_at
+updated_at
+```
+
+Quotation versions are immutable snapshots. Creating a quotation creates v1. Updating a quotation creates a new latest version and updates `quotations.current_version_id`.
+
+## quotation_version_items
+
+```txt
+id
+quotation_version_id
+line_index
+material_id nullable
+material_code_snapshot
+material_name_snapshot
+model_snapshot nullable
+picture_url_snapshot nullable
+unit_snapshot
+quantity
+unit_price
+amount
+created_at
+updated_at
+```
 
 ## quotation_items
 
@@ -789,6 +842,8 @@ line_index
 material_id nullable
 material_code_snapshot
 material_name_snapshot
+model_snapshot nullable
+picture_url_snapshot nullable
 unit_snapshot
 quantity
 unit_price
@@ -797,7 +852,7 @@ created_at
 updated_at
 ```
 
-Quotation items snapshot inventory material code, name, unit, and unit price so old quotations do not change when inventory data changes later.
+`quotation_items` stores the current master item set for listing/detail compatibility. Immutable historical items are stored in `quotation_version_items`. Both snapshot inventory material code, name, model, picture URL, unit, and unit price so old quotations do not change when inventory data changes later.
 
 ## quotation_images
 
@@ -821,6 +876,41 @@ exported_by_id
 format
 file_name
 created_at
+```
+
+## quotation_templates
+
+```txt
+id
+name
+original_file_name
+file_url
+file_size nullable
+mime_type nullable
+placeholder_config
+is_default
+status
+uploaded_by_id nullable
+created_at
+updated_at
+```
+
+Uploaded Excel templates are stored as local files. Placeholder mapping is stored as JSON.
+
+## quotation_company_settings
+
+```txt
+id
+company_name nullable
+tax_code nullable
+address nullable
+phone nullable
+email nullable
+bank_account_number nullable
+bank_name nullable
+bank_branch nullable
+created_at
+updated_at
 ```
 
 ## project_statistics_snapshots

@@ -58,8 +58,17 @@ const permissions = [
   "inventory.view_cost",
   "quotations.view",
   "quotations.manage",
+  "quotations.preview",
   "quotations.export",
   "quotations.delete",
+  "quotations.approve",
+  "quotations.version.view",
+  "quotations.version.create",
+  "quotations.stock_out",
+  "quotations.customer_po.upload",
+  "quotation_templates.view",
+  "quotation_templates.manage",
+  "quotation_settings.manage",
   "email.manage",
   "audit_logs.view"
 ];
@@ -324,10 +333,10 @@ async function seedRolesAndPermissions() {
     }
   }
   const quotationRolePermissions: Record<string, string[]> = {
-    director: ["quotations.view", "quotations.export"],
-    accountant: ["quotations.view", "quotations.manage", "quotations.export"],
-    project_manager: ["quotations.view", "quotations.manage", "quotations.export", "quotations.delete"],
-    team_leader: ["quotations.view"],
+    director: ["quotations.view", "quotations.preview", "quotations.export", "quotations.approve", "quotations.version.view", "quotation_templates.view"],
+    accountant: ["quotations.view", "quotations.manage", "quotations.preview", "quotations.export", "quotations.version.view", "quotations.version.create", "quotation_templates.view", "quotation_templates.manage", "quotation_settings.manage"],
+    project_manager: ["quotations.view", "quotations.manage", "quotations.preview", "quotations.export", "quotations.delete", "quotations.approve", "quotations.version.view", "quotations.version.create", "quotations.stock_out", "quotations.customer_po.upload", "quotation_templates.view"],
+    team_leader: ["quotations.view", "quotations.preview", "quotations.version.view"],
     project_employee: ["quotations.view"]
   };
 

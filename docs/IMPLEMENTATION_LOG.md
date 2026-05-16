@@ -2509,3 +2509,91 @@ Phase preparation for future module implementation.
 - Update this log before and after each future implementation phase.
 - Run targeted validation for the changed workspace during future phases.
 - Update the pull request description after a pull request exists and a phase is completed.
+## 2026-05-16 - Quotation Phase 1 Core Preview Export
+
+### Task Name
+
+Quotation Phase 1: core, versioning, preview, Excel template upload, placeholder mapping, and Excel export.
+
+### Scope
+
+- Added quotation master/version/template/settings database foundation.
+- Implemented backend CRUD, versioning, server-side quotation code generation, calculations, preview, Excel export, customer PO upload, approval/reject/cancel actions, project-material sync, and quotation-linked stock out.
+- Added quotation permissions for preview, versions, approval, stock out, PO upload, templates, and settings.
+- Added frontend quotation type support, version history/actions, built-in preview, template manager, company settings page, and version-specific Excel export.
+- Advanced drag/drop canvas layout editor remains out of scope for Phase 1.
+
+### Assumptions
+
+- Commercial quotations do not require a project.
+- Project quotations require a project.
+- Old quotation versions are immutable.
+- Stock out from an approved quotation version is one-time and all-or-nothing.
+- Uploaded Excel templates are stored locally and placeholder mapping is JSON-based.
+
+### Changed Files Summary
+
+- `apps/api/prisma/schema.prisma`
+- `apps/api/prisma/migrations/20260516120000_quotation_core_version_preview_export/migration.sql`
+- `apps/api/prisma/seed.ts`
+- `apps/api/src/modules/quotations/quotations.routes.ts`
+- `apps/api/src/modules/quotations/quotations.schemas.ts`
+- `apps/api/src/modules/quotations/quotations.service.ts`
+- `apps/api/src/routes.ts`
+- `apps/web/types/quotations.ts`
+- `apps/web/features/quotations/quotations-api.ts`
+- `apps/web/features/quotations/quotation-form.tsx`
+- `apps/web/features/quotations/quotation-detail-client.tsx`
+- `apps/web/features/quotations/quotations-list-client.tsx`
+- `apps/web/features/quotations/quotation-template-manager-client.tsx`
+- `apps/web/features/quotations/quotation-settings-client.tsx`
+- `apps/web/app/quotations/templates/page.tsx`
+- `apps/web/app/quotations/settings/page.tsx`
+- `docs/QUOTATION_EXEC_PLAN.md`
+- `docs/QUOTATION_PLAN.md`
+- `DATABASE.md`
+- `API.md`
+- `WORKFLOWS.md`
+- `MAP.md`
+- `docs/DECISIONS.md`
+- `docs/IMPLEMENTATION_LOG.md`
+
+### Commands Run
+
+- `npx prisma format --schema apps/api/prisma/schema.prisma`
+- `npx prisma validate`
+- `npx prisma generate`
+- `npx prisma migrate dev --name quotation_core_version_preview_export`
+- `npx prisma db execute --file prisma/migrations/20260516120000_quotation_core_version_preview_export/migration.sql`
+- `npm run typecheck --workspace apps/api`
+- `npm run typecheck --workspace apps/web`
+- `npx prisma validate --schema prisma/.staged-schema.prisma`
+
+### Errors Found
+
+- `prisma format` initially ran from the wrong directory and could not find the schema. Classification: `config_error`.
+- `prisma validate` initially ran from the repo root without loading `apps/api/.env`. Classification: `env_missing`.
+- `prisma migrate dev` failed first because the manual migration had a UTF-8 BOM, then failed again because the environment is non-interactive. Classification: `migration_error` then `config_error`.
+- API typecheck initially failed because a Zod effects schema was used before calling `.partial()`. Classification: `type_error`.
+- Web typecheck initially failed because the quotation type select returned a plain string instead of the `QuotationType` union. Classification: `type_error`.
+
+### Fixes Applied
+
+- Ran Prisma commands from the correct API workspace/schema path.
+- Removed the migration file BOM.
+- Applied the migration with `prisma db execute` after non-interactive `migrate dev` could not run.
+- Split the quotation body Zod schema before create/update refinements.
+- Narrowed the frontend quotation type select value to `QuotationType`.
+
+### Result
+
+- Prisma format, validate, and generate completed.
+- Quotation migration SQL was executed successfully with `prisma db execute`.
+- API typecheck passed.
+- Web typecheck passed.
+- Staged Prisma schema validation passed.
+
+### Remaining TODOs
+
+- Run `npx prisma migrate dev` interactively on a developer machine to record the migration in the local migration history if needed.
+- Quotation Phase 2: implement the advanced canvas layout editor.
