@@ -56,6 +56,10 @@ const permissions = [
   "inventory.import",
   "inventory.export",
   "inventory.view_cost",
+  "quotations.view",
+  "quotations.manage",
+  "quotations.export",
+  "quotations.delete",
   "email.manage",
   "audit_logs.view"
 ];
@@ -315,6 +319,39 @@ async function seedRolesAndPermissions() {
         create: {
           roleId: role.id,
           permissionId: inventoryPermission.id
+        }
+      });
+    }
+  }
+  const quotationRolePermissions: Record<string, string[]> = {
+    director: ["quotations.view", "quotations.export"],
+    accountant: ["quotations.view", "quotations.manage", "quotations.export"],
+    project_manager: ["quotations.view", "quotations.manage", "quotations.export", "quotations.delete"],
+    team_leader: ["quotations.view"],
+    project_employee: ["quotations.view"]
+  };
+
+  for (const [roleCode, permissionCodes] of Object.entries(quotationRolePermissions)) {
+    const role = await prisma.role.findUniqueOrThrow({
+      where: { code: roleCode }
+    });
+
+    for (const permissionCode of permissionCodes) {
+      const quotationPermission = await prisma.permission.findUniqueOrThrow({
+        where: { code: permissionCode }
+      });
+
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId: role.id,
+            permissionId: quotationPermission.id
+          }
+        },
+        update: {},
+        create: {
+          roleId: role.id,
+          permissionId: quotationPermission.id
         }
       });
     }

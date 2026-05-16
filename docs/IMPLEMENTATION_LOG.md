@@ -1,5 +1,81 @@
 # Implementation Log
 
+## 2026-05-16 - Quotation Phase 1 Backend Foundation
+
+### Current Phase
+
+Quotation Phase 1: database foundation, permissions, backend CRUD, code generation, calculations, and audit log foundation.
+
+### Scope
+
+- Implement backend only.
+- Add Prisma quotation models and migration SQL.
+- Add quotation permissions to seed data.
+- Add `/api/quotations` CRUD routes with RBAC.
+- Add server-side quotation code generation, material snapshots, totals calculation, and audit logs.
+- Do not implement frontend pages, image upload endpoints, signature upload endpoints, Excel export, PDF export, or approval workflow.
+
+### Result
+
+- Added `QuotationStatus`, `Quotation`, `QuotationItem`, and `QuotationImage` models.
+- Added quotation permissions: `quotations.view`, `quotations.manage`, `quotations.export`, and `quotations.delete`.
+- Added backend schemas, routes, and service for list/create/detail/update/delete.
+- Implemented server-generated `Q-YYYYMMDD-XXX` quotation codes with per-day sequence and unique constraint.
+- Implemented quotation item snapshots from Inventory materials.
+- Implemented backend-authoritative calculations for item amount, one-set subtotal, total before VAT, VAT amount, and grand total.
+- Added audit logs for quotation create, update, and delete/deactivate.
+- Soft delete sets `deletedAt` and `cancelled` status.
+
+### Changed Files Summary
+
+- `apps/api/prisma/schema.prisma`
+- `apps/api/prisma/migrations/20260516090000_add_quotation_backend_foundation/migration.sql`
+- `apps/api/prisma/seed.ts`
+- `apps/api/src/routes.ts`
+- `apps/api/src/modules/quotations/quotations.routes.ts`
+- `apps/api/src/modules/quotations/quotations.schemas.ts`
+- `apps/api/src/modules/quotations/quotations.service.ts`
+- `docs/IMPLEMENTATION_LOG.md`
+- `docs/logs/2026-05-16_quotation-phase-1_prisma-generate.log`
+- `docs/logs/2026-05-16_quotation-phase-1_prisma-migrate-dev.log`
+- `docs/logs/2026-05-16_quotation-phase-1_staged-prisma-validate.log`
+
+### Commands Run
+
+- `npx prisma format`
+- `npx prisma validate`
+- `npx prisma generate`
+- `npx prisma generate` retry
+- `npx prisma migrate dev --name add_quotation_backend_foundation --skip-generate`
+- `npm run typecheck --workspace apps/api`
+- `npx prisma db execute --file prisma/migrations/20260516090000_add_quotation_backend_foundation/migration.sql`
+- Direct service smoke test with `npx tsx --env-file=.env -`
+- Staged schema validation with `npx prisma validate --schema <temp staged schema>`
+
+### Errors Found
+
+- `npx prisma generate` failed twice with Windows `EPERM` while replacing `node_modules/.prisma/client/query_engine-windows.dll.node`. Classification: `unknown`.
+- `npx prisma migrate dev --name add_quotation_backend_foundation --skip-generate` failed because Prisma Migrate does not support this non-interactive shell. Classification: `config_error`.
+- First staged temp schema validation failed because PowerShell wrote the temporary schema with encoding Prisma rejected. Classification: `config_error`.
+
+### Fixes Applied
+
+- Saved both failure logs under `docs/logs/`.
+- Added a manual SQL migration and applied it locally with `prisma db execute`.
+- Verified API TypeScript typecheck passes.
+
+### Verification Steps
+
+- Prisma schema validation passed.
+- API typecheck passed.
+- Direct service smoke test created quotation `Q-20260516-001`, recalculated totals, updated it, found it in list search, and soft-deleted it.
+- BOM-free staged schema validation passed.
+
+### Known TODOs
+
+- Stop any process locking Prisma query engine, then rerun `npx prisma generate`.
+- Run `npx prisma migrate dev` from an interactive shell or apply migrations through the deployment migration flow.
+- Quotation Phase 2 should implement frontend list/create/edit/detail and material selector UI.
 ## 2026-05-15 - Quotation Management Planning
 
 ### Current Phase
