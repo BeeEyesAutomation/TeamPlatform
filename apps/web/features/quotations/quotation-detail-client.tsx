@@ -24,6 +24,7 @@ import {
   uploadCustomerPo
 } from "./quotations-api";
 import { formatMoney, toDateInput } from "./quotation-format";
+import { QuotationLayoutPreview } from "./quotation-layout-preview";
 
 const assetUrl = (path?: string | null) => path ? (path.startsWith("http") ? path : `${apiBaseUrl}${path}`) : "";
 
@@ -208,7 +209,9 @@ export function QuotationDetailClient({ id }: { id: string }) {
         <Summary label="Grand Total" value={activeVersion?.grandTotal ?? quotation.grandTotal} strong />
       </section>
 
-      {preview ? (
+      {preview?.layoutConfig?.blocks?.length ? <QuotationLayoutPreview preview={preview} /> : null}
+
+      {preview && !preview.layoutConfig?.blocks?.length ? (
         <section className="space-y-4 rounded-md border border-border bg-white p-5">
           <div className="border-b border-border pb-3">
             <div className="text-lg font-bold text-ink">{preview.companySettings?.companyName || "Company Quotation"}</div>

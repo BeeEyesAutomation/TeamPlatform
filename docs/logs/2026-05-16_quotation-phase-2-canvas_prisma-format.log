@@ -1,0 +1,9 @@
+npx prisma format failed because PowerShell blocked C:\Program Files\nodejs\npx.ps1 under the current execution policy.
+
+Classification: config_error
+
+Relevant output:
+npx : File C:\Program Files\nodejs\npx.ps1 cannot be loaded because running scripts is disabled on this system.
+
+Targeted retry:
+Use npx.cmd prisma format from the same workspace to avoid the blocked PowerShell script wrapper.

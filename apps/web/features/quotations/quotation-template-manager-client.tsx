@@ -15,6 +15,7 @@ import {
   updateQuotationTemplateMapping,
   uploadQuotationTemplate
 } from "./quotations-api";
+import { QuotationCanvasEditor } from "./quotation-canvas-editor";
 
 const defaultMapping = {
   "#yyyyMMdd": "quotationDate",
@@ -39,6 +40,7 @@ export function QuotationTemplateManagerClient() {
   const [name, setName] = useState("");
   const [mappingText, setMappingText] = useState(JSON.stringify(defaultMapping, null, 2));
   const [activeTemplateId, setActiveTemplateId] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState<QuotationTemplate | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -46,6 +48,10 @@ export function QuotationTemplateManagerClient() {
     try {
       const response = await fetchQuotationTemplates({ pageSize: 50 });
       setTemplates(response.data.items);
+      setSelectedTemplate((current) => {
+        if (!current) return response.data.items.find((item) => item.id === activeTemplateId) ?? null;
+        return response.data.items.find((item) => item.id === current.id) ?? current;
+      });
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot load quotation templates.");
@@ -67,6 +73,7 @@ export function QuotationTemplateManagerClient() {
       setFile(null);
       setName("");
       setActiveTemplateId(response.data.id);
+      setSelectedTemplate(response.data);
       setMappingText(JSON.stringify(response.data.placeholderConfig || defaultMapping, null, 2));
       await load();
     } catch (err) {
@@ -104,6 +111,10 @@ export function QuotationTemplateManagerClient() {
     try {
       await deleteQuotationTemplate(id);
       setMessage("Template deleted successfully.");
+      if (activeTemplateId === id) {
+        setActiveTemplateId("");
+        setSelectedTemplate(null);
+      }
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot delete template.");
@@ -112,6 +123,7 @@ export function QuotationTemplateManagerClient() {
 
   function selectTemplate(template: QuotationTemplate) {
     setActiveTemplateId(template.id);
+    setSelectedTemplate(template);
     setMappingText(JSON.stringify(template.placeholderConfig || defaultMapping, null, 2));
   }
 
@@ -145,7 +157,7 @@ export function QuotationTemplateManagerClient() {
         emptyDescription="Upload an Excel template to customize quotation exports."
         columns={[
           { key: "name", header: "Name", render: (item) => <button className="font-semibold text-primary" type="button" onClick={() => selectTemplate(item)}>{item.name}</button> },
-          { key: "file", header: "Original File", render: (item) => item.originalFileName },
+          { key: "file", header: "Original File", render: (item) => item.originalFileName ?? item.fileName ?? "-" },
           { key: "default", header: "Default", className: "whitespace-nowrap", render: (item) => item.isDefault ? "Yes" : "No" },
           {
             key: "actions",
@@ -170,6 +182,14 @@ export function QuotationTemplateManagerClient() {
           <ToolbarButton variant="primary" onClick={() => void saveMapping()}>Save Mapping</ToolbarButton>
         </div>
       </section>
+
+      {selectedTemplate ? (
+        <QuotationCanvasEditor key={selectedTemplate.id} template={selectedTemplate} />
+      ) : (
+        <section className="rounded-md border border-border bg-white p-4 text-sm text-muted">
+          Select a template to edit its canvas layout.
+        </section>
+      )}
     </section>
   );
 }

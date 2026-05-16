@@ -1,0 +1,16 @@
+npx.cmd prisma generate failed while replacing the generated Prisma client.
+
+Classification: unknown
+
+Relevant output:
+EPERM: operation not permitted, unlink 'C:\TeamPlatform\node_modules\.prisma\client\index.js'
+
+Targeted retry:
+Retry npx.cmd prisma generate once. If it fails again, stop and document that the generated client file appears locked or permission-restricted.
+
+Retry result:
+npx.cmd prisma generate failed again with:
+EPERM: operation not permitted, unlink 'C:\TeamPlatform\node_modules\.prisma\client\index.d.ts'
+
+Conclusion:
+The generated Prisma client files appear locked or permission-restricted in this workspace. No additional retry was attempted.

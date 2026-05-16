@@ -106,13 +106,101 @@ export type QuotationMaterial = Pick<InventoryItem, "id" | "materialCode" | "mat
 export interface QuotationTemplate {
   id: string;
   name: string;
-  originalFileName: string;
+  originalFileName?: string;
+  fileName?: string;
   fileUrl: string;
+  defaultVersionId?: string | null;
   placeholderConfig?: Record<string, string> | null;
+  detectedPlaceholders?: string[] | null;
   isDefault: boolean;
   status: "active" | "inactive";
+  versions?: QuotationTemplateVersion[];
   createdAt: string;
   updatedAt: string;
+}
+
+export type QuotationLayoutBlockType =
+  | "text"
+  | "company_info"
+  | "quotation_info"
+  | "project_info"
+  | "customer_info"
+  | "content"
+  | "specifications"
+  | "material_table"
+  | "image"
+  | "logo"
+  | "signature"
+  | "notes"
+  | "totals"
+  | "vat_summary"
+  | "divider"
+  | "custom_field";
+
+export interface QuotationBlockStyleConfig {
+  fontSize?: number;
+  fontWeight?: string;
+  italic?: boolean;
+  textAlign?: "left" | "center" | "right";
+  textColor?: string;
+  backgroundColor?: string;
+  border?: boolean;
+  padding?: number;
+}
+
+export interface QuotationLayoutBlock {
+  id: string;
+  blockType: QuotationLayoutBlockType;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  zIndex: number;
+  visible: boolean;
+  locked: boolean;
+  content?: string;
+  bindingKey?: string;
+  styleConfig?: QuotationBlockStyleConfig;
+  required?: boolean;
+}
+
+export interface QuotationLayoutConfig {
+  blocks: QuotationLayoutBlock[];
+}
+
+export interface QuotationTableColumnConfig {
+  key: string;
+  label: string;
+  width: number;
+  visible: boolean;
+  align: "left" | "center" | "right";
+  custom?: boolean;
+}
+
+export interface QuotationTableConfig {
+  columns: QuotationTableColumnConfig[];
+}
+
+export interface QuotationCanvasConfig {
+  pageWidth: number;
+  pageHeight: number;
+  unit?: string;
+  backgroundColor?: string;
+}
+
+export interface QuotationTemplateVersion {
+  id: string;
+  templateId: string;
+  versionNumber: number;
+  originalFileUrl?: string | null;
+  sheetName?: string | null;
+  layoutConfig?: QuotationLayoutConfig | null;
+  placeholderConfig?: Record<string, string> | null;
+  tableConfig?: QuotationTableConfig | null;
+  canvasConfig?: QuotationCanvasConfig | null;
+  status: "active" | "inactive";
+  createdById?: string | null;
+  createdAt: string;
 }
 
 export interface QuotationCompanySettings {
@@ -131,6 +219,11 @@ export interface QuotationCompanySettings {
 export interface QuotationPreview {
   quotation: Quotation;
   version: QuotationVersion;
+  template?: QuotationTemplate | null;
+  templateVersion?: QuotationTemplateVersion | null;
+  layoutConfig?: QuotationLayoutConfig | null;
+  tableConfig?: QuotationTableConfig | null;
+  canvasConfig?: QuotationCanvasConfig | null;
   companySettings: QuotationCompanySettings | null;
   projectName: string;
 }

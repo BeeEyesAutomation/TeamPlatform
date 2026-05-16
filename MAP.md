@@ -150,7 +150,9 @@ Implemented backend:
 ```txt
 /api/quotations                                      Quotation CRUD, versions, preview, Excel export, approval, PO upload, stock out
 /api/quotation-templates                             Excel template upload, placeholder mapping, default template management
+/api/quotation-template-versions                     Canvas layout JSON, material table config, duplicate/restore template versions
 /api/quotation-settings                              Company quotation settings for preview/export
+/api/quotation-template-versions                     Quotation template version layout/table APIs
 apps/api/src/modules/quotations/                     routes, schemas, service, calculations, Excel builder
 ```
 
@@ -164,6 +166,8 @@ Implemented frontend:
 /quotations/templates                                Excel template manager
 /quotations/settings                                 Company quotation settings
 apps/web/features/quotations/                        API wrapper, list, form, detail, template/settings clients
+apps/web/features/quotations/quotation-canvas-editor.tsx  Canvas template layout editor
+apps/web/features/quotations/quotation-layout-preview.tsx  Layout-config web preview renderer
 apps/web/types/quotations.ts                         Quotation frontend types
 ```
 

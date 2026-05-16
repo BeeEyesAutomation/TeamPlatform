@@ -1,0 +1,9 @@
+npm run typecheck --workspace apps/api failed because PowerShell blocked C:\Program Files\nodejs\npm.ps1 under the current execution policy.
+
+Classification: config_error
+
+Relevant output:
+npm : File C:\Program Files\nodejs\npm.ps1 cannot be loaded because running scripts is disabled on this system.
+
+Targeted retry:
+Use npm.cmd run typecheck --workspace apps/api to avoid the blocked PowerShell script wrapper.

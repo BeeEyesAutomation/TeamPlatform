@@ -1,0 +1,20 @@
+Staged Prisma schema validation initially failed because the temporary schema path was written relative to the API workspace twice.
+
+Classification: config_error
+
+Relevant output:
+Could not find a part of the path 'C:\TeamPlatform\apps\api\apps\api\prisma\.phase2-staged-schema.prisma'.
+
+Targeted retry:
+Write the temporary staged schema to prisma/.phase2-staged-schema.prisma from the API workspace and validate that path once.
+
+Retry result:
+The retry wrote the temp schema through PowerShell redirection, which produced UTF-16 content that Prisma rejected.
+
+Classification: config_error
+
+Next targeted retry:
+Write the temporary staged schema with explicit UTF-8 encoding, then validate once.
+
+Final result:
+The explicit UTF-8 temporary staged schema validation passed.

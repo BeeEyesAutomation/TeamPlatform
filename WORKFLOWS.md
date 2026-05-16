@@ -489,6 +489,8 @@ Template and settings management:
 User opens Quotation Templates
 -> Upload .xlsx template
 -> Edit placeholder mapping JSON
+-> Edit canvas layout blocks and material table columns
+-> Duplicate or restore template versions when needed
 -> Set default template
 
 User opens Company Quotation Settings

@@ -100,3 +100,29 @@ export const templateUpdateSchema = z.object({
 export const templateMappingSchema = z.object({
   placeholderConfig: z.record(z.string().trim().min(1), z.string().trim().min(1))
 });
+
+export const templateVersionParamSchema = z.object({ id: z.string().uuid() });
+
+const jsonObjectSchema = z.record(z.string(), z.unknown());
+
+export const templateVersionCreateSchema = z.object({
+  sourceVersionId: optionalUuidSchema,
+  sheetName: z.preprocess(emptyToUndefined, z.string().trim().max(255).optional()),
+  layoutConfig: jsonObjectSchema.optional(),
+  placeholderConfig: jsonObjectSchema.optional(),
+  tableConfig: jsonObjectSchema.optional(),
+  canvasConfig: jsonObjectSchema.optional()
+});
+
+export const templateVersionLayoutSchema = z.object({
+  layoutConfig: jsonObjectSchema,
+  canvasConfig: jsonObjectSchema.optional()
+});
+
+export const templateVersionTableConfigSchema = z.object({
+  tableConfig: jsonObjectSchema
+});
+
+export const setDefaultTemplateVersionSchema = z.object({
+  versionId: z.string().uuid("Template Version is required.")
+});

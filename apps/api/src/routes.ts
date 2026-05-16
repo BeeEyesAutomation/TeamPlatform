@@ -11,7 +11,7 @@ import { importsRouter } from "./modules/imports/imports.routes";
 import { inventoryRouter } from "./modules/inventory/inventory.routes";
 import { payrollRouter, payrollsRouter, payslipsRouter } from "./modules/payroll/payroll.routes";
 import { positionsRouter } from "./modules/positions/positions.routes";
-import { quotationSettingsRouter, quotationTemplatesRouter, quotationsRouter } from "./modules/quotations/quotations.routes";
+import { quotationSettingsRouter, quotationTemplateVersionsRouter, quotationTemplatesRouter, quotationsRouter } from "./modules/quotations/quotations.routes";
 import {
   documentPermissionsRouter,
   documentTypesRouter,
@@ -70,6 +70,7 @@ apiRouter.use("/inventory", inventoryRouter);
 apiRouter.use("/exports", exportsRouter);
 apiRouter.use("/quotations", quotationsRouter);
 apiRouter.use("/quotation-templates", quotationTemplatesRouter);
+apiRouter.use("/quotation-template-versions", quotationTemplateVersionsRouter);
 apiRouter.use("/quotation-settings", quotationSettingsRouter);
 apiRouter.use("/statistics", statisticsRouter);
 apiRouter.use("/reports", reportsRouter);

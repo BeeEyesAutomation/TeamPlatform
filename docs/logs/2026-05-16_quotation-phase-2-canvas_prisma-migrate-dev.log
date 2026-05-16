@@ -1,0 +1,9 @@
+npx.cmd prisma migrate dev failed because the current shell is non-interactive.
+
+Classification: config_error
+
+Relevant output:
+Prisma Migrate has detected that the environment is non-interactive, which is not supported.
+
+Targeted handling:
+The migration SQL already exists at apps/api/prisma/migrations/20260516143000_add_quotation_template_versions/migration.sql. Apply it with prisma db execute instead of resetting or deleting migrations.

@@ -6,6 +6,7 @@ import type {
   QuotationImage,
   QuotationPreview,
   QuotationTemplate,
+  QuotationTemplateVersion,
   QuotationVersion
 } from "../../types/quotations";
 
@@ -100,6 +101,29 @@ export const setDefaultQuotationTemplate = (id: string) =>
   apiJson<QuotationTemplate>(`/api/quotation-templates/${id}/set-default`, "POST");
 
 export const deleteQuotationTemplate = (id: string) => apiJson<QuotationTemplate>(`/api/quotation-templates/${id}`, "DELETE");
+
+export const fetchQuotationTemplateVersions = (templateId: string) =>
+  apiGet<QuotationTemplateVersion[]>(`/api/quotation-templates/${templateId}/versions`);
+
+export const createQuotationTemplateVersion = (templateId: string, body: Record<string, unknown> = {}) =>
+  apiJson<QuotationTemplateVersion>(`/api/quotation-templates/${templateId}/versions`, "POST", body);
+
+export const fetchQuotationTemplateVersion = (id: string) => apiGet<QuotationTemplateVersion>(`/api/quotation-template-versions/${id}`);
+
+export const updateQuotationTemplateVersionLayout = (id: string, body: unknown) =>
+  apiJson<QuotationTemplateVersion>(`/api/quotation-template-versions/${id}/layout`, "PUT", body);
+
+export const updateQuotationTemplateVersionTableConfig = (id: string, tableConfig: unknown) =>
+  apiJson<QuotationTemplateVersion>(`/api/quotation-template-versions/${id}/table-config`, "PUT", { tableConfig });
+
+export const duplicateQuotationTemplateVersion = (id: string) =>
+  apiJson<QuotationTemplateVersion>(`/api/quotation-template-versions/${id}/duplicate`, "POST");
+
+export const setDefaultQuotationTemplateVersion = (templateId: string, versionId: string) =>
+  apiJson<{ template: QuotationTemplate; version: QuotationTemplateVersion }>(`/api/quotation-templates/${templateId}/set-default-version`, "POST", { versionId });
+
+export const restoreQuotationTemplateVersion = (id: string) =>
+  apiJson<{ template: QuotationTemplate; version: QuotationTemplateVersion }>(`/api/quotation-template-versions/${id}/restore`, "POST");
 
 export async function downloadQuotationExcel(id: string, quotationCode: string, versionId?: string) {
   const token = getStoredAccessToken();

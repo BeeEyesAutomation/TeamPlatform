@@ -953,21 +953,46 @@ model QuotationTemplate {
   mimeType             String?      @map("mime_type") @db.VarChar(100)
   placeholderConfig    Json?        @map("placeholder_config")
   detectedPlaceholders Json?        @map("detected_placeholders")
+  defaultVersionId     String?      @map("default_version_id")
   isDefault            Boolean      @default(false) @map("is_default")
   status               RecordStatus @default(active)
   uploadedById         String?      @map("uploaded_by_id")
   quotation            Quotation?   @relation(fields: [quotationId], references: [id])
+  versions             QuotationTemplateVersion[]
   createdAt            DateTime     @default(now()) @map("created_at")
   updatedAt            DateTime     @updatedAt @map("updated_at")
   deletedAt            DateTime?    @map("deleted_at")
 
   @@index([quotationId])
   @@index([isDefault])
+  @@index([defaultVersionId])
   @@index([status])
   @@index([createdAt])
   @@map("quotation_templates")
 }
 
+model QuotationTemplateVersion {
+  id                String            @id @default(uuid())
+  templateId        String            @map("template_id")
+  versionNumber     Int               @map("version_number")
+  originalFileUrl   String?           @map("original_file_url") @db.Text
+  sheetName         String?           @map("sheet_name") @db.VarChar(255)
+  layoutConfig      Json?             @map("layout_config")
+  placeholderConfig Json?             @map("placeholder_config")
+  tableConfig       Json?             @map("table_config")
+  canvasConfig      Json?             @map("canvas_config")
+  status            RecordStatus      @default(active)
+  createdById       String?           @map("created_by_id")
+  template          QuotationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  createdAt         DateTime          @default(now()) @map("created_at")
+
+  @@unique([templateId, versionNumber])
+  @@index([templateId])
+  @@index([versionNumber])
+  @@index([status])
+  @@index([createdAt])
+  @@map("quotation_template_versions")
+}
 model QuotationCompanySettings {
   id                String   @id @default(uuid())
   companyName       String?  @map("company_name") @db.VarChar(255)

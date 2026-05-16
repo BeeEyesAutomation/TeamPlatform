@@ -15,6 +15,11 @@ import {
   quotationUpdateSchema,
   templateMappingSchema,
   templateQuerySchema,
+  setDefaultTemplateVersionSchema,
+  templateVersionCreateSchema,
+  templateVersionLayoutSchema,
+  templateVersionParamSchema,
+  templateVersionTableConfigSchema,
   templateUpdateSchema,
   versionParamSchema
 } from "./quotations.schemas";
@@ -24,6 +29,7 @@ import {
   buildQuotationPreview,
   cancelQuotationVersion,
   createQuotation,
+  createQuotationTemplateVersion,
   createStockOutFromVersion,
   createUpdateFromVersion,
   deleteQuotation,
@@ -33,25 +39,33 @@ import {
   getCompanySettings,
   getQuotation,
   getQuotationTemplate,
+  getQuotationTemplateVersion,
   getQuotationVersion,
+  duplicateQuotationTemplateVersion,
   listQuotationTemplates,
+  listQuotationTemplateVersions,
   listQuotationVersions,
   listQuotations,
   previewNextQuotationCode,
   rejectQuotationVersion,
+  restoreQuotationTemplateVersion,
   setDefaultQuotationTemplate,
+  setDefaultQuotationTemplateVersion,
   syncProjectMaterials,
   updateCompanySettings,
   updateQuotation,
   updateQuotationSignature,
   updateQuotationTemplate,
   updateQuotationTemplateMapping,
+  updateQuotationTemplateVersionLayout,
+  updateQuotationTemplateVersionTableConfig,
   uploadCustomerPo,
   uploadQuotationTemplate
 } from "./quotations.service";
 
 export const quotationsRouter = Router();
 export const quotationTemplatesRouter = Router();
+export const quotationTemplateVersionsRouter = Router();
 export const quotationSettingsRouter = Router();
 
 const routeDir = path.dirname(fileURLToPath(import.meta.url));
@@ -89,6 +103,7 @@ const contextFromRequest = (req: Request) => ({
 
 quotationsRouter.use(requireAuth);
 quotationTemplatesRouter.use(requireAuth);
+quotationTemplateVersionsRouter.use(requireAuth);
 quotationSettingsRouter.use(requireAuth);
 
 quotationSettingsRouter.get(
@@ -136,6 +151,35 @@ quotationTemplatesRouter.get(
   })
 );
 
+quotationTemplatesRouter.get(
+  "/:id/versions",
+  requirePermission("quotation_templates.view"),
+  asyncHandler(async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    res.json({ status: "ok", data: await listQuotationTemplateVersions(id) });
+  })
+);
+
+quotationTemplatesRouter.post(
+  "/:id/versions",
+  requirePermission("quotation_templates.version_manage"),
+  asyncHandler(async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const body = templateVersionCreateSchema.parse(req.body);
+    res.status(201).json({ status: "ok", data: await createQuotationTemplateVersion(id, body, contextFromRequest(req)) });
+  })
+);
+
+quotationTemplatesRouter.post(
+  "/:id/set-default-version",
+  requirePermission("quotation_templates.version_manage"),
+  asyncHandler(async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const body = setDefaultTemplateVersionSchema.parse(req.body);
+    res.json({ status: "ok", data: await setDefaultQuotationTemplateVersion(id, body.versionId, contextFromRequest(req)) });
+  })
+);
+
 quotationTemplatesRouter.put(
   "/:id",
   requirePermission("quotation_templates.manage"),
@@ -171,6 +215,91 @@ quotationTemplatesRouter.delete(
   asyncHandler(async (req, res) => {
     const { id } = idParamSchema.parse(req.params);
     res.json({ status: "ok", data: await deleteQuotationTemplate(id, contextFromRequest(req)) });
+  })
+);
+
+quotationTemplatesRouter.get(
+  "/versions/:id",
+  requirePermission("quotation_templates.view"),
+  asyncHandler(async (req, res) => {
+    const { id } = templateVersionParamSchema.parse(req.params);
+    res.json({ status: "ok", data: await getQuotationTemplateVersion(id) });
+  })
+);
+
+quotationTemplatesRouter.put(
+  "/versions/:id/layout",
+  requirePermission("quotation_templates.layout_edit"),
+  asyncHandler(async (req, res) => {
+    const { id } = templateVersionParamSchema.parse(req.params);
+    const body = templateVersionLayoutSchema.parse(req.body);
+    res.json({ status: "ok", data: await updateQuotationTemplateVersionLayout(id, body, contextFromRequest(req)) });
+  })
+);
+
+quotationTemplatesRouter.put(
+  "/versions/:id/table-config",
+  requirePermission("quotation_templates.layout_edit"),
+  asyncHandler(async (req, res) => {
+    const { id } = templateVersionParamSchema.parse(req.params);
+    const body = templateVersionTableConfigSchema.parse(req.body);
+    res.json({ status: "ok", data: await updateQuotationTemplateVersionTableConfig(id, body, contextFromRequest(req)) });
+  })
+);
+
+quotationTemplatesRouter.post(
+  "/versions/:id/duplicate",
+  requirePermission("quotation_templates.version_manage"),
+  asyncHandler(async (req, res) => {
+    const { id } = templateVersionParamSchema.parse(req.params);
+    res.status(201).json({ status: "ok", data: await duplicateQuotationTemplateVersion(id, contextFromRequest(req)) });
+  })
+);
+
+quotationTemplateVersionsRouter.get(
+  "/:id",
+  requirePermission("quotation_templates.view"),
+  asyncHandler(async (req, res) => {
+    const { id } = templateVersionParamSchema.parse(req.params);
+    res.json({ status: "ok", data: await getQuotationTemplateVersion(id) });
+  })
+);
+
+quotationTemplateVersionsRouter.put(
+  "/:id/layout",
+  requirePermission("quotation_templates.layout_edit"),
+  asyncHandler(async (req, res) => {
+    const { id } = templateVersionParamSchema.parse(req.params);
+    const body = templateVersionLayoutSchema.parse(req.body);
+    res.json({ status: "ok", data: await updateQuotationTemplateVersionLayout(id, body, contextFromRequest(req)) });
+  })
+);
+
+quotationTemplateVersionsRouter.put(
+  "/:id/table-config",
+  requirePermission("quotation_templates.layout_edit"),
+  asyncHandler(async (req, res) => {
+    const { id } = templateVersionParamSchema.parse(req.params);
+    const body = templateVersionTableConfigSchema.parse(req.body);
+    res.json({ status: "ok", data: await updateQuotationTemplateVersionTableConfig(id, body, contextFromRequest(req)) });
+  })
+);
+
+quotationTemplateVersionsRouter.post(
+  "/:id/duplicate",
+  requirePermission("quotation_templates.version_manage"),
+  asyncHandler(async (req, res) => {
+    const { id } = templateVersionParamSchema.parse(req.params);
+    res.status(201).json({ status: "ok", data: await duplicateQuotationTemplateVersion(id, contextFromRequest(req)) });
+  })
+);
+
+quotationTemplateVersionsRouter.post(
+  "/:id/restore",
+  requirePermission("quotation_templates.version_manage"),
+  asyncHandler(async (req, res) => {
+    const { id } = templateVersionParamSchema.parse(req.params);
+    res.json({ status: "ok", data: await restoreQuotationTemplateVersion(id, contextFromRequest(req)) });
   })
 );
 

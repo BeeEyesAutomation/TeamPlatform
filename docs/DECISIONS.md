@@ -93,3 +93,10 @@ Excel export is required for MVP. PDF export, approval workflow, and email sendi
 - Excel templates are uploaded as local files, while placeholder mappings are stored as JSON.
 - Stock out from quotation is allowed once per approved quotation version and runs all-or-nothing in a database transaction.
 - Commercial quotations do not sync items to project materials.
+
+## Quotation Phase 2 Decisions
+
+- Canvas layout editing uses JSON config for MVP: `layoutConfig`, `tableConfig`, and `canvasConfig` live on immutable `QuotationTemplateVersion` records.
+- Excel export still uses uploaded workbook placeholder mapping. Canvas-to-Excel exact positioning and cell-level editing are future work.
+- Material table config controls web preview and informs the built-in Excel workbook fallback where practical.
+- Template versions are immutable snapshots. Restoring an old version sets it as the default instead of mutating the historical record.

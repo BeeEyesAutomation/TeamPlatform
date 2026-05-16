@@ -395,4 +395,10 @@ Phase 1 implements the working foundation:
 - One all-or-nothing inventory stock out per approved quotation version.
 - Project quotation item sync to project materials.
 
-Phase 1 does not include the advanced drag/drop canvas editor. That remains Phase 2.
+Phase 2 adds the canvas layout editor MVP:
+
+- Layouts are stored as JSON template versions instead of cell-level Excel designer records.
+- Users can add, edit, duplicate, hide/show, lock/unlock, position, resize, layer, and align quotation blocks.
+- Material table columns can be shown/hidden, reordered, renamed, resized, aligned, and extended with simple custom columns.
+- Web preview renders the saved `layoutConfig` and `tableConfig` when available and falls back to the built-in Phase 1 preview.
+- Excel export still uses placeholder mapping for uploaded workbooks; canvas-to-Excel exact positioning remains a future phase.

@@ -13,6 +13,9 @@ import type {
   quotationQuerySchema,
   quotationUpdateSchema,
   templateMappingSchema,
+  templateVersionCreateSchema,
+  templateVersionLayoutSchema,
+  templateVersionTableConfigSchema,
   templateQuerySchema,
   templateUpdateSchema
 } from "./quotations.schemas";
@@ -27,6 +30,9 @@ type QuotationItemInput = QuotationCreate["items"][number];
 type CompanySettingsInput = z.infer<typeof companySettingsSchema>;
 type TemplateUpdateInput = z.infer<typeof templateUpdateSchema>;
 type TemplateMappingInput = z.infer<typeof templateMappingSchema>;
+type TemplateVersionCreateInput = z.infer<typeof templateVersionCreateSchema>;
+type TemplateVersionLayoutInput = z.infer<typeof templateVersionLayoutSchema>;
+type TemplateVersionTableConfigInput = z.infer<typeof templateVersionTableConfigSchema>;
 
 interface RequestContext {
   actorId?: string;
@@ -47,6 +53,40 @@ const defaultPlaceholderConfig = {
   "#Unit": "item.unitSnapshot",
   "#Price": "item.unitPrice",
   "#PriceTotal": "item.amount"
+};
+
+const defaultCanvasConfig = {
+  pageWidth: 794,
+  pageHeight: 1123,
+  unit: "px",
+  backgroundColor: "#ffffff"
+};
+
+const defaultTableConfig = {
+  columns: [
+    { key: "lineIndex", label: "No", width: 48, visible: true, align: "center" },
+    { key: "materialCodeSnapshot", label: "Material Code", width: 120, visible: true, align: "left" },
+    { key: "materialNameSnapshot", label: "Item Description", width: 220, visible: true, align: "left" },
+    { key: "modelSnapshot", label: "Model", width: 120, visible: true, align: "left" },
+    { key: "pictureUrlSnapshot", label: "Picture", width: 90, visible: true, align: "center" },
+    { key: "quantity", label: "Quantity", width: 90, visible: true, align: "right" },
+    { key: "unitSnapshot", label: "Unit", width: 70, visible: true, align: "center" },
+    { key: "unitPrice", label: "Unit Price", width: 120, visible: true, align: "right" },
+    { key: "amount", label: "Amount", width: 120, visible: true, align: "right" }
+  ]
+};
+
+const defaultLayoutConfig = {
+  blocks: [
+    { id: "company-info", blockType: "company_info", x: 40, y: 32, width: 360, height: 92, zIndex: 1, visible: true, locked: false, content: "Company Information", bindingKey: "company.name", styleConfig: { fontSize: 18, fontWeight: "700", textAlign: "left", textColor: "#111827", backgroundColor: "#ffffff", border: false, padding: 8 }, required: true },
+    { id: "quotation-title", blockType: "text", x: 250, y: 130, width: 300, height: 48, zIndex: 2, visible: true, locked: false, content: "QUOTATION", bindingKey: "", styleConfig: { fontSize: 24, fontWeight: "700", textAlign: "center", textColor: "#111827", backgroundColor: "#ffffff", border: false, padding: 8 }, required: true },
+    { id: "quotation-info", blockType: "quotation_info", x: 430, y: 32, width: 300, height: 92, zIndex: 1, visible: true, locked: false, content: "Quotation Information", bindingKey: "quotation.code", styleConfig: { fontSize: 12, fontWeight: "500", textAlign: "left", textColor: "#111827", backgroundColor: "#ffffff", border: true, padding: 8 }, required: true },
+    { id: "customer-info", blockType: "customer_info", x: 40, y: 190, width: 690, height: 86, zIndex: 1, visible: true, locked: false, content: "Customer Information", bindingKey: "customer.name", styleConfig: { fontSize: 13, fontWeight: "500", textAlign: "left", textColor: "#111827", backgroundColor: "#f9fafb", border: true, padding: 10 }, required: true },
+    { id: "material-table", blockType: "material_table", x: 40, y: 300, width: 690, height: 360, zIndex: 1, visible: true, locked: false, content: "Material Table", bindingKey: "quotation.items", styleConfig: { fontSize: 12, fontWeight: "400", textAlign: "left", textColor: "#111827", backgroundColor: "#ffffff", border: true, padding: 6 }, required: true },
+    { id: "totals", blockType: "totals", x: 430, y: 690, width: 300, height: 130, zIndex: 1, visible: true, locked: false, content: "Totals", bindingKey: "grandTotal", styleConfig: { fontSize: 13, fontWeight: "600", textAlign: "right", textColor: "#111827", backgroundColor: "#ffffff", border: true, padding: 8 }, required: true },
+    { id: "notes", blockType: "notes", x: 40, y: 850, width: 360, height: 120, zIndex: 1, visible: true, locked: false, content: "Notes", bindingKey: "notes", styleConfig: { fontSize: 12, fontWeight: "400", textAlign: "left", textColor: "#374151", backgroundColor: "#ffffff", border: false, padding: 8 }, required: false },
+    { id: "signature", blockType: "signature", x: 500, y: 850, width: 230, height: 120, zIndex: 1, visible: true, locked: false, content: "Signature", bindingKey: "signature.image", styleConfig: { fontSize: 12, fontWeight: "500", textAlign: "center", textColor: "#111827", backgroundColor: "#ffffff", border: false, padding: 8 }, required: false }
+  ]
 };
 
 const toDecimal = (value: number | string | Prisma.Decimal) => new Prisma.Decimal(value);
@@ -556,9 +596,138 @@ export async function listQuotationTemplates(query: TemplateQuery) {
 }
 
 export async function getQuotationTemplate(id: string) {
-  const template = await db.quotationTemplate.findFirst({ where: { id, deletedAt: null } });
+  const template = await db.quotationTemplate.findFirst({
+    where: { id, deletedAt: null },
+    include: { versions: { where: { status: "active" }, orderBy: { versionNumber: "desc" } } }
+  });
   if (!template) throw new AppError(404, "Quotation template not found.");
   return template;
+}
+
+async function getDefaultTemplateVersion(template: any) {
+  if (!template) return null;
+  if (template.defaultVersionId) {
+    const version = await db.quotationTemplateVersion.findFirst({ where: { id: template.defaultVersionId, status: "active" } });
+    if (version) return version;
+  }
+  return db.quotationTemplateVersion.findFirst({
+    where: { templateId: template.id, status: "active" },
+    orderBy: { versionNumber: "desc" }
+  });
+}
+
+async function nextTemplateVersionNumber(templateId: string) {
+  const latest = await db.quotationTemplateVersion.findFirst({
+    where: { templateId },
+    orderBy: { versionNumber: "desc" },
+    select: { versionNumber: true }
+  });
+  return (latest?.versionNumber ?? 0) + 1;
+}
+
+async function createInitialTemplateVersion(template: any, context: RequestContext) {
+  const version = await db.quotationTemplateVersion.create({
+    data: {
+      templateId: template.id,
+      versionNumber: 1,
+      originalFileUrl: template.fileUrl,
+      sheetName: "Quotation",
+      layoutConfig: defaultLayoutConfig,
+      placeholderConfig: template.placeholderConfig ?? defaultPlaceholderConfig,
+      tableConfig: defaultTableConfig,
+      canvasConfig: defaultCanvasConfig,
+      createdById: context.actorId
+    }
+  });
+  await db.quotationTemplate.update({ where: { id: template.id }, data: { defaultVersionId: version.id } });
+  return version;
+}
+
+export async function listQuotationTemplateVersions(templateId: string) {
+  await getQuotationTemplate(templateId);
+  return db.quotationTemplateVersion.findMany({
+    where: { templateId, status: "active" },
+    orderBy: { versionNumber: "desc" }
+  });
+}
+
+export async function getQuotationTemplateVersion(id: string) {
+  const version = await db.quotationTemplateVersion.findFirst({
+    where: { id, status: "active" },
+    include: { template: true }
+  });
+  if (!version) throw new AppError(404, "Quotation template version not found.");
+  return version;
+}
+
+export async function createQuotationTemplateVersion(templateId: string, data: TemplateVersionCreateInput, context: RequestContext) {
+  const template = await getQuotationTemplate(templateId);
+  const source = data.sourceVersionId ? await getQuotationTemplateVersion(data.sourceVersionId) : await getDefaultTemplateVersion(template);
+  const version = await db.quotationTemplateVersion.create({
+    data: {
+      templateId,
+      versionNumber: await nextTemplateVersionNumber(templateId),
+      originalFileUrl: source?.originalFileUrl ?? template.fileUrl,
+      sheetName: data.sheetName ?? source?.sheetName ?? "Quotation",
+      layoutConfig: data.layoutConfig ?? source?.layoutConfig ?? defaultLayoutConfig,
+      placeholderConfig: data.placeholderConfig ?? source?.placeholderConfig ?? template.placeholderConfig ?? defaultPlaceholderConfig,
+      tableConfig: data.tableConfig ?? source?.tableConfig ?? defaultTableConfig,
+      canvasConfig: data.canvasConfig ?? source?.canvasConfig ?? defaultCanvasConfig,
+      createdById: context.actorId
+    }
+  });
+  await createAuditLog({ actorId: context.actorId, action: "create_version", module: "quotation_templates", targetType: "quotation_template_version", targetId: version.id, metadata: { templateId, versionNumber: version.versionNumber }, ipAddress: context.ipAddress, userAgent: context.userAgent });
+  return version;
+}
+
+export async function updateQuotationTemplateVersionLayout(id: string, data: TemplateVersionLayoutInput, context: RequestContext) {
+  const existing = await getQuotationTemplateVersion(id);
+  const updated = await db.quotationTemplateVersion.update({
+    where: { id },
+    data: {
+      layoutConfig: data.layoutConfig,
+      canvasConfig: data.canvasConfig ?? existing.canvasConfig
+    }
+  });
+  await createAuditLog({ actorId: context.actorId, action: "layout_edit", module: "quotation_templates", targetType: "quotation_template_version", targetId: id, oldValue: { layoutConfig: existing.layoutConfig, canvasConfig: existing.canvasConfig }, newValue: { layoutConfig: updated.layoutConfig, canvasConfig: updated.canvasConfig }, ipAddress: context.ipAddress, userAgent: context.userAgent });
+  return updated;
+}
+
+export async function updateQuotationTemplateVersionTableConfig(id: string, data: TemplateVersionTableConfigInput, context: RequestContext) {
+  const existing = await getQuotationTemplateVersion(id);
+  const updated = await db.quotationTemplateVersion.update({ where: { id }, data: { tableConfig: data.tableConfig } });
+  await createAuditLog({ actorId: context.actorId, action: "table_config_update", module: "quotation_templates", targetType: "quotation_template_version", targetId: id, oldValue: { tableConfig: existing.tableConfig }, newValue: { tableConfig: updated.tableConfig }, ipAddress: context.ipAddress, userAgent: context.userAgent });
+  return updated;
+}
+
+export async function duplicateQuotationTemplateVersion(id: string, context: RequestContext) {
+  const source = await getQuotationTemplateVersion(id);
+  const version = await createQuotationTemplateVersion(source.templateId, {
+    sourceVersionId: source.id,
+    sheetName: source.sheetName ?? undefined,
+    layoutConfig: source.layoutConfig ?? undefined,
+    placeholderConfig: source.placeholderConfig ?? undefined,
+    tableConfig: source.tableConfig ?? undefined,
+    canvasConfig: source.canvasConfig ?? undefined
+  } as TemplateVersionCreateInput, context);
+  await createAuditLog({ actorId: context.actorId, action: "duplicate_version", module: "quotation_templates", targetType: "quotation_template_version", targetId: version.id, metadata: { sourceVersionId: id }, ipAddress: context.ipAddress, userAgent: context.userAgent });
+  return version;
+}
+
+export async function setDefaultQuotationTemplateVersion(templateId: string, versionId: string, context: RequestContext) {
+  await getQuotationTemplate(templateId);
+  const version = await getQuotationTemplateVersion(versionId);
+  if (version.templateId !== templateId) throw new AppError(400, "Template Version does not belong to this template.");
+  const template = await db.quotationTemplate.update({ where: { id: templateId }, data: { defaultVersionId: versionId, isDefault: true } });
+  await createAuditLog({ actorId: context.actorId, action: "set_default_version", module: "quotation_templates", targetType: "quotation_template", targetId: templateId, metadata: { versionId, versionNumber: version.versionNumber }, ipAddress: context.ipAddress, userAgent: context.userAgent });
+  return { template, version };
+}
+
+export async function restoreQuotationTemplateVersion(id: string, context: RequestContext) {
+  const version = await getQuotationTemplateVersion(id);
+  const result = await setDefaultQuotationTemplateVersion(version.templateId, id, context);
+  await createAuditLog({ actorId: context.actorId, action: "restore_version", module: "quotation_templates", targetType: "quotation_template_version", targetId: id, metadata: { templateId: version.templateId, versionNumber: version.versionNumber }, ipAddress: context.ipAddress, userAgent: context.userAgent });
+  return result;
 }
 
 async function detectPlaceholders(filePath: string) {
@@ -591,8 +760,9 @@ export async function uploadQuotationTemplate(file: { originalname: string; file
       uploadedById: context.actorId
     }
   });
+  await createInitialTemplateVersion(template, context);
   await createAuditLog({ actorId: context.actorId, action: "upload", module: "quotation_templates", targetType: "quotation_template", targetId: template.id, newValue: template, ipAddress: context.ipAddress, userAgent: context.userAgent });
-  return template;
+  return getQuotationTemplate(template.id);
 }
 
 export async function updateQuotationTemplate(id: string, data: TemplateUpdateInput, context: RequestContext) {
@@ -607,7 +777,9 @@ export async function updateQuotationTemplateMapping(id: string, data: TemplateM
 }
 
 export async function setDefaultQuotationTemplate(id: string, context: RequestContext) {
-  await getQuotationTemplate(id);
+  const template = await getQuotationTemplate(id);
+  let version = await getDefaultTemplateVersion(template);
+  if (!version) version = await createInitialTemplateVersion(template, context);
   await db.$transaction([db.quotationTemplate.updateMany({ where: { deletedAt: null }, data: { isDefault: false } }), db.quotationTemplate.update({ where: { id }, data: { isDefault: true } })]);
   await createAuditLog({ actorId: context.actorId, action: "set_default", module: "quotation_templates", targetType: "quotation_template", targetId: id, ipAddress: context.ipAddress, userAgent: context.userAgent });
   return getQuotationTemplate(id);
@@ -647,11 +819,19 @@ export async function buildQuotationPreview(id: string, versionId?: string) {
   const quotation = await getQuotation(id);
   const version = versionId ? await getQuotationVersion(id, versionId) : quotation.currentVersion;
   const settings = await getCompanySettings();
+  const defaultTemplate = await db.quotationTemplate.findFirst({ where: { deletedAt: null, isDefault: true }, orderBy: { createdAt: "desc" } });
+  const templateVersion = defaultTemplate ? await getDefaultTemplateVersion(defaultTemplate) : null;
   if (!version) throw new AppError(404, "Quotation version not found.");
   return {
     company: settings,
+    companySettings: settings,
     quotation,
     version,
+    template: defaultTemplate,
+    templateVersion,
+    layoutConfig: templateVersion?.layoutConfig ?? null,
+    tableConfig: templateVersion?.tableConfig ?? null,
+    canvasConfig: templateVersion?.canvasConfig ?? null,
     projectName: version.quotationType === "project" ? quotation.project?.name ?? "-" : "Commercial",
     totals: {
       subtotalOneSet: version.subtotalOneSet,
@@ -675,11 +855,13 @@ function styleWorksheet(sheet: ExcelJS.Worksheet) {
   ];
 }
 
-async function buildDefaultWorkbook(quotation: any, version: any) {
+async function buildDefaultWorkbook(quotation: any, version: any, templateVersion?: any) {
   const settings = await getCompanySettings();
+  const tableConfig = templateVersion?.tableConfig ?? defaultTableConfig;
+  const columns = Array.isArray(tableConfig?.columns) ? tableConfig.columns.filter((column: any) => column.visible !== false) : defaultTableConfig.columns;
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Quotation");
-  styleWorksheet(sheet);
+  sheet.columns = columns.map((column: any) => ({ width: Math.max(8, Math.round(Number(column.width ?? 100) / 8)) }));
   sheet.mergeCells("A1:H1");
   sheet.getCell("A1").value = settings.companyName ?? "TeamPlatform";
   sheet.getCell("A1").font = { bold: true, size: 16 };
@@ -691,9 +873,9 @@ async function buildDefaultWorkbook(quotation: any, version: any) {
   sheet.addRow(["Specifications", version.customerRequest ?? ""]);
   sheet.addRow(["Content", version.content ?? ""]);
   sheet.addRow([]);
-  const header = sheet.addRow(["#", "Code", "Name", "Model", "Qty", "Unit", "Price", "Amount"]);
+  const header = sheet.addRow(columns.map((column: any) => column.label ?? column.key));
   header.font = { bold: true };
-  version.items.forEach((item: any) => sheet.addRow([item.lineIndex, item.materialCodeSnapshot, item.materialNameSnapshot, item.modelSnapshot ?? "", Number(item.quantity), item.unitSnapshot, Number(item.unitPrice), Number(item.amount)]));
+  version.items.forEach((item: any) => sheet.addRow(columns.map((column: any) => valueForTableColumn(column.key, item))));
   sheet.addRow([]);
   sheet.addRow(["Subtotal for 1 Set", Number(version.subtotalOneSet)]);
   sheet.addRow(["Number of Sets", Number(version.numberOfSets)]);
@@ -702,6 +884,26 @@ async function buildDefaultWorkbook(quotation: any, version: any) {
   sheet.addRow(["VAT Amount", Number(version.vatAmount)]);
   sheet.addRow(["Grand Total", Number(version.grandTotal)]);
   return workbook;
+}
+
+function valueForTableColumn(key: string, item: any) {
+  const map: Record<string, unknown> = {
+    lineIndex: item.lineIndex,
+    materialCodeSnapshot: item.materialCodeSnapshot,
+    materialNameSnapshot: item.materialNameSnapshot,
+    modelSnapshot: item.modelSnapshot ?? "",
+    pictureUrlSnapshot: item.pictureUrlSnapshot ?? "",
+    quantity: Number(item.quantity),
+    unitSnapshot: item.unitSnapshot,
+    unitPrice: Number(item.unitPrice),
+    amount: Number(item.amount),
+    brand: "",
+    origin: "",
+    leadTime: "",
+    warranty: "",
+    remark: ""
+  };
+  return map[key] ?? "";
 }
 
 async function buildTemplateWorkbook(quotation: any, version: any, template: any) {
@@ -736,7 +938,8 @@ export async function exportQuotationExcel(id: string, context: RequestContext, 
   const version = versionId ? await getQuotationVersion(id, versionId) : quotation.currentVersion;
   if (!version) throw new AppError(404, "Quotation version not found.");
   const template = await db.quotationTemplate.findFirst({ where: { deletedAt: null, isDefault: true }, orderBy: { createdAt: "desc" } });
-  const workbook = template ? await buildTemplateWorkbook(quotation, version, template).catch(() => buildDefaultWorkbook(quotation, version)) : await buildDefaultWorkbook(quotation, version);
+  const templateVersion = template ? await getDefaultTemplateVersion(template) : null;
+  const workbook = template ? await buildTemplateWorkbook(quotation, version, template).catch(() => buildDefaultWorkbook(quotation, version, templateVersion)) : await buildDefaultWorkbook(quotation, version, templateVersion);
   const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
   const fileName = `quotation-${quotation.quotationCode}.xlsx`;
 

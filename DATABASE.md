@@ -888,6 +888,7 @@ file_url
 file_size nullable
 mime_type nullable
 placeholder_config
+default_version_id nullable
 is_default
 status
 uploaded_by_id nullable
@@ -896,6 +897,25 @@ updated_at
 ```
 
 Uploaded Excel templates are stored as local files. Placeholder mapping is stored as JSON.
+
+## quotation_template_versions
+
+```txt
+id
+template_id
+version_number
+original_file_url nullable
+sheet_name nullable
+layout_config nullable
+placeholder_config nullable
+table_config nullable
+canvas_config nullable
+status
+created_by_id nullable
+created_at
+```
+
+Template versions are immutable numbered snapshots for the canvas layout editor. `layout_config`, `table_config`, and `canvas_config` are JSON-first MVP fields. `quotation_templates.default_version_id` points to the default version used by preview/export fallback behavior.
 
 ## quotation_company_settings
 

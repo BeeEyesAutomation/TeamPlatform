@@ -24,9 +24,18 @@ Phase 1 deliberately excludes:
 
 ## Phase 2: Canvas Layout Editor
 
-Recommended next scope:
+Implemented scope:
 
 - Visual section/block editor for quotation layout.
-- Drag/drop fields and table columns.
-- Preview rendering from the layout schema.
-- Export bridge from layout schema to Excel/PDF templates.
+- JSON-backed layout blocks with position, size, layer, visibility, lock state, binding, and style configuration.
+- Properties panel for content, placeholder binding, alignment, colors, size, position, duplicate, hide/show, lock/unlock, and delete actions.
+- Material table column editor for visibility, labels, order, width, alignment, and custom columns.
+- Template version records with immutable version numbers, duplicate, restore/set-default, and default-version selection.
+- Preview rendering from `layoutConfig` and `tableConfig`, with fallback to the built-in Phase 1 preview.
+- Excel export continues to use uploaded template placeholder mapping; table configuration informs the built-in workbook fallback where practical.
+
+Phase 2 deliberately excludes:
+
+- Full Excel cell-level designer.
+- Exact canvas-to-Excel positioning.
+- PDF export.

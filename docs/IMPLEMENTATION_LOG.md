@@ -2597,3 +2597,87 @@ Quotation Phase 1: core, versioning, preview, Excel template upload, placeholder
 
 - Run `npx prisma migrate dev` interactively on a developer machine to record the migration in the local migration history if needed.
 - Quotation Phase 2: implement the advanced canvas layout editor.
+
+## 2026-05-16 - Quotation Phase 2 Canvas Layout Editor
+
+### Task Name
+
+Quotation Phase 2: canvas layout editor and flexible template builder.
+
+### Scope
+
+- Add JSON-backed quotation template versions.
+- Add canvas layout block editing and material table column configuration.
+- Add template version APIs for list, create, layout update, table config update, duplicate, restore, and default-version selection.
+- Render quotation preview from saved layout JSON when available, with built-in preview fallback.
+- Keep Excel export placeholder-based while using table config for the built-in workbook fallback where practical.
+
+### Assumptions
+
+- Canvas layout config is the MVP storage format.
+- Uploaded Excel export remains placeholder-driven.
+- Exact canvas-to-Excel cell positioning is future work.
+- Restoring a template version sets it as the default instead of mutating old versions.
+
+### Changed Files Summary
+
+- `apps/api/prisma/schema.prisma`
+- `apps/api/prisma/migrations/20260516143000_add_quotation_template_versions/migration.sql`
+- `apps/api/prisma/seed.ts`
+- `apps/api/src/modules/quotations/quotations.routes.ts`
+- `apps/api/src/modules/quotations/quotations.schemas.ts`
+- `apps/api/src/modules/quotations/quotations.service.ts`
+- `apps/api/src/routes.ts`
+- `apps/web/types/quotations.ts`
+- `apps/web/features/quotations/quotations-api.ts`
+- `apps/web/features/quotations/quotation-canvas-editor.tsx`
+- `apps/web/features/quotations/quotation-layout-preview.tsx`
+- `apps/web/features/quotations/quotation-detail-client.tsx`
+- `apps/web/features/quotations/quotation-template-manager-client.tsx`
+- `docs/QUOTATION_EXEC_PLAN.md`
+- `docs/QUOTATION_PLAN.md`
+- `DATABASE.md`
+- `API.md`
+- `WORKFLOWS.md`
+- `MAP.md`
+- `docs/DECISIONS.md`
+- `docs/IMPLEMENTATION_LOG.md`
+
+### Commands Run
+
+- `npx prisma format` failed because PowerShell blocked `npx.ps1`; retried with `npx.cmd prisma format`.
+- `npx.cmd prisma format`
+- `npx.cmd prisma validate`
+- `npx.cmd prisma generate`
+- `npx.cmd prisma migrate dev`
+- `npx.cmd prisma db execute --file prisma/migrations/20260516143000_add_quotation_template_versions/migration.sql --schema prisma/schema.prisma`
+- `npm run typecheck --workspace apps/api` failed because PowerShell blocked `npm.ps1`; retried with `npm.cmd run typecheck --workspace apps/api`.
+- `npm.cmd run typecheck --workspace apps/api`
+- `npm.cmd run typecheck --workspace apps/web`
+- `rg --files apps/api apps/web | rg "quotation.*(test|spec)\.(ts|tsx)$"`
+
+### Errors Found
+
+- `npx prisma format` failed because PowerShell blocked `npx.ps1`. Classification: `config_error`.
+- `npx.cmd prisma generate` failed twice with `EPERM` unlink errors under `node_modules/.prisma/client`. Classification: `unknown`; generated client files appear locked or permission-restricted.
+- `npx.cmd prisma migrate dev` failed because Prisma Migrate does not support the non-interactive shell. Classification: `config_error`.
+- `npm run typecheck --workspace apps/api` failed because PowerShell blocked `npm.ps1`. Classification: `config_error`.
+
+### Fixes Applied
+
+- Retried blocked Node tool commands with `npx.cmd` and `npm.cmd`.
+- Applied the migration SQL with `prisma db execute` after `migrate dev` could not run non-interactively.
+- Saved failure logs under `docs/logs/`.
+
+### Result
+
+- Prisma format and validate passed.
+- Migration SQL executed successfully.
+- API typecheck passed.
+- Web typecheck passed.
+- No targeted quotation test files were found.
+
+### Remaining TODOs
+
+- Re-run `npx.cmd prisma generate` after closing any process locking `node_modules/.prisma/client`.
+- Run `npx prisma migrate dev` interactively on a developer machine if local migration history must be updated through Prisma Migrate.
